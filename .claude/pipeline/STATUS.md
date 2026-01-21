@@ -7,19 +7,19 @@
 
 ## Current State
 
-**Current Feature:** particle-system
-**Current Phase:** test-complete
-**Next Command:** `/finalize particle-system`
+**Current Feature:** wind-animation
+**Current Phase:** ready-to-start
+**Next Command:** `/research wind-animation`
 
 ---
 
 ## Pipeline Progress (Current Feature)
 
 ```
-[x] /research  - Complete
-[x] /plan      - Complete
-[x] /implement - Complete
-[x] /test      - Complete
+[ ] /research  - Not started
+[ ] /plan      - Not started
+[ ] /implement - Not started
+[ ] /test      - Not started
 [ ] /finalize  - Not started
 ```
 
@@ -35,8 +35,8 @@ See `ROADMAP.md` for full feature list and requirements.
 | 1 | camera-feed | DONE |
 | 2 | compass-sensors | DONE |
 | 3 | sky-detection | DONE |
-| 4 | particle-system | **<- CURRENT (test passed)** |
-| 5 | wind-animation | waiting |
+| 4 | particle-system | DONE |
+| 5 | wind-animation | **<- CURRENT** |
 | 6 | altitude-depth | waiting |
 | 7 | polish | waiting |
 
