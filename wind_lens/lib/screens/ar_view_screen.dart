@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../models/compass_data.dart';
 import '../services/compass_service.dart';
+import '../services/sky_detection/pitch_based_sky_mask.dart';
 import '../widgets/camera_view.dart';
 
 /// The main AR view screen that displays the camera feed with compass overlay.
@@ -31,10 +32,17 @@ class _ARViewScreenState extends State<ARViewScreen> {
   /// Current device pitch in degrees.
   double _pitch = 0;
 
+  /// The sky mask for determining sky regions based on device pitch.
+  late PitchBasedSkyMask _skyMask;
+
+  /// Current sky fraction (0.0 to 1.0).
+  double _skyFraction = 0;
+
   @override
   void initState() {
     super.initState();
     _compassService = CompassService();
+    _skyMask = PitchBasedSkyMask();
     _compassService.start();
     _compassSubscription = _compassService.stream.listen(_onCompassUpdate);
   }
@@ -51,6 +59,8 @@ class _ARViewScreenState extends State<ARViewScreen> {
     setState(() {
       _heading = data.heading;
       _pitch = data.pitch;
+      _skyMask.updatePitch(_pitch);
+      _skyFraction = _skyMask.skyFraction;
     });
   }
 
@@ -98,6 +108,16 @@ class _ARViewScreenState extends State<ARViewScreen> {
           const SizedBox(height: 4),
           Text(
             'Pitch: ${_pitch.toStringAsFixed(1)}°',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              fontFamily: 'monospace',
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Sky: ${(_skyFraction * 100).toStringAsFixed(1)}%',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 14,

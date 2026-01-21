@@ -30,5 +30,23 @@ void main() {
       // Assert
       expect(find.byType(CameraView), findsOneWidget);
     });
+
+    testWidgets('displays sky fraction in debug overlay', (tester) async {
+      // Arrange & Act
+      await tester.pumpWidget(const MaterialApp(home: ARViewScreen()));
+
+      // Assert - Sky fraction text should be present with initial value
+      expect(find.textContaining('Sky:'), findsOneWidget);
+    });
+
+    testWidgets('debug overlay shows heading, pitch, and sky', (tester) async {
+      // Arrange & Act
+      await tester.pumpWidget(const MaterialApp(home: ARViewScreen()));
+
+      // Assert - All three debug values should be displayed
+      expect(find.textContaining('Heading:'), findsOneWidget);
+      expect(find.textContaining('Pitch:'), findsOneWidget);
+      expect(find.textContaining('Sky:'), findsOneWidget);
+    });
   });
 }
