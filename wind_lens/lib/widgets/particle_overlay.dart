@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../models/particle.dart';
+import '../models/wind_data.dart';
 import '../services/sky_detection/sky_mask.dart';
 
 /// A widget that renders animated wind particles over the camera view.
@@ -16,6 +17,8 @@ import '../services/sky_detection/sky_mask.dart';
 /// - Pre-allocated particle pool (no allocations in render loop)
 /// - 2-pass glow rendering for visual appeal
 /// - Sky mask integration for realistic AR effect
+/// - Wind-driven particle movement
+/// - World-fixed direction (adjusts for compass heading)
 /// - FPS logging for performance monitoring
 class ParticleOverlay extends StatefulWidget {
   /// The sky mask for filtering particles to sky region.
@@ -24,22 +27,30 @@ class ParticleOverlay extends StatefulWidget {
   /// Number of particles in the pool (default 2000).
   final int particleCount;
 
-  /// Fixed wind angle in radians.
+  /// Wind data containing u/v components, speed, and direction.
   ///
-  /// 0.0 = wind blowing right, PI/2 = wind blowing down, etc.
-  /// Will be replaced with real wind data in future features.
-  final double windAngle;
+  /// Used to determine particle movement direction and speed.
+  /// Defaults to zero wind if not specified.
+  final WindData windData;
+
+  /// Compass heading in degrees (0-360, clockwise from North).
+  ///
+  /// Used to make particles appear "world-fixed" - they maintain
+  /// their real-world direction as the phone rotates.
+  final double compassHeading;
 
   /// Creates a new ParticleOverlay.
   ///
   /// The [skyMask] is required and determines which screen regions
-  /// will display particles.
-  const ParticleOverlay({
+  /// will display particles. Wind data and compass heading control
+  /// particle movement direction.
+  ParticleOverlay({
     super.key,
     required this.skyMask,
     this.particleCount = 2000,
-    this.windAngle = 0.0,
-  });
+    WindData? windData,
+    this.compassHeading = 0.0,
+  }) : windData = windData ?? WindData.zero();
 
   @override
   State<ParticleOverlay> createState() => _ParticleOverlayState();
@@ -64,6 +75,9 @@ class _ParticleOverlayState extends State<ParticleOverlay>
 
   /// Last time FPS was logged.
   DateTime _lastFpsLog = DateTime.now();
+
+  /// Cached screen angle (computed each frame, not allocated).
+  double _screenAngle = 0.0;
 
   @override
   void initState() {
@@ -94,17 +108,41 @@ class _ParticleOverlayState extends State<ParticleOverlay>
 
   /// Called every frame by the Ticker.
   ///
-  /// Updates particle positions and ages, resets expired particles,
-  /// and triggers a repaint.
+  /// Updates particle positions based on wind direction, ages particles,
+  /// resets expired particles, and triggers a repaint.
   void _onTick(Duration elapsed) {
     // Calculate delta time since last frame
     final dt = (elapsed - _lastFrameTime).inMicroseconds / 1000000.0;
     _lastFrameTime = elapsed;
 
+    // Calculate screen-space angle (wind direction adjusted for compass)
+    // windDirection is in radians (meteorological: direction wind comes FROM)
+    // compassHeading is in degrees (0-360, clockwise from North)
+    final windAngle = widget.windData.directionRadians;
+    final compassRad = widget.compassHeading * pi / 180;
+    _screenAngle = windAngle - compassRad;
+
+    // Calculate speed factor (m/s -> screen fraction per second)
+    // Multiplier of 0.002 from spec gives reasonable visual speed
+    final speedFactor = widget.windData.speed * 0.002;
+
     // Update all particles
     for (final p in _particles) {
+      // Move particle based on wind direction
+      p.x += cos(_screenAngle) * speedFactor * dt;
+      p.y -= sin(_screenAngle) * speedFactor * dt; // Y inverted in screen coords
+
+      // Update trail length based on wind speed
+      p.trailLength = widget.windData.speed * 0.5;
+
       // Age the particle (~3 second lifespan with 0.3 multiplier)
       p.age += dt * 0.3;
+
+      // Wrap around screen edges (instead of just resetting)
+      if (p.x < 0) p.x += 1.0;
+      if (p.x > 1) p.x -= 1.0;
+      if (p.y < 0) p.y += 1.0;
+      if (p.y > 1) p.y -= 1.0;
 
       // Reset expired particles
       if (p.isExpired) {
@@ -132,7 +170,7 @@ class _ParticleOverlayState extends State<ParticleOverlay>
       painter: ParticleOverlayPainter(
         particles: _particles,
         skyMask: widget.skyMask,
-        windAngle: widget.windAngle,
+        windAngle: _screenAngle,
         color: Colors.white,
       ),
       size: Size.infinite,
@@ -156,7 +194,7 @@ class ParticleOverlayPainter extends CustomPainter {
   /// The sky mask for filtering particles.
   final SkyMask skyMask;
 
-  /// Wind direction angle in radians.
+  /// Wind direction angle in radians (screen-space, adjusted for compass).
   final double windAngle;
 
   /// Base color for particles.
