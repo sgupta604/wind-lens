@@ -20,6 +20,7 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
   CameraController? _controller;
   bool _isInitialized = false;
   String? _errorMessage;
+  bool _isStreamingImages = false;
 
   @override
   void initState() {
@@ -30,6 +31,7 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _stopImageStream();
     WidgetsBinding.instance.removeObserver(this);
     _controller?.dispose();
     super.dispose();
@@ -41,7 +43,8 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
     if (_controller == null || !_controller!.value.isInitialized) return;
 
     if (state == AppLifecycleState.inactive) {
-      // App is being paused - dispose camera to free resources
+      // App is being paused - stop streaming and dispose camera
+      _stopImageStream();
       _controller?.dispose();
     } else if (state == AppLifecycleState.resumed) {
       // App is resuming - reinitialize camera
@@ -80,6 +83,11 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
       debugPrint(
           'Camera initialized, resolution: ${size?.width.toInt()}x${size?.height.toInt()}');
 
+      // Start image streaming if callback is provided
+      if (widget.onFrame != null) {
+        _startImageStream();
+      }
+
       if (mounted) {
         setState(() => _isInitialized = true);
       }
@@ -87,6 +95,47 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
       setState(() => _errorMessage = _getErrorMessage(e.code));
     } catch (e) {
       setState(() => _errorMessage = 'Failed to initialize camera: $e');
+    }
+  }
+
+  /// Starts the camera image stream for frame processing.
+  ///
+  /// The stream provides raw camera frames to the [onFrame] callback.
+  /// Used by sky detection for color-based analysis.
+  void _startImageStream() {
+    if (_controller == null ||
+        !_controller!.value.isInitialized ||
+        _isStreamingImages ||
+        widget.onFrame == null) {
+      return;
+    }
+
+    try {
+      _controller!.startImageStream((CameraImage image) {
+        // Call the onFrame callback with the camera image
+        widget.onFrame!(image);
+      });
+      _isStreamingImages = true;
+      debugPrint('Camera image stream started');
+    } catch (e) {
+      debugPrint('Failed to start image stream: $e');
+    }
+  }
+
+  /// Stops the camera image stream.
+  void _stopImageStream() {
+    if (_controller == null ||
+        !_controller!.value.isInitialized ||
+        !_isStreamingImages) {
+      return;
+    }
+
+    try {
+      _controller!.stopImageStream();
+      _isStreamingImages = false;
+      debugPrint('Camera image stream stopped');
+    } catch (e) {
+      debugPrint('Failed to stop image stream: $e');
     }
   }
 

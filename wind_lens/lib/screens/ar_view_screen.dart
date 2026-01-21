@@ -8,7 +8,8 @@ import '../models/compass_data.dart';
 import '../models/wind_data.dart';
 import '../services/compass_service.dart';
 import '../services/fake_wind_service.dart';
-import '../services/sky_detection/pitch_based_sky_mask.dart';
+import 'package:camera/camera.dart';
+import '../services/sky_detection/auto_calibrating_sky_detector.dart';
 import '../widgets/altitude_slider.dart';
 import '../widgets/camera_view.dart';
 import '../widgets/info_bar.dart';
@@ -47,8 +48,9 @@ class _ARViewScreenState extends State<ARViewScreen> {
   /// Current device pitch in degrees.
   double _pitch = 0;
 
-  /// The sky mask for determining sky regions based on device pitch.
-  late PitchBasedSkyMask _skyMask;
+  /// The sky detector for determining sky regions.
+  /// Uses auto-calibrating color-based detection with pitch-based fallback.
+  late AutoCalibratingSkyDetector _skyDetector;
 
   /// Current sky fraction (0.0 to 1.0).
   double _skyFraction = 0;
@@ -75,12 +77,15 @@ class _ARViewScreenState extends State<ARViewScreen> {
   /// Current particle count (may be reduced by PerformanceManager).
   int _currentParticleCount = 2000;
 
+  /// Whether the sky detector is calibrated.
+  bool _isCalibrated = false;
+
   @override
   void initState() {
     super.initState();
     _compassService = CompassService();
     _windService = FakeWindService();
-    _skyMask = PitchBasedSkyMask();
+    _skyDetector = AutoCalibratingSkyDetector();
     _compassService.start();
     _compassSubscription = _compassService.stream.listen(_onCompassUpdate);
   }
@@ -94,7 +99,7 @@ class _ARViewScreenState extends State<ARViewScreen> {
 
   /// Handles compass data updates from the service.
   ///
-  /// Updates heading, pitch, sky mask, and fetches altitude-specific wind data.
+  /// Updates heading, pitch, sky detector, and fetches altitude-specific wind data.
   /// Stores previous heading before update for parallax calculation.
   void _onCompassUpdate(CompassData data) {
     setState(() {
@@ -103,12 +108,33 @@ class _ARViewScreenState extends State<ARViewScreen> {
 
       _heading = data.heading;
       _pitch = data.pitch;
-      _skyMask.updatePitch(_pitch);
-      _skyFraction = _skyMask.skyFraction;
+      _skyDetector.updatePitch(_pitch);
+      _skyFraction = _skyDetector.skyFraction;
+      _isCalibrated = _skyDetector.isCalibrated;
 
       // Update wind data for current altitude level
       _windData = _windService.getWindForAltitude(_altitudeLevel);
     });
+  }
+
+  /// Handles camera frame updates for sky detection.
+  ///
+  /// Passes frames to the auto-calibrating sky detector for color-based
+  /// sky detection and calibration.
+  void _onCameraFrame(CameraImage image) {
+    _skyDetector.processFrame(image);
+
+    // Update sky fraction after processing (don't call setState too frequently)
+    final newFraction = _skyDetector.skyFraction;
+    final newCalibrated = _skyDetector.isCalibrated;
+
+    if ((newFraction - _skyFraction).abs() > 0.01 ||
+        newCalibrated != _isCalibrated) {
+      setState(() {
+        _skyFraction = newFraction;
+        _isCalibrated = newCalibrated;
+      });
+    }
   }
 
   /// Handles altitude level changes from the slider.
@@ -152,11 +178,11 @@ class _ARViewScreenState extends State<ARViewScreen> {
         child: Stack(
           children: [
             // Layer 1: Camera feed as the base layer
-            const CameraView(),
+            CameraView(onFrame: _onCameraFrame),
 
             // Layer 2: Particle overlay for wind visualization
             ParticleOverlay(
-              skyMask: _skyMask,
+              skyMask: _skyDetector,
               windData: _windData,
               compassHeading: _heading,
               altitudeLevel: _altitudeLevel,
@@ -258,6 +284,8 @@ class _ARViewScreenState extends State<ARViewScreen> {
           _buildDebugText('Pitch: ${_pitch.toStringAsFixed(1)}'),
           const SizedBox(height: 4),
           _buildDebugText('Sky: ${(_skyFraction * 100).toStringAsFixed(1)}%'),
+          const SizedBox(height: 4),
+          _buildDebugText('Sky Cal: ${_isCalibrated ? "Yes" : "No"}'),
           const SizedBox(height: 4),
           _buildDebugText('Altitude: ${_altitudeLevel.displayName}'),
           const SizedBox(height: 4),

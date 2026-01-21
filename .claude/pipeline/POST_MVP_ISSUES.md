@@ -10,7 +10,7 @@
 | ID | Issue | Severity | Status | Spec Section |
 |----|-------|----------|--------|--------------|
 | BUG-001 | Debug panel missing | Medium | **DONE** | Section 10 |
-| BUG-002 | Sky detection pitch-only (no color masking) | **Critical** | Open | Section 3 |
+| BUG-002 | Sky detection pitch-only (no color masking) | **Critical** | **DONE** | Section 3 |
 | BUG-003 | Particles not masked to sky pixels | **Critical** | Open | Section 4 |
 | BUG-004 | Wind animation not world-fixed | High | Open | Section 5 |
 | BUG-005 | Altitude slider UX (buttons vs slider) | Low | Open | Section 7 |
@@ -51,7 +51,7 @@
 ### BUG-002: Sky Detection Pitch-Only (No Color Masking)
 
 **Severity:** Critical
-**Status:** Open
+**Status:** DONE (2026-01-21)
 **Spec Reference:** MVP Spec Section 3 - Sky Detection
 
 **Expected Behavior:**
@@ -69,11 +69,29 @@
 **User Report:**
 > "when i tilt straight up it thinks its the sky but i did it in my room and it thought my ceiling was the sky. when i point it outside to the sky it ignores lots of blue until i tilt high enough"
 
-**Root Cause (suspected):**
+**Root Cause (confirmed):**
 - Level 2a auto-calibrating detection was planned in research but not implemented
 - Current implementation just uses pitch angle to calculate a skyFraction threshold
 
-**Pipeline:** `/diagnose sky-detection` → `/plan` → `/implement`
+**Fix Implemented:**
+- Implemented Level 2a auto-calibrating sky detection with HSV color analysis
+- System samples sky colors from top 10-40% of frame when pitch > 45 degrees
+- Builds statistical HSV histogram profile (mean, std dev, percentiles)
+- Scores each pixel as sky/not-sky based on learned profile
+- Auto-recalibrates every 5 minutes for lighting changes
+- Falls back to pitch-based detection when not calibrated
+- Cross-platform support (iOS BGRA, Android YUV420)
+- 70 new tests added (236 total passing), flutter analyze clean
+- Performance optimized: downscaling to 128x96, pre-allocated mask buffer
+
+**Components Created:**
+- `lib/models/hsv.dart` - HSV color model
+- `lib/utils/color_utils.dart` - RGB/YUV to HSV conversion
+- `lib/services/sky_detection/hsv_histogram.dart` - Statistical sky profile
+- `lib/services/sky_detection/auto_calibrating_sky_detector.dart` - Main detector
+- 4 test files with 70 comprehensive tests
+
+**Pipeline:** `/diagnose sky-detection` → `/plan` → `/implement` → `/test` → `/finalize` ✓
 
 ---
 

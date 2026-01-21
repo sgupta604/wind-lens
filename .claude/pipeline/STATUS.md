@@ -7,9 +7,9 @@
 
 ## Current State
 
-**Current Feature:** None (ready for next issue)
-**Current Phase:** Idle
-**Next Command:** Select next issue from POST_MVP_ISSUES.md
+**Current Feature:** sky-detection-v2
+**Current Phase:** finalize-complete
+**Next Command:** See POST_MVP_ISSUES.md for next issue (BUG-003 or BUG-004)
 
 **Issues Tracker:** `.claude/pipeline/POST_MVP_ISSUES.md`
 
@@ -18,11 +18,11 @@
 ## Pipeline Progress (Current Feature)
 
 ```
-[x] /research  - Used diagnosis from active-work
-[x] /plan      - Complete (2026-01-21T03:15)
-[x] /implement - Complete (166 tests passing)
-[x] /test      - Complete (all tests passed)
-[x] /finalize  - Complete (committed locally)
+[x] /research  - Used diagnosis from .claude/active-work/sky-detection/diagnosis.md
+[x] /plan      - Complete (2026-01-21T04:30)
+[x] /implement - Complete (2026-01-21)
+[x] /test      - Complete (236 tests passing)
+[x] /finalize  - Complete (2026-01-21)
 ```
 
 ---
@@ -46,24 +46,31 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 
 ---
 
+## Post-MVP Bugs/Features In Progress
+
+| Issue | Description | Status |
+|-------|-------------|--------|
+| BUG-002 | Sky Detection Level 2a Auto-Calibrating | DONE (2026-01-21) |
+| BUG-003 | Particles not masked to sky pixels | Ready to start (requires BUG-002) |
+| BUG-004 | Wind animation not world-fixed | Ready to start |
+
+---
+
 ## What To Do
 
-**MVP IS COMPLETE!**
+**BUG-002 sky-detection-v2 COMPLETE!**
 
-The Wind Lens Flutter app MVP is fully implemented with all 8 features:
-- Camera feed with AR view
-- Compass and sensor integration
-- Sky detection (pitch-based)
-- Particle rendering system (2000 particles with 2-pass glow)
-- Wind-driven particle animation
-- 3 altitude levels with parallax depth
-- Polish (debug panel, InfoBar, performance manager)
+Level 2a Auto-Calibrating Sky Detection has been successfully implemented and finalized. All 236 tests passing, flutter analyze clean.
 
-**Next steps:**
-- Test on a real device (iOS/Android)
-- Manual testing of camera, sensors, gestures
-- Performance validation on various devices
-- Consider additional features or improvements
+**Next Priority Issues:**
+
+1. **BUG-003: Particle Masking** (Critical) - Now unblocked with BUG-002 complete
+   - Use AutoCalibratingSkyDetector for per-pixel particle masking
+   - Run `/diagnose particle-masking` to start
+
+2. **BUG-004: World-Fixed Animation** (High) - Can be done in parallel
+   - Fix compass integration for world-anchored particles
+   - Run `/diagnose wind-anchoring` to start
 
 ---
 
@@ -75,20 +82,20 @@ After each pipeline step, update:
 2. **Next Command** to the next step
 3. **Pipeline Progress** checkboxes
 
-Example after `/test compass-sensors` passes:
+Example after `/implement sky-detection-v2` completes:
 ```
-**Current Phase:** test-complete
-**Next Command:** `/finalize compass-sensors`
+**Current Phase:** implement-complete
+**Next Command:** `/test sky-detection-v2`
 
 [x] /research  - Complete
 [x] /plan      - Complete
 [x] /implement - Complete
-[x] /test      - Complete
+[ ] /test      - Not started
 [ ] /finalize  - Not started
 ```
 
 When feature completes (`/finalize` done):
-1. Update Overall MVP Progress table
-2. Set Current Feature to next feature
+1. Update Post-MVP Bugs/Features table
+2. Set Current Feature to next issue
 3. Reset Pipeline Progress checkboxes
-4. Set Next Command to `/research <next-feature>`
+4. Set Next Command to next issue workflow
