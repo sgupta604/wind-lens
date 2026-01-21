@@ -6,7 +6,14 @@ import 'package:flutter/scheduler.dart';
 import '../models/altitude_level.dart';
 import '../models/particle.dart';
 import '../models/wind_data.dart';
+import '../services/performance_manager.dart';
 import '../services/sky_detection/sky_mask.dart';
+
+/// Callback type for FPS and particle count updates.
+///
+/// [fps] is the current average frames per second.
+/// [particleCount] is the current adaptive particle count.
+typedef FpsUpdateCallback = void Function(double fps, int particleCount);
 
 /// A widget that renders animated wind particles over the camera view.
 ///
@@ -21,12 +28,16 @@ import '../services/sky_detection/sky_mask.dart';
 /// - Wind-driven particle movement
 /// - World-fixed direction (adjusts for compass heading)
 /// - Altitude-specific coloring and parallax effects
-/// - FPS logging for performance monitoring
+/// - Adaptive performance with PerformanceManager integration
+/// - FPS callback for debug display
 class ParticleOverlay extends StatefulWidget {
   /// The sky mask for filtering particles to sky region.
   final SkyMask skyMask;
 
   /// Number of particles in the pool (default 2000).
+  ///
+  /// Note: This is the initial/maximum particle count. The actual count
+  /// may be reduced by the PerformanceManager if FPS drops below 45.
   final int particleCount;
 
   /// Wind data containing u/v components, speed, and direction.
@@ -54,11 +65,25 @@ class ParticleOverlay extends StatefulWidget {
   /// altitude particles appear to move less when the phone rotates.
   final double previousHeading;
 
+  /// Callback for FPS and particle count updates.
+  ///
+  /// Called approximately once per second with the current average FPS
+  /// and adaptive particle count. Useful for debug display.
+  final FpsUpdateCallback? onFpsUpdate;
+
+  /// Optional PerformanceManager for testing.
+  ///
+  /// If not provided, a new instance will be created internally.
+  final PerformanceManager? performanceManager;
+
   /// Creates a new ParticleOverlay.
   ///
   /// The [skyMask] is required and determines which screen regions
   /// will display particles. Wind data and compass heading control
   /// particle movement direction. Altitude level affects visual appearance.
+  ///
+  /// Optional [onFpsUpdate] callback provides FPS/particle count updates
+  /// for debug display purposes.
   ParticleOverlay({
     super.key,
     required this.skyMask,
@@ -67,6 +92,8 @@ class ParticleOverlay extends StatefulWidget {
     this.compassHeading = 0.0,
     this.altitudeLevel = AltitudeLevel.surface,
     this.previousHeading = 0.0,
+    this.onFpsUpdate,
+    this.performanceManager,
   }) : windData = windData ?? WindData.zero();
 
   @override
@@ -87,11 +114,14 @@ class _ParticleOverlayState extends State<ParticleOverlay>
   /// Last frame time for delta calculation.
   Duration _lastFrameTime = Duration.zero;
 
-  /// Frame counter for FPS calculation.
-  int _frameCount = 0;
+  /// Performance manager for adaptive particle count.
+  late PerformanceManager _performanceManager;
 
-  /// Last time FPS was logged.
-  DateTime _lastFpsLog = DateTime.now();
+  /// Last time FPS callback was fired.
+  DateTime _lastFpsCallback = DateTime.now();
+
+  /// Current particle count (may differ from widget.particleCount due to performance adaptation).
+  int _currentParticleCount = 2000;
 
   /// Cached screen angle (computed each frame, not allocated).
   double _screenAngle = 0.0;
@@ -101,10 +131,14 @@ class _ParticleOverlayState extends State<ParticleOverlay>
     super.initState();
     _random = Random();
 
+    // Use provided performance manager or create a new one
+    _performanceManager = widget.performanceManager ?? PerformanceManager();
+    _currentParticleCount = widget.particleCount;
+
     // Pre-allocate entire particle pool with staggered ages
     // to avoid all particles appearing at once
     _particles = List.generate(
-      widget.particleCount,
+      _currentParticleCount,
       (_) => Particle(
         x: _random.nextDouble(),
         y: _random.nextDouble(),
@@ -123,14 +157,47 @@ class _ParticleOverlayState extends State<ParticleOverlay>
     super.dispose();
   }
 
+  /// Adjusts the particle pool size when performance manager changes count.
+  void _adjustParticlePool(int newCount) {
+    if (newCount == _currentParticleCount) return;
+
+    if (newCount < _currentParticleCount) {
+      // Reduce: just truncate the list
+      _particles = _particles.sublist(0, newCount);
+    } else {
+      // Increase: add new particles
+      final additionalParticles = List.generate(
+        newCount - _currentParticleCount,
+        (_) => Particle(
+          x: _random.nextDouble(),
+          y: _random.nextDouble(),
+          age: _random.nextDouble(),
+          trailLength: 10,
+        ),
+      );
+      _particles.addAll(additionalParticles);
+    }
+    _currentParticleCount = newCount;
+  }
+
   /// Called every frame by the Ticker.
   ///
   /// Updates particle positions based on wind direction, ages particles,
   /// applies parallax effect based on heading change, and triggers a repaint.
+  /// Also records frame timing with PerformanceManager and calls FPS callback.
   void _onTick(Duration elapsed) {
+    // Record frame with performance manager BEFORE processing
+    _performanceManager.recordFrame(elapsed, _lastFrameTime);
+
     // Calculate delta time since last frame
     final dt = (elapsed - _lastFrameTime).inMicroseconds / 1000000.0;
     _lastFrameTime = elapsed;
+
+    // Check if particle count needs adjustment
+    final targetParticleCount = _performanceManager.particleCount;
+    if (targetParticleCount != _currentParticleCount) {
+      _adjustParticlePool(targetParticleCount);
+    }
 
     // Calculate screen-space angle (wind direction adjusted for compass)
     // windDirection is in radians (meteorological: direction wind comes FROM)
@@ -182,14 +249,15 @@ class _ParticleOverlayState extends State<ParticleOverlay>
       }
     }
 
-    // FPS logging (every second)
-    _frameCount++;
+    // FPS callback (throttled to ~1/second)
     final now = DateTime.now();
-    if (now.difference(_lastFpsLog).inSeconds >= 1) {
-      debugPrint(
-          'Rendering ${widget.particleCount} particles at $_frameCount FPS');
-      _frameCount = 0;
-      _lastFpsLog = now;
+    if (now.difference(_lastFpsCallback).inSeconds >= 1) {
+      // Call FPS callback if provided
+      widget.onFpsUpdate?.call(
+        _performanceManager.currentFps,
+        _currentParticleCount,
+      );
+      _lastFpsCallback = now;
     }
 
     // Trigger repaint

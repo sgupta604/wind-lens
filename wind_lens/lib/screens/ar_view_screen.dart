@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/altitude_level.dart';
 import '../models/compass_data.dart';
@@ -10,6 +11,7 @@ import '../services/fake_wind_service.dart';
 import '../services/sky_detection/pitch_based_sky_mask.dart';
 import '../widgets/altitude_slider.dart';
 import '../widgets/camera_view.dart';
+import '../widgets/info_bar.dart';
 import '../widgets/particle_overlay.dart';
 
 /// The main AR view screen that displays the camera feed with wind visualization.
@@ -19,7 +21,9 @@ import '../widgets/particle_overlay.dart';
 /// - Wind-driven particle animation
 /// - World-fixed particle direction (adjusts for compass heading)
 /// - Altitude selection with visual depth effects (parallax)
-/// - Debug overlay showing heading, pitch, sky fraction, altitude, and wind data
+/// - Toggleable debug panel (3-finger tap to show/hide)
+/// - User-facing info bar with wind speed, direction, and altitude
+/// - Adaptive performance management
 class ARViewScreen extends StatefulWidget {
   const ARViewScreen({super.key});
 
@@ -59,6 +63,17 @@ class _ARViewScreenState extends State<ARViewScreen> {
   ///
   /// Stored before updating _heading to calculate the heading delta.
   double _previousHeading = 0;
+
+  /// Whether the debug panel is visible.
+  ///
+  /// Toggle with 3-finger tap. Hidden by default for clean user experience.
+  bool _showDebugPanel = false;
+
+  /// Current FPS from ParticleOverlay (updated ~1/second).
+  double _currentFps = 60.0;
+
+  /// Current particle count (may be reduced by PerformanceManager).
+  int _currentParticleCount = 2000;
 
   @override
   void initState() {
@@ -105,50 +120,92 @@ class _ARViewScreenState extends State<ARViewScreen> {
     });
   }
 
+  /// Handles FPS updates from the ParticleOverlay.
+  void _onFpsUpdate(double fps, int particleCount) {
+    setState(() {
+      _currentFps = fps;
+      _currentParticleCount = particleCount;
+    });
+  }
+
+  /// Toggles the debug panel visibility with haptic feedback.
+  void _toggleDebugPanel() {
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _showDebugPanel = !_showDebugPanel;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // Layer 1: Camera feed as the base layer
-          const CameraView(),
+      body: GestureDetector(
+        // 3-finger tap detection for debug panel toggle
+        onScaleStart: (details) {
+          if (details.pointerCount >= 3) {
+            _toggleDebugPanel();
+          }
+        },
+        child: Stack(
+          children: [
+            // Layer 1: Camera feed as the base layer
+            const CameraView(),
 
-          // Layer 2: Particle overlay for wind visualization
-          ParticleOverlay(
-            skyMask: _skyMask,
-            windData: _windData,
-            compassHeading: _heading,
-            altitudeLevel: _altitudeLevel,
-            previousHeading: _previousHeading,
-          ),
+            // Layer 2: Particle overlay for wind visualization
+            ParticleOverlay(
+              skyMask: _skyMask,
+              windData: _windData,
+              compassHeading: _heading,
+              altitudeLevel: _altitudeLevel,
+              previousHeading: _previousHeading,
+              onFpsUpdate: _onFpsUpdate,
+            ),
 
-          // Layer 3: Debug overlay positioned at top-left
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 16,
-            left: 16,
-            child: _buildDebugOverlay(),
-          ),
+            // Layer 3: Debug panel (conditionally visible)
+            if (_showDebugPanel)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 16,
+                left: 16,
+                child: _buildDebugPanel(),
+              ),
 
-          // Layer 4: Altitude slider positioned at right edge, vertically centered
-          Positioned(
-            right: 16,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: AltitudeSlider(
-                value: _altitudeLevel,
-                onChanged: _onAltitudeChanged,
+            // Layer 4: Altitude slider positioned at right edge, vertically centered
+            Positioned(
+              right: 16,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: AltitudeSlider(
+                  value: _altitudeLevel,
+                  onChanged: _onAltitudeChanged,
+                ),
               ),
             ),
-          ),
-        ],
+
+            // Layer 5: Info bar at the bottom
+            Positioned(
+              left: 16,
+              right: 80, // Leave space for altitude slider
+              bottom: bottomPadding + 16,
+              child: InfoBar(
+                windSpeed: _windData.speed,
+                windDirection: _windData.directionDegrees,
+                altitude: _altitudeLevel,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  /// Builds the debug overlay widget showing heading, pitch, sky, altitude, and wind values.
-  Widget _buildDebugOverlay() {
+  /// Builds the debug panel widget showing detailed metrics.
+  ///
+  /// Shows: Heading, Pitch, Sky%, Altitude, Wind, FPS, Particles
+  Widget _buildDebugPanel() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -159,56 +216,34 @@ class _ARViewScreenState extends State<ARViewScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            'Heading: ${_heading.toStringAsFixed(1)}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              fontFamily: 'monospace',
-            ),
-          ),
+          _buildDebugText('Heading: ${_heading.toStringAsFixed(1)}'),
           const SizedBox(height: 4),
-          Text(
-            'Pitch: ${_pitch.toStringAsFixed(1)}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              fontFamily: 'monospace',
-            ),
-          ),
+          _buildDebugText('Pitch: ${_pitch.toStringAsFixed(1)}'),
           const SizedBox(height: 4),
-          Text(
-            'Sky: ${(_skyFraction * 100).toStringAsFixed(1)}%',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              fontFamily: 'monospace',
-            ),
-          ),
+          _buildDebugText('Sky: ${(_skyFraction * 100).toStringAsFixed(1)}%'),
           const SizedBox(height: 4),
-          Text(
-            'Altitude: ${_altitudeLevel.displayName}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              fontFamily: 'monospace',
-            ),
-          ),
+          _buildDebugText('Altitude: ${_altitudeLevel.displayName}'),
           const SizedBox(height: 4),
-          Text(
-            'Wind: ${_windData.speed.toStringAsFixed(1)}m/s @ ${_windData.directionDegrees.toStringAsFixed(0)}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              fontFamily: 'monospace',
-            ),
-          ),
+          _buildDebugText(
+              'Wind: ${_windData.speed.toStringAsFixed(1)}m/s @ ${_windData.directionDegrees.toStringAsFixed(0)}'),
+          const SizedBox(height: 4),
+          _buildDebugText('FPS: ${_currentFps.toStringAsFixed(0)}'),
+          const SizedBox(height: 4),
+          _buildDebugText('Particles: $_currentParticleCount'),
         ],
+      ),
+    );
+  }
+
+  /// Builds a single line of debug text.
+  Widget _buildDebugText(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        fontFamily: 'monospace',
       ),
     );
   }
