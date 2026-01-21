@@ -76,6 +76,55 @@ void main() {
     });
   });
 
+  group('ARViewScreen Debug Toggle Button', () {
+    testWidgets('debug toggle button is visible on screen', (tester) async {
+      // Arrange & Act
+      await tester.pumpWidget(const MaterialApp(home: ARViewScreen()));
+
+      // Assert - DBG button should always be visible
+      expect(find.text('DBG'), findsOneWidget);
+    });
+
+    testWidgets('debug toggle button shows debug panel on tap', (tester) async {
+      // Arrange
+      await tester.pumpWidget(const MaterialApp(home: ARViewScreen()));
+
+      // Assert - Debug panel content should NOT be visible initially
+      expect(find.textContaining('Heading:'), findsNothing);
+
+      // Act - Tap the DBG button
+      await tester.tap(find.text('DBG'));
+      // Use pump() instead of pumpAndSettle() because ParticleOverlay animates continuously
+      await tester.pump();
+
+      // Assert - Debug panel content should now be visible
+      expect(find.textContaining('Heading:'), findsOneWidget);
+      expect(find.textContaining('Pitch:'), findsOneWidget);
+      expect(find.textContaining('Sky:'), findsOneWidget);
+    });
+
+    testWidgets('debug toggle button hides debug panel on second tap',
+        (tester) async {
+      // Arrange
+      await tester.pumpWidget(const MaterialApp(home: ARViewScreen()));
+
+      // Act - First tap to show debug panel
+      await tester.tap(find.text('DBG'));
+      // Use pump() instead of pumpAndSettle() because ParticleOverlay animates continuously
+      await tester.pump();
+
+      // Assert - Debug panel should be visible
+      expect(find.textContaining('Heading:'), findsOneWidget);
+
+      // Act - Second tap to hide debug panel
+      await tester.tap(find.text('DBG'));
+      await tester.pump();
+
+      // Assert - Debug panel should be hidden again
+      expect(find.textContaining('Heading:'), findsNothing);
+    });
+  });
+
   group('ARViewScreen InfoBar', () {
     testWidgets('info bar is visible', (tester) async {
       // Arrange & Act

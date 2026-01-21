@@ -164,15 +164,19 @@ class _ARViewScreenState extends State<ARViewScreen> {
               onFpsUpdate: _onFpsUpdate,
             ),
 
-            // Layer 3: Debug panel (conditionally visible)
+            // Layer 3: Debug toggle button (always visible)
+            _buildDebugToggleButton(),
+
+            // Layer 4: Debug panel (conditionally visible)
+            // Positioned below the toggle button (8 + 40 + 8 = 56)
             if (_showDebugPanel)
               Positioned(
-                top: MediaQuery.of(context).padding.top + 16,
-                left: 16,
+                top: MediaQuery.of(context).padding.top + 56,
+                left: 8,
                 child: _buildDebugPanel(),
               ),
 
-            // Layer 4: Altitude slider positioned at right edge, vertically centered
+            // Layer 5: Altitude slider positioned at right edge, vertically centered
             Positioned(
               right: 16,
               top: 0,
@@ -185,7 +189,7 @@ class _ARViewScreenState extends State<ARViewScreen> {
               ),
             ),
 
-            // Layer 5: Info bar at the bottom
+            // Layer 6: Info bar at the bottom
             Positioned(
               left: 16,
               right: 80, // Leave space for altitude slider
@@ -197,6 +201,39 @@ class _ARViewScreenState extends State<ARViewScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Builds the debug toggle button positioned in the top-left corner.
+  ///
+  /// This button provides a reliable way to toggle the debug panel on real
+  /// devices, as the 3-finger gesture may not work reliably due to system
+  /// gesture interference.
+  Widget _buildDebugToggleButton() {
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 8,
+      left: 8,
+      child: GestureDetector(
+        onTap: _toggleDebugPanel,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          alignment: Alignment.center,
+          child: const Text(
+            'DBG',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'monospace',
+            ),
+          ),
         ),
       ),
     );
