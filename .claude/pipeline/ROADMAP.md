@@ -188,7 +188,7 @@ Update this as features complete:
 
 | Feature | Status | Completed Date |
 |---------|--------|----------------|
-| project-setup | NOT STARTED | - |
+| project-setup | COMPLETE | 2026-01-21 |
 | camera-feed | NOT STARTED | - |
 | compass-sensors | NOT STARTED | - |
 | sky-detection | NOT STARTED | - |

@@ -7,19 +7,19 @@
 
 ## Current State
 
-**Current Feature:** project-setup
-**Current Phase:** test-complete
-**Next Command:** `/finalize project-setup`
+**Current Feature:** camera-feed
+**Current Phase:** ready
+**Next Command:** `/research camera-feed`
 
 ---
 
 ## Pipeline Progress (Current Feature)
 
 ```
-[x] /research  - Complete
-[x] /plan      - Complete
-[x] /implement - Complete
-[x] /test      - Complete (ALL TESTS PASSED)
+[ ] /research  - Not started
+[ ] /plan      - Not started
+[ ] /implement - Not started
+[ ] /test      - Not started
 [ ] /finalize  - Not started
 ```
 
@@ -31,8 +31,8 @@ See `ROADMAP.md` for full feature list and requirements.
 
 | # | Feature | Status |
 |---|---------|--------|
-| 0 | project-setup | **<- CURRENT** |
-| 1 | camera-feed | waiting |
+| 0 | project-setup | DONE |
+| 1 | camera-feed | **<- CURRENT** |
 | 2 | compass-sensors | waiting |
 | 3 | sky-detection | waiting |
 | 4 | particle-system | waiting |
@@ -46,7 +46,7 @@ See `ROADMAP.md` for full feature list and requirements.
 
 **If this is a new session:**
 1. Report this status to user
-2. Ask: "Ready to run `/finalize project-setup`?"
+2. Ask: "Ready to run `/research camera-feed`?"
 
 **If user says "continue" or "next":**
 - Run the Next Command shown above
