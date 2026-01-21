@@ -189,7 +189,7 @@ Update this as features complete:
 | Feature | Status | Completed Date |
 |---------|--------|----------------|
 | project-setup | COMPLETE | 2026-01-21 |
-| camera-feed | NOT STARTED | - |
+| camera-feed | COMPLETE | 2026-01-21 |
 | compass-sensors | NOT STARTED | - |
 | sky-detection | NOT STARTED | - |
 | particle-system | NOT STARTED | - |

@@ -7,9 +7,9 @@
 
 ## Current State
 
-**Current Feature:** camera-feed
+**Current Feature:** compass-sensors
 **Current Phase:** ready
-**Next Command:** `/research camera-feed`
+**Next Command:** `/research compass-sensors`
 
 ---
 
@@ -32,8 +32,8 @@ See `ROADMAP.md` for full feature list and requirements.
 | # | Feature | Status |
 |---|---------|--------|
 | 0 | project-setup | DONE |
-| 1 | camera-feed | **<- CURRENT** |
-| 2 | compass-sensors | waiting |
+| 1 | camera-feed | DONE |
+| 2 | compass-sensors | **<- CURRENT (ready)** |
 | 3 | sky-detection | waiting |
 | 4 | particle-system | waiting |
 | 5 | wind-animation | waiting |
@@ -46,7 +46,7 @@ See `ROADMAP.md` for full feature list and requirements.
 
 **If this is a new session:**
 1. Report this status to user
-2. Ask: "Ready to run `/research camera-feed`?"
+2. Ask: "Ready to run `/research compass-sensors`?"
 
 **If user says "continue" or "next":**
 - Run the Next Command shown above
