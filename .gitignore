@@ -1,0 +1,32 @@
+# Wind Lens .gitignore
+
+# Flutter
+.dart_tool/
+.packages
+build/
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Claude Code active work (not committed - working files)
+.claude/active-work/*
+!.claude/active-work/.gitkeep
+
+# Keep these committed
+# .claude/features/ - design documents
+# .claude/pipeline/ - workflow documentation
+# .claude/agents/ - agent definitions
+# .claude/commands/ - command definitions

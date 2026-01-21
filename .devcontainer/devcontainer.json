@@ -1,0 +1,25 @@
+{
+  "name": "Wind Lens Dev",
+  "build": {
+    "dockerfile": "../Dockerfile"
+  },
+  "remoteUser": "developer",
+  "mounts": [
+    "source=${localEnv:HOME}/.claude,target=/home/developer/.claude,type=bind",
+    "source=${localEnv:HOME}/.config/claude-code,target=/home/developer/.config/claude-code,type=bind"
+  ],
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "postStartCommand": "echo '🚀 Wind Lens Dev Container Ready' && echo '   Run: yolo    (launches Claude Code with full permissions)' && echo '   Run: flutter doctor    (check Flutter setup)'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Dart-Code.dart-code",
+        "Dart-Code.flutter"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  }
+}

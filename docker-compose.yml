@@ -1,0 +1,16 @@
+services:
+  windlens-dev:
+    build: .
+    image: windlens-claude-dev
+    container_name: windlens-dev
+    stdin_open: true
+    tty: true
+    volumes:
+      - .:/workspace
+      - ~/.claude:/home/developer/.claude
+      - ~/.config/claude-code:/home/developer/.config/claude-code
+      - pub-cache:/home/developer/.pub-cache
+    working_dir: /workspace
+
+volumes:
+  pub-cache:
