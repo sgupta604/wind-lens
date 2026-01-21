@@ -193,8 +193,8 @@ Update this as features complete:
 | compass-sensors | COMPLETE | 2026-01-21 |
 | sky-detection | COMPLETE | 2026-01-21 |
 | particle-system | COMPLETE | 2026-01-21 |
-| wind-animation | NOT STARTED | - |
-| altitude-depth | NOT STARTED | - |
+| wind-animation | COMPLETE | 2026-01-21 |
+| altitude-depth | COMPLETE | 2026-01-21 |
 | polish | NOT STARTED | - |
 
 ---

@@ -7,9 +7,9 @@
 
 ## Current State
 
-**Current Feature:** wind-animation
-**Current Phase:** ready-to-start
-**Next Command:** `/research wind-animation`
+**Current Feature:** polish
+**Current Phase:** ready-to-research
+**Next Command:** `/research polish`
 
 ---
 
@@ -36,9 +36,9 @@ See `ROADMAP.md` for full feature list and requirements.
 | 2 | compass-sensors | DONE |
 | 3 | sky-detection | DONE |
 | 4 | particle-system | DONE |
-| 5 | wind-animation | **<- CURRENT** |
-| 6 | altitude-depth | waiting |
-| 7 | polish | waiting |
+| 5 | wind-animation | DONE |
+| 6 | altitude-depth | DONE |
+| 7 | polish | **<- CURRENT** |
 
 ---
 
@@ -46,7 +46,7 @@ See `ROADMAP.md` for full feature list and requirements.
 
 **If this is a new session:**
 1. Report this status to user
-2. Ask: "Ready to run `/test particle-system`?"
+2. Ask: "Ready to run `/research polish`?"
 
 **If user says "continue" or "next":**
 - Run the Next Command shown above
