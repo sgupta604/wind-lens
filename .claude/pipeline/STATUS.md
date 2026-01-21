@@ -7,9 +7,9 @@
 
 ## Current State
 
-**Current Feature:** compass-sensors
+**Current Feature:** sky-detection
 **Current Phase:** ready
-**Next Command:** `/research compass-sensors`
+**Next Command:** `/research sky-detection`
 
 ---
 
@@ -33,8 +33,8 @@ See `ROADMAP.md` for full feature list and requirements.
 |---|---------|--------|
 | 0 | project-setup | DONE |
 | 1 | camera-feed | DONE |
-| 2 | compass-sensors | **<- CURRENT (ready)** |
-| 3 | sky-detection | waiting |
+| 2 | compass-sensors | DONE |
+| 3 | sky-detection | **<- CURRENT (ready to start)** |
 | 4 | particle-system | waiting |
 | 5 | wind-animation | waiting |
 | 6 | altitude-depth | waiting |
@@ -46,7 +46,7 @@ See `ROADMAP.md` for full feature list and requirements.
 
 **If this is a new session:**
 1. Report this status to user
-2. Ask: "Ready to run `/research compass-sensors`?"
+2. Ask: "Ready to run `/research sky-detection`?"
 
 **If user says "continue" or "next":**
 - Run the Next Command shown above
@@ -65,16 +65,16 @@ After each pipeline step, update:
 2. **Next Command** to the next step
 3. **Pipeline Progress** checkboxes
 
-Example after `/implement project-setup` completes:
+Example after `/test compass-sensors` passes:
 ```
-**Current Phase:** implement-complete
-**Next Command:** `/test project-setup`
+**Current Phase:** test-complete
+**Next Command:** `/finalize compass-sensors`
 
 [x] /research  - Complete
 [x] /plan      - Complete
 [x] /implement - Complete
-[ ] /test      - Not started
-...
+[x] /test      - Complete
+[ ] /finalize  - Not started
 ```
 
 When feature completes (`/finalize` done):
