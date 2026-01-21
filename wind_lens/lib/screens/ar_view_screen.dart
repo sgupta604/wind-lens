@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../models/altitude_level.dart';
 import '../models/compass_data.dart';
 import '../models/wind_data.dart';
 import '../services/compass_service.dart';
 import '../services/fake_wind_service.dart';
 import '../services/sky_detection/pitch_based_sky_mask.dart';
+import '../widgets/altitude_slider.dart';
 import '../widgets/camera_view.dart';
 import '../widgets/particle_overlay.dart';
 
@@ -16,7 +18,8 @@ import '../widgets/particle_overlay.dart';
 /// designed for augmented reality wind visualization. It includes:
 /// - Wind-driven particle animation
 /// - World-fixed particle direction (adjusts for compass heading)
-/// - Debug overlay showing heading, pitch, sky fraction, and wind data
+/// - Altitude selection with visual depth effects (parallax)
+/// - Debug overlay showing heading, pitch, sky fraction, altitude, and wind data
 class ARViewScreen extends StatefulWidget {
   const ARViewScreen({super.key});
 
@@ -49,6 +52,14 @@ class _ARViewScreenState extends State<ARViewScreen> {
   /// Current wind data.
   WindData _windData = WindData.zero();
 
+  /// Current altitude level for particle visualization.
+  AltitudeLevel _altitudeLevel = AltitudeLevel.surface;
+
+  /// Previous compass heading for parallax calculation.
+  ///
+  /// Stored before updating _heading to calculate the heading delta.
+  double _previousHeading = 0;
+
   @override
   void initState() {
     super.initState();
@@ -68,16 +79,29 @@ class _ARViewScreenState extends State<ARViewScreen> {
 
   /// Handles compass data updates from the service.
   ///
-  /// Updates heading, pitch, sky mask, and fetches new wind data.
+  /// Updates heading, pitch, sky mask, and fetches altitude-specific wind data.
+  /// Stores previous heading before update for parallax calculation.
   void _onCompassUpdate(CompassData data) {
     setState(() {
+      // Store previous heading BEFORE updating for parallax calculation
+      _previousHeading = _heading;
+
       _heading = data.heading;
       _pitch = data.pitch;
       _skyMask.updatePitch(_pitch);
       _skyFraction = _skyMask.skyFraction;
 
-      // Update wind data on each compass update
-      _windData = _windService.getWind();
+      // Update wind data for current altitude level
+      _windData = _windService.getWindForAltitude(_altitudeLevel);
+    });
+  }
+
+  /// Handles altitude level changes from the slider.
+  void _onAltitudeChanged(AltitudeLevel level) {
+    setState(() {
+      _altitudeLevel = level;
+      // Immediately update wind data for the new altitude
+      _windData = _windService.getWindForAltitude(_altitudeLevel);
     });
   }
 
@@ -95,6 +119,8 @@ class _ARViewScreenState extends State<ARViewScreen> {
             skyMask: _skyMask,
             windData: _windData,
             compassHeading: _heading,
+            altitudeLevel: _altitudeLevel,
+            previousHeading: _previousHeading,
           ),
 
           // Layer 3: Debug overlay positioned at top-left
@@ -103,12 +129,25 @@ class _ARViewScreenState extends State<ARViewScreen> {
             left: 16,
             child: _buildDebugOverlay(),
           ),
+
+          // Layer 4: Altitude slider positioned at right edge, vertically centered
+          Positioned(
+            right: 16,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: AltitudeSlider(
+                value: _altitudeLevel,
+                onChanged: _onAltitudeChanged,
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  /// Builds the debug overlay widget showing heading, pitch, sky, and wind values.
+  /// Builds the debug overlay widget showing heading, pitch, sky, altitude, and wind values.
   Widget _buildDebugOverlay() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -142,6 +181,16 @@ class _ARViewScreenState extends State<ARViewScreen> {
           const SizedBox(height: 4),
           Text(
             'Sky: ${(_skyFraction * 100).toStringAsFixed(1)}%',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              fontFamily: 'monospace',
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Altitude: ${_altitudeLevel.displayName}',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 14,

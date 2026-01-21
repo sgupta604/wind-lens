@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import '../models/altitude_level.dart';
 import '../models/wind_data.dart';
 
 /// A service that provides simulated wind data for development and testing.
@@ -46,6 +47,52 @@ class FakeWindService {
     // Debug logging for verification
     debugPrint(
         'Wind: ${wind.speed.toStringAsFixed(1)}m/s @ ${wind.directionDegrees.toStringAsFixed(0)}deg');
+
+    return wind;
+  }
+
+  /// Gets simulated wind data for a specific altitude level.
+  ///
+  /// Returns [WindData] with wind speed multiplied by the altitude's
+  /// speed multiplier, simulating the stronger winds at higher altitudes.
+  ///
+  /// - Surface: ~3-6 m/s (base speed)
+  /// - Mid-level: ~4.5-9 m/s (1.5x multiplier)
+  /// - Jet Stream: ~9-18 m/s (3.0x multiplier)
+  ///
+  /// The altitude value in the returned WindData is set to the altitude
+  /// level's meters AGL value.
+  ///
+  /// Example:
+  /// ```dart
+  /// final service = FakeWindService();
+  /// final wind = service.getWindForAltitude(AltitudeLevel.jetStream);
+  /// print('Jet stream wind: ${wind.speed.toStringAsFixed(1)} m/s at ${wind.altitude}m');
+  /// ```
+  WindData getWindForAltitude(AltitudeLevel level) {
+    final time = DateTime.now().millisecondsSinceEpoch / 1000;
+
+    // Calculate base u-component: 3.0 + sin(time * 0.1) * 2.0 = range [1, 5] m/s
+    final baseU = 3.0 + sin(time * 0.1) * 2.0;
+
+    // Calculate base v-component: 2.0 + cos(time * 0.15) * 1.5 = range [0.5, 3.5] m/s
+    final baseV = 2.0 + cos(time * 0.15) * 1.5;
+
+    // Apply altitude speed multiplier
+    final multiplier = level.particleSpeedMultiplier;
+    final u = baseU * multiplier;
+    final v = baseV * multiplier;
+
+    final wind = WindData(
+      uComponent: u,
+      vComponent: v,
+      altitude: level.metersAGL,
+      timestamp: DateTime.now(),
+    );
+
+    // Debug logging for verification
+    debugPrint(
+        'Wind (${level.displayName}): ${wind.speed.toStringAsFixed(1)}m/s @ ${wind.directionDegrees.toStringAsFixed(0)}deg at ${wind.altitude}m');
 
     return wind;
   }

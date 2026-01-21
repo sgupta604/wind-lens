@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wind_lens/screens/ar_view_screen.dart';
+import 'package:wind_lens/widgets/altitude_slider.dart';
 import 'package:wind_lens/widgets/camera_view.dart';
 
 void main() {
@@ -47,6 +48,22 @@ void main() {
       expect(find.textContaining('Heading:'), findsOneWidget);
       expect(find.textContaining('Pitch:'), findsOneWidget);
       expect(find.textContaining('Sky:'), findsOneWidget);
+    });
+
+    testWidgets('contains AltitudeSlider widget', (tester) async {
+      // Arrange & Act
+      await tester.pumpWidget(const MaterialApp(home: ARViewScreen()));
+
+      // Assert
+      expect(find.byType(AltitudeSlider), findsOneWidget);
+    });
+
+    testWidgets('displays altitude in debug overlay', (tester) async {
+      // Arrange & Act
+      await tester.pumpWidget(const MaterialApp(home: ARViewScreen()));
+
+      // Assert - Altitude text should be present in debug overlay
+      expect(find.textContaining('Altitude:'), findsOneWidget);
     });
   });
 }

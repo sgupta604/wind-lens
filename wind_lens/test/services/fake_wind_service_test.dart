@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wind_lens/models/altitude_level.dart';
 import 'package:wind_lens/models/wind_data.dart';
 import 'package:wind_lens/services/fake_wind_service.dart';
 
@@ -78,6 +79,57 @@ void main() {
           true,
         );
       });
+    });
+  });
+
+  group('getWindForAltitude()', () {
+    late FakeWindService service;
+
+    setUp(() {
+      service = FakeWindService();
+    });
+
+    test('returns WindData for surface altitude', () {
+      final wind = service.getWindForAltitude(AltitudeLevel.surface);
+
+      expect(wind, isA<WindData>());
+      expect(wind.altitude, 10.0);
+    });
+
+    test('returns WindData for midLevel altitude', () {
+      final wind = service.getWindForAltitude(AltitudeLevel.midLevel);
+
+      expect(wind, isA<WindData>());
+      expect(wind.altitude, 1500.0);
+    });
+
+    test('returns WindData for jetStream altitude', () {
+      final wind = service.getWindForAltitude(AltitudeLevel.jetStream);
+
+      expect(wind, isA<WindData>());
+      expect(wind.altitude, 10500.0);
+    });
+
+    test('wind speed increases with altitude level', () {
+      final surfaceWind = service.getWindForAltitude(AltitudeLevel.surface);
+      final midWind = service.getWindForAltitude(AltitudeLevel.midLevel);
+      final jetWind = service.getWindForAltitude(AltitudeLevel.jetStream);
+
+      // Mid-level wind should be faster than surface (1.5x multiplier)
+      expect(midWind.speed, greaterThan(surfaceWind.speed));
+
+      // Jet stream should be faster than mid-level (3.0x vs 1.5x)
+      expect(jetWind.speed, greaterThan(midWind.speed));
+    });
+
+    test('returns correct altitude value in WindData', () {
+      final surfaceWind = service.getWindForAltitude(AltitudeLevel.surface);
+      final midWind = service.getWindForAltitude(AltitudeLevel.midLevel);
+      final jetWind = service.getWindForAltitude(AltitudeLevel.jetStream);
+
+      expect(surfaceWind.altitude, AltitudeLevel.surface.metersAGL);
+      expect(midWind.altitude, AltitudeLevel.midLevel.metersAGL);
+      expect(jetWind.altitude, AltitudeLevel.jetStream.metersAGL);
     });
   });
 }

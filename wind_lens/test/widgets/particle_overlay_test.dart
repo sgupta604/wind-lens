@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wind_lens/models/altitude_level.dart';
 import 'package:wind_lens/models/wind_data.dart';
 import 'package:wind_lens/services/sky_detection/sky_mask.dart';
 import 'package:wind_lens/widgets/particle_overlay.dart';
@@ -437,6 +438,146 @@ void main() {
 
       // Animation should run without error
       await tester.pump(const Duration(milliseconds: 16));
+      expect(find.byType(ParticleOverlay), findsOneWidget);
+    });
+  });
+
+  group('ParticleOverlay Altitude Integration', () {
+    late MockSkyMask mockSkyMask;
+
+    setUp(() {
+      mockSkyMask = MockSkyMask();
+    });
+
+    testWidgets('accepts altitudeLevel parameter', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ParticleOverlay(
+              skyMask: mockSkyMask,
+              altitudeLevel: AltitudeLevel.midLevel,
+            ),
+          ),
+        ),
+      );
+
+      final overlay = tester.widget<ParticleOverlay>(
+        find.byType(ParticleOverlay),
+      );
+      expect(overlay.altitudeLevel, AltitudeLevel.midLevel);
+    });
+
+    testWidgets('accepts previousHeading parameter', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ParticleOverlay(
+              skyMask: mockSkyMask,
+              previousHeading: 45.0,
+            ),
+          ),
+        ),
+      );
+
+      final overlay = tester.widget<ParticleOverlay>(
+        find.byType(ParticleOverlay),
+      );
+      expect(overlay.previousHeading, 45.0);
+    });
+
+    testWidgets('defaults to surface altitude when not specified',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ParticleOverlay(
+              skyMask: mockSkyMask,
+            ),
+          ),
+        ),
+      );
+
+      final overlay = tester.widget<ParticleOverlay>(
+        find.byType(ParticleOverlay),
+      );
+      expect(overlay.altitudeLevel, AltitudeLevel.surface);
+    });
+
+    testWidgets('defaults to 0.0 previousHeading when not specified',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ParticleOverlay(
+              skyMask: mockSkyMask,
+            ),
+          ),
+        ),
+      );
+
+      final overlay = tester.widget<ParticleOverlay>(
+        find.byType(ParticleOverlay),
+      );
+      expect(overlay.previousHeading, 0.0);
+    });
+
+    testWidgets('renders with different altitude levels', (tester) async {
+      // Test all three altitude levels render without error
+      for (final level in AltitudeLevel.values) {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: ParticleOverlay(
+                skyMask: mockSkyMask,
+                altitudeLevel: level,
+                particleCount: 100,
+              ),
+            ),
+          ),
+        );
+
+        await tester.pump(const Duration(milliseconds: 16));
+
+        expect(find.byType(ParticleOverlay), findsOneWidget);
+      }
+    });
+
+    testWidgets('handles compass heading changes for parallax', (tester) async {
+      // First render with heading 0
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ParticleOverlay(
+              skyMask: mockSkyMask,
+              compassHeading: 0.0,
+              previousHeading: 0.0,
+              altitudeLevel: AltitudeLevel.surface,
+              particleCount: 100,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 16));
+
+      // Change heading to simulate rotation (previous = 0, current = 90)
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ParticleOverlay(
+              skyMask: mockSkyMask,
+              compassHeading: 90.0,
+              previousHeading: 0.0,
+              altitudeLevel: AltitudeLevel.surface,
+              particleCount: 100,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 16));
+
+      // Should render without error
       expect(find.byType(ParticleOverlay), findsOneWidget);
     });
   });

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
+import '../models/altitude_level.dart';
 import '../models/particle.dart';
 import '../models/wind_data.dart';
 import '../services/sky_detection/sky_mask.dart';
@@ -19,6 +20,7 @@ import '../services/sky_detection/sky_mask.dart';
 /// - Sky mask integration for realistic AR effect
 /// - Wind-driven particle movement
 /// - World-fixed direction (adjusts for compass heading)
+/// - Altitude-specific coloring and parallax effects
 /// - FPS logging for performance monitoring
 class ParticleOverlay extends StatefulWidget {
   /// The sky mask for filtering particles to sky region.
@@ -39,17 +41,32 @@ class ParticleOverlay extends StatefulWidget {
   /// their real-world direction as the phone rotates.
   final double compassHeading;
 
+  /// The altitude level for particle visualization.
+  ///
+  /// Determines particle color, trail scale, and parallax factor.
+  /// Defaults to [AltitudeLevel.surface].
+  final AltitudeLevel altitudeLevel;
+
+  /// Previous compass heading for parallax calculation.
+  ///
+  /// The difference between current heading and previous heading is used
+  /// to calculate parallax offset, creating a depth illusion where higher
+  /// altitude particles appear to move less when the phone rotates.
+  final double previousHeading;
+
   /// Creates a new ParticleOverlay.
   ///
   /// The [skyMask] is required and determines which screen regions
   /// will display particles. Wind data and compass heading control
-  /// particle movement direction.
+  /// particle movement direction. Altitude level affects visual appearance.
   ParticleOverlay({
     super.key,
     required this.skyMask,
     this.particleCount = 2000,
     WindData? windData,
     this.compassHeading = 0.0,
+    this.altitudeLevel = AltitudeLevel.surface,
+    this.previousHeading = 0.0,
   }) : windData = windData ?? WindData.zero();
 
   @override
@@ -109,7 +126,7 @@ class _ParticleOverlayState extends State<ParticleOverlay>
   /// Called every frame by the Ticker.
   ///
   /// Updates particle positions based on wind direction, ages particles,
-  /// resets expired particles, and triggers a repaint.
+  /// applies parallax effect based on heading change, and triggers a repaint.
   void _onTick(Duration elapsed) {
     // Calculate delta time since last frame
     final dt = (elapsed - _lastFrameTime).inMicroseconds / 1000000.0;
@@ -126,14 +143,29 @@ class _ParticleOverlayState extends State<ParticleOverlay>
     // Multiplier of 0.002 from spec gives reasonable visual speed
     final speedFactor = widget.windData.speed * 0.002;
 
+    // Calculate heading delta for parallax effect
+    // Normalize to -180 to 180 range to handle wraparound (359 -> 1 degrees)
+    double headingDelta = widget.compassHeading - widget.previousHeading;
+    if (headingDelta > 180) headingDelta -= 360;
+    if (headingDelta < -180) headingDelta += 360;
+
+    // Get altitude-specific properties
+    final parallaxFactor = widget.altitudeLevel.parallaxFactor;
+    final trailScale = widget.altitudeLevel.trailScale;
+
     // Update all particles
     for (final p in _particles) {
+      // Apply parallax offset based on heading change
+      // Higher altitude (lower parallax factor) = less movement when phone rotates
+      p.x -= (headingDelta / 360.0) * parallaxFactor;
+
       // Move particle based on wind direction
       p.x += cos(_screenAngle) * speedFactor * dt;
       p.y -= sin(_screenAngle) * speedFactor * dt; // Y inverted in screen coords
 
-      // Update trail length based on wind speed
-      p.trailLength = widget.windData.speed * 0.5;
+      // Update trail length based on wind speed and altitude scale
+      // Shorter trails at higher altitudes create depth illusion
+      p.trailLength = widget.windData.speed * 0.5 * trailScale;
 
       // Age the particle (~3 second lifespan with 0.3 multiplier)
       p.age += dt * 0.3;
@@ -171,7 +203,7 @@ class _ParticleOverlayState extends State<ParticleOverlay>
         particles: _particles,
         skyMask: widget.skyMask,
         windAngle: _screenAngle,
-        color: Colors.white,
+        color: widget.altitudeLevel.particleColor,
       ),
       size: Size.infinite,
     );
