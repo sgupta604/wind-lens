@@ -191,7 +191,7 @@ Update this as features complete:
 | project-setup | COMPLETE | 2026-01-21 |
 | camera-feed | COMPLETE | 2026-01-21 |
 | compass-sensors | COMPLETE | 2026-01-21 |
-| sky-detection | NOT STARTED | - |
+| sky-detection | COMPLETE | 2026-01-21 |
 | particle-system | NOT STARTED | - |
 | wind-animation | NOT STARTED | - |
 | altitude-depth | NOT STARTED | - |

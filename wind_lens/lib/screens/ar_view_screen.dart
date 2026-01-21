@@ -6,6 +6,7 @@ import '../models/compass_data.dart';
 import '../services/compass_service.dart';
 import '../services/sky_detection/pitch_based_sky_mask.dart';
 import '../widgets/camera_view.dart';
+import '../widgets/particle_overlay.dart';
 
 /// The main AR view screen that displays the camera feed with compass overlay.
 ///
@@ -70,10 +71,16 @@ class _ARViewScreenState extends State<ARViewScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Camera feed as the base layer
+          // Layer 1: Camera feed as the base layer
           const CameraView(),
 
-          // Debug overlay positioned at top-left
+          // Layer 2: Particle overlay for wind visualization
+          ParticleOverlay(
+            skyMask: _skyMask,
+            windAngle: 0.0, // Fixed for now, wind-animation feature adds real angle
+          ),
+
+          // Layer 3: Debug overlay positioned at top-left
           Positioned(
             top: MediaQuery.of(context).padding.top + 16,
             left: 16,

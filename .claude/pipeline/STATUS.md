@@ -7,19 +7,19 @@
 
 ## Current State
 
-**Current Feature:** sky-detection
-**Current Phase:** ready
-**Next Command:** `/research sky-detection`
+**Current Feature:** particle-system
+**Current Phase:** test-complete
+**Next Command:** `/finalize particle-system`
 
 ---
 
 ## Pipeline Progress (Current Feature)
 
 ```
-[ ] /research  - Not started
-[ ] /plan      - Not started
-[ ] /implement - Not started
-[ ] /test      - Not started
+[x] /research  - Complete
+[x] /plan      - Complete
+[x] /implement - Complete
+[x] /test      - Complete
 [ ] /finalize  - Not started
 ```
 
@@ -34,8 +34,8 @@ See `ROADMAP.md` for full feature list and requirements.
 | 0 | project-setup | DONE |
 | 1 | camera-feed | DONE |
 | 2 | compass-sensors | DONE |
-| 3 | sky-detection | **<- CURRENT (ready to start)** |
-| 4 | particle-system | waiting |
+| 3 | sky-detection | DONE |
+| 4 | particle-system | **<- CURRENT (test passed)** |
 | 5 | wind-animation | waiting |
 | 6 | altitude-depth | waiting |
 | 7 | polish | waiting |
@@ -46,7 +46,7 @@ See `ROADMAP.md` for full feature list and requirements.
 
 **If this is a new session:**
 1. Report this status to user
-2. Ask: "Ready to run `/research sky-detection`?"
+2. Ask: "Ready to run `/test particle-system`?"
 
 **If user says "continue" or "next":**
 - Run the Next Command shown above
