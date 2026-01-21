@@ -7,9 +7,9 @@
 
 ## Current State
 
-**Current Feature:** sky-detection-v2
-**Current Phase:** finalize-complete
-**Next Command:** See POST_MVP_ISSUES.md for next issue (BUG-003 or BUG-004)
+**Current Feature:** None (BUG-003 complete, ready for next issue)
+**Current Phase:** idle
+**Next Command:** Start next issue from POST_MVP_ISSUES.md or user request
 
 **Issues Tracker:** `.claude/pipeline/POST_MVP_ISSUES.md`
 
@@ -18,11 +18,11 @@
 ## Pipeline Progress (Current Feature)
 
 ```
-[x] /research  - Used diagnosis from .claude/active-work/sky-detection/diagnosis.md
-[x] /plan      - Complete (2026-01-21T04:30)
-[x] /implement - Complete (2026-01-21)
-[x] /test      - Complete (236 tests passing)
-[x] /finalize  - Complete (2026-01-21)
+[x] /diagnose  - Complete (2026-01-21) - Root cause identified
+[x] /plan      - Complete (2026-01-21) - Implementation plan and tasks created
+[x] /implement - Complete (2026-01-21) - Sky-aware spawning implemented with TDD
+[x] /test      - Complete (2026-01-21) - All 242 tests passing
+[x] /finalize  - Complete (2026-01-21) - Committed locally
 ```
 
 ---
@@ -50,27 +50,33 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 
 | Issue | Description | Status |
 |-------|-------------|--------|
+| BUG-001 | Debug Panel Missing | DONE (2026-01-21) |
 | BUG-002 | Sky Detection Level 2a Auto-Calibrating | DONE (2026-01-21) |
-| BUG-003 | Particles not masked to sky pixels | Ready to start (requires BUG-002) |
+| BUG-003 | Particles not masked to sky pixels | DONE (2026-01-21) |
 | BUG-004 | Wind animation not world-fixed | Ready to start |
 
 ---
 
 ## What To Do
 
-**BUG-002 sky-detection-v2 COMPLETE!**
+**BUG-003 particle-masking COMPLETE!**
 
-Level 2a Auto-Calibrating Sky Detection has been successfully implemented and finalized. All 236 tests passing, flutter analyze clean.
+All pipeline stages complete for BUG-003:
+- `/diagnose` - Root cause identified (particles spawning everywhere)
+- `/plan` - Implementation plan with 14 tasks created
+- `/implement` - TDD implementation complete (42 lines production, 302 lines tests)
+- `/test` - All 242 tests passing, flutter analyze clean
+- `/finalize` - Local commit created, SUMMARY.md written
 
-**Next Priority Issues:**
+**Results:**
+- Particles now spawn only in sky regions (true AR experience)
+- 6 new tests added for sky-aware spawning
+- Performance optimized for high/low sky fractions
+- Graceful fallback prevents infinite loops
 
-1. **BUG-003: Particle Masking** (Critical) - Now unblocked with BUG-002 complete
-   - Use AutoCalibratingSkyDetector for per-pixel particle masking
-   - Run `/diagnose particle-masking` to start
+**Next issue:** BUG-004 (Wind animation not world-fixed) or user request
 
-2. **BUG-004: World-Fixed Animation** (High) - Can be done in parallel
-   - Fix compass integration for world-anchored particles
-   - Run `/diagnose wind-anchoring` to start
+**Summary:** `.claude/features/particle-masking/SUMMARY.md`
 
 ---
 
@@ -82,14 +88,14 @@ After each pipeline step, update:
 2. **Next Command** to the next step
 3. **Pipeline Progress** checkboxes
 
-Example after `/implement sky-detection-v2` completes:
+Example after `/plan particle-masking` completes:
 ```
-**Current Phase:** implement-complete
-**Next Command:** `/test sky-detection-v2`
+**Current Phase:** plan-complete
+**Next Command:** `/implement particle-masking`
 
-[x] /research  - Complete
+[x] /diagnose  - Complete
 [x] /plan      - Complete
-[x] /implement - Complete
+[ ] /implement - Not started
 [ ] /test      - Not started
 [ ] /finalize  - Not started
 ```

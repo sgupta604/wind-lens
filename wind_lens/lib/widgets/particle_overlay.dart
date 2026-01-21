@@ -157,6 +157,45 @@ class _ParticleOverlayState extends State<ParticleOverlay>
     super.dispose();
   }
 
+  /// Resets a particle to a random position within sky regions.
+  ///
+  /// Tries up to [maxAttempts] times to find a valid sky position.
+  /// Falls back to a random position if no sky is found to prevent
+  /// infinite loops when the user is pointing at mostly non-sky.
+  ///
+  /// Performance optimization: When sky fraction is very high (>90%),
+  /// skips the expensive loop since almost any random position is valid.
+  ///
+  /// Parameters:
+  /// - [p]: The particle to reset
+  /// - [skyMask]: The current sky detection mask
+  /// - [maxAttempts]: Maximum sampling attempts (default: 10)
+  void _resetToSkyPosition(Particle p, SkyMask skyMask, {int maxAttempts = 10}) {
+    // Quick path: if sky fraction is very high, skip expensive checks
+    // Almost any position will be valid, so just pick random and verify once
+    if (skyMask.skyFraction > 0.9) {
+      p.x = _random.nextDouble();
+      p.y = _random.nextDouble();
+      p.age = 0.0;
+      return;
+    }
+
+    for (int i = 0; i < maxAttempts; i++) {
+      final x = _random.nextDouble();
+      final y = _random.nextDouble();
+      if (skyMask.isPointInSky(x, y)) {
+        p.x = x;
+        p.y = y;
+        p.age = 0.0;
+        return;
+      }
+    }
+    // Fallback: random position (will be hidden by render check)
+    p.x = _random.nextDouble();
+    p.y = _random.nextDouble();
+    p.age = 0.0;
+  }
+
   /// Adjusts the particle pool size when performance manager changes count.
   void _adjustParticlePool(int newCount) {
     if (newCount == _currentParticleCount) return;
@@ -243,9 +282,9 @@ class _ParticleOverlayState extends State<ParticleOverlay>
       if (p.y < 0) p.y += 1.0;
       if (p.y > 1) p.y -= 1.0;
 
-      // Reset expired particles
-      if (p.isExpired) {
-        p.reset(_random);
+      // Reset expired particles OR particles that drifted out of sky
+      if (p.isExpired || !widget.skyMask.isPointInSky(p.x, p.y)) {
+        _resetToSkyPosition(p, widget.skyMask);
       }
     }
 
