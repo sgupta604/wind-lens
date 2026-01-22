@@ -8,12 +8,12 @@ import '../models/altitude_level.dart';
 /// A vertical slider for selecting altitude levels.
 ///
 /// Displays three segments (JET, MID, SFC) from top to bottom, allowing
-/// the user to tap to select a different altitude level. Uses glassmorphism
-/// styling (frosted glass effect) for a modern AR appearance.
+/// the user to tap or drag to select a different altitude level. Uses
+/// glassmorphism styling (frosted glass effect) for a modern AR appearance.
 ///
 /// Features:
 /// - Glassmorphism background with blur effect
-/// - Three tappable segments with clear labels
+/// - Three segments with clear labels (tap or drag to select)
 /// - Visual highlighting of selected segment
 /// - Haptic feedback on selection change
 /// - Minimum 48pt touch targets for accessibility
@@ -61,40 +61,59 @@ class AltitudeSlider extends StatelessWidget {
     };
   }
 
+  /// Determines which altitude level corresponds to a Y position.
+  AltitudeLevel _levelFromY(double localY) {
+    final segmentIndex = (localY / _segmentHeight).floor().clamp(0, 2);
+    return switch (segmentIndex) {
+      0 => AltitudeLevel.jetStream,
+      1 => AltitudeLevel.midLevel,
+      _ => AltitudeLevel.surface,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(_borderRadius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          width: _width,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(_borderRadius),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.3),
-              width: 1,
+    return GestureDetector(
+      onVerticalDragUpdate: (details) {
+        final newLevel = _levelFromY(details.localPosition.dy);
+        if (newLevel != value) {
+          HapticFeedback.lightImpact();
+          onChanged(newLevel);
+        }
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(_borderRadius),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            width: _width,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(_borderRadius),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.3),
+                width: 1,
+              ),
             ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // JET (top) - Jet Stream
-              _buildSegment(
-                level: AltitudeLevel.jetStream,
-                isFirst: true,
-              ),
-              // MID (middle) - Mid-level / Cloud level
-              _buildSegment(
-                level: AltitudeLevel.midLevel,
-              ),
-              // SFC (bottom) - Surface
-              _buildSegment(
-                level: AltitudeLevel.surface,
-                isLast: true,
-              ),
-            ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // JET (top) - Jet Stream
+                _buildSegment(
+                  level: AltitudeLevel.jetStream,
+                  isFirst: true,
+                ),
+                // MID (middle) - Mid-level / Cloud level
+                _buildSegment(
+                  level: AltitudeLevel.midLevel,
+                ),
+                // SFC (bottom) - Surface
+                _buildSegment(
+                  level: AltitudeLevel.surface,
+                  isLast: true,
+                ),
+              ],
+            ),
           ),
         ),
       ),

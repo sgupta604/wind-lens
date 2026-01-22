@@ -14,7 +14,7 @@
 | BUG-002.5 | Sky detection not working on real device | **Critical** | **DONE** | Section 3 |
 | BUG-003 | Particles not masked to sky pixels | **Critical** | **DONE** | Section 4 |
 | BUG-004 | Wind animation not world-fixed | High | **DONE** | Section 5 |
-| BUG-005 | Altitude slider UX (buttons vs slider) | Low | Open | Section 7 |
+| BUG-005 | Altitude slider UX (buttons vs slider) | Low | **DONE** | Section 7 |
 
 ---
 
@@ -224,22 +224,40 @@
 ### BUG-005: Altitude Slider UX
 
 **Severity:** Low
-**Status:** Open
+**Status:** DONE (2026-01-22)
 **Spec Reference:** MVP Spec Section 7 - Altitude Slider
 
 **Expected Behavior:**
 - Vertical slider with glassmorphism styling
 - Smooth dragging between altitude levels
 - Visual depth indication
+- Spec: "Interaction: Tap segment OR drag"
 
-**Actual Behavior:**
+**Actual Behavior (BEFORE FIX):**
+- Only tap interaction implemented
 - Works as discrete buttons between levels
-- Functional but UX differs from spec
+- Cannot drag to select levels
 
 **User Report:**
 > "the slider is more of a button between the different levels"
 
-**Pipeline:** `/diagnose altitude-slider` → `/plan` → `/implement`
+**Root Cause (confirmed):**
+- Drag gesture handler not implemented
+- Only tap handlers on individual segments
+
+**Fix Implemented:**
+- Added vertical drag gesture support via outer GestureDetector
+- Users can now tap OR drag to select altitude levels
+- Haptic feedback on level changes during drag
+- Helper method `_levelFromY()` converts Y position to altitude level
+- Preserved tap interaction (no regression)
+- All 254 tests passing, flutter analyze clean
+
+**Components Modified:**
+- `lib/widgets/altitude_slider.dart` (+18 lines)
+- `test/widgets/altitude_slider_test.dart` (+44 lines, 1 new test)
+
+**Pipeline:** `/diagnose altitude-slider` → `/plan` → `/implement` → `/test` → `/finalize` ✓
 
 ---
 

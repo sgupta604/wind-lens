@@ -222,5 +222,48 @@ void main() {
       // Check for ClipRRect which provides rounded corners
       expect(find.byType(ClipRRect), findsOneWidget);
     });
+
+    testWidgets('calls onChanged when dragging between segments',
+        (tester) async {
+      final List<AltitudeLevel> changedLevels = [];
+      AltitudeLevel currentValue = AltitudeLevel.jetStream;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: StatefulBuilder(
+                builder: (context, setState) {
+                  return AltitudeSlider(
+                    value: currentValue,
+                    onChanged: (level) {
+                      changedLevels.add(level);
+                      setState(() => currentValue = level);
+                    },
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Get slider position
+      final sliderFinder = find.byType(AltitudeSlider);
+      final sliderTopLeft = tester.getTopLeft(sliderFinder);
+
+      // Simulate drag from top (JET) to bottom (SFC)
+      // Each segment is 56px high, so drag 120px to cross both boundaries
+      await tester.timedDragFrom(
+        sliderTopLeft + const Offset(30, 10), // Start at top of JET segment
+        const Offset(0, 120), // Drag down through MID to SFC
+        const Duration(milliseconds: 300),
+      );
+      await tester.pump();
+
+      // Should have triggered callbacks for MID and SFC (crossed 2 boundaries)
+      expect(changedLevels, contains(AltitudeLevel.midLevel));
+      expect(changedLevels, contains(AltitudeLevel.surface));
+    });
   });
 }
