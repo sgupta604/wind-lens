@@ -13,7 +13,7 @@
 | BUG-002 | Sky detection pitch-only (no color masking) | **Critical** | **DONE** | Section 3 |
 | BUG-002.5 | Sky detection not working on real device | **Critical** | **DONE** | Section 3 |
 | BUG-003 | Particles not masked to sky pixels | **Critical** | **DONE** | Section 4 |
-| BUG-004 | Wind animation not world-fixed | High | Open | Section 5 |
+| BUG-004 | Wind animation not world-fixed | High | **DONE** | Section 5 |
 | BUG-005 | Altitude slider UX (buttons vs slider) | Low | Open | Section 7 |
 
 ---
@@ -175,28 +175,49 @@
 ### BUG-004: Wind Animation Not World-Fixed
 
 **Severity:** High
-**Status:** Open
-**Spec Reference:** MVP Spec Section 5 - Compass Integration
+**Status:** **DONE** (2026-01-22)
+**Spec Reference:** MVP Spec Section 5, 11 - Compass Integration
 
 **Expected Behavior:**
 - Particles should feel anchored to the real sky
 - When you rotate phone, particles should stay in place (world-fixed)
-- Uses compass heading to offset particle positions
-- Formula: `screenAngle = windDirection - compassHeading`
+- All altitude levels should shift equally when phone rotates
+- Formula: particles shift by `(headingDelta / 360.0)` of screen width
 
-**Actual Behavior:**
-- Particles move with the phone
-- Feels like a video overlay
-- No sense of looking at real sky through a window
+**Actual Behavior (BEFORE FIX):**
+- Surface particles (parallax 1.0) were 100% world-fixed (correct)
+- Mid-level particles (parallax 0.6) were only 60% world-fixed (broken)
+- Jet stream particles (parallax 0.3) were only 30% world-fixed (broken)
+- Higher altitude particles felt "stuck to screen" instead of anchored in world space
 
 **User Report:**
 > "wind animation seems like a video playing on top of my screen, it doesn't stay consistent as i move my phone around"
 
-**Root Cause (suspected):**
-- Compass heading may not be applied to particle position offset
-- Particles may be using screen coordinates instead of world coordinates
+**Root Cause (confirmed):**
+- Original formula conflated world anchoring with parallax depth:
+  ```dart
+  p.x -= (headingDelta / 360.0) * parallaxFactor;
+  ```
+- parallaxFactor varied by altitude (1.0, 0.6, 0.3)
+- This meant jet stream particles only shifted 30% when they should shift 100%
 
-**Pipeline:** `/diagnose wind-anchoring` → `/plan` → `/implement`
+**Fix Implemented:**
+- Changed formula to apply 100% world anchoring for ALL altitude levels:
+  ```dart
+  p.x -= (headingDelta / 360.0);
+  ```
+- Depth perception now achieved through other visual cues:
+  - Particle color (white → cyan → purple)
+  - Trail scale (1.0 → 0.7 → 0.5)
+  - Speed multiplier (1.0x → 1.5x → 3.0x)
+- 3 new tests added (253 total passing), flutter analyze clean
+
+**Components Modified:**
+- `lib/widgets/particle_overlay.dart` - Fixed world anchoring formula (line 269)
+- `lib/models/altitude_level.dart` - Updated parallaxFactor documentation
+- `test/widgets/particle_overlay_test.dart` - Added 3 world anchoring tests
+
+**Pipeline:** `/diagnose wind-anchoring` → `/plan` → `/implement` → `/test` → `/finalize` ✓
 
 ---
 

@@ -81,16 +81,21 @@ extension AltitudeLevelProperties on AltitudeLevel {
         AltitudeLevel.jetStream => 3.0,
       };
 
-  /// Parallax factor for creating depth perception.
+  /// Parallax factor for potential depth effects.
   ///
-  /// Lower values = objects appear further away (less movement when rotating phone).
-  /// - surface: 1.0 (close, moves most when phone rotates)
-  /// - midLevel: 0.6 (moderate distance)
-  /// - jetStream: 0.3 (far away, barely moves when phone rotates)
+  /// NOTE: As of BUG-004 fix, this factor is NO LONGER used for world anchoring.
+  /// All altitude levels now use 100% world anchoring (particles stay fixed in
+  /// real-world space when phone rotates).
   ///
-  /// This creates the illusion that higher altitude particles are further
-  /// from the viewer, similar to how distant mountains appear to move
-  /// less than nearby trees when you turn your head.
+  /// Depth perception is achieved through other visual properties:
+  /// - Particle color: white (surface) -> cyan (mid) -> purple (jet stream)
+  /// - Trail scale: 1.0 -> 0.7 -> 0.5 (shorter = further)
+  /// - Speed multiplier: 1.0x -> 1.5x -> 3.0x (faster at altitude)
+  ///
+  /// Values retained for potential future subtle parallax enhancement:
+  /// - surface: 1.0
+  /// - midLevel: 0.6
+  /// - jetStream: 0.3
   double get parallaxFactor => switch (this) {
         AltitudeLevel.surface => 1.0,
         AltitudeLevel.midLevel => 0.6,

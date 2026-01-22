@@ -256,14 +256,20 @@ class _ParticleOverlayState extends State<ParticleOverlay>
     if (headingDelta < -180) headingDelta += 360;
 
     // Get altitude-specific properties
+    // NOTE: parallaxFactor is intentionally unused after BUG-004 fix
+    // Kept for potential future subtle depth effects
+    // ignore: unused_local_variable
     final parallaxFactor = widget.altitudeLevel.parallaxFactor;
     final trailScale = widget.altitudeLevel.trailScale;
 
     // Update all particles
     for (final p in _particles) {
-      // Apply parallax offset based on heading change
-      // Higher altitude (lower parallax factor) = less movement when phone rotates
-      p.x -= (headingDelta / 360.0) * parallaxFactor;
+      // WORLD ANCHORING: All particles are 100% anchored to world space
+      // When phone rotates X degrees, particles shift X/360 of screen width
+      // This creates the AR illusion of particles fixed in the real sky
+      // Spec: "Particles should appear to stay fixed in world space" (Section 11)
+      // BUG-004 Fix: Removed parallaxFactor multiplication that broke world anchoring
+      p.x -= (headingDelta / 360.0);
 
       // Move particle based on wind direction
       p.x += cos(_screenAngle) * speedFactor * dt;
