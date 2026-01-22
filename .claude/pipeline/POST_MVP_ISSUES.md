@@ -11,7 +11,8 @@
 |----|-------|----------|--------|--------------|
 | BUG-001 | Debug panel missing | Medium | **DONE** | Section 10 |
 | BUG-002 | Sky detection pitch-only (no color masking) | **Critical** | **DONE** | Section 3 |
-| BUG-003 | Particles not masked to sky pixels | **Critical** | Open | Section 4 |
+| BUG-002.5 | Sky detection not working on real device | **Critical** | **DONE** | Section 3 |
+| BUG-003 | Particles not masked to sky pixels | **Critical** | **DONE** | Section 4 |
 | BUG-004 | Wind animation not world-fixed | High | Open | Section 5 |
 | BUG-005 | Altitude slider UX (buttons vs slider) | Low | Open | Section 7 |
 
@@ -95,10 +96,56 @@
 
 ---
 
+### BUG-002.5: Sky Detection Not Working on Real Device
+
+**Severity:** Critical
+**Status:** DONE (2026-01-22)
+**Spec Reference:** MVP Spec Section 3 - Sky Detection
+
+**Expected Behavior:**
+- Sky detection should work at various phone angles (not just pointing straight up)
+- Should detect actual sky pixels based on color, not just pitch angle
+- Particles should appear where sky is visible in camera feed
+- When pointing down, no particles (correct)
+
+**Actual Behavior (BEFORE FIX):**
+- Sky detection doesn't recognize sky at all
+- Phone has to be pointed nearly straight up to see particles
+- Color-based detection not triggering on real device
+- System stuck in pitch-based fallback mode
+
+**User Report:**
+> "sky detection does not work whatsoever anymore. a phone does not need to be pointed directly up to see particles. obviously if its pointing down it shouldn't show any particles. but it should be searching for where the sky is."
+
+**Root Cause (confirmed):**
+- Calibration threshold of 45 degrees was too high for natural viewing angles
+- Users typically view sky at 20-40 degree angles
+- Calibration never triggered during normal use
+- Color-based detection remained inactive
+
+**Fix Implemented:**
+- Lowered calibration threshold from 45 to 25 degrees
+- Changed sample region top from 10% to 5% (safer at lower angles)
+- Added dynamic sample region based on pitch angle:
+  - 60+ degrees: sample top 5-50% (looking high up)
+  - 45-59 degrees: sample top 5-40% (original behavior)
+  - 35-44 degrees: sample top 5-30% (moderate angle)
+  - 25-34 degrees: sample top 5-20% (conservative)
+  - <25 degrees: sample top 5-15% (very conservative)
+- 8 new tests added (250 total passing), flutter analyze clean
+
+**Components Modified:**
+- `lib/services/sky_detection/auto_calibrating_sky_detector.dart`
+- `test/services/sky_detection/auto_calibrating_sky_detector_test.dart`
+
+**Pipeline:** `/diagnose sky-detection-v2` → `/plan` → `/implement` → `/test` → `/finalize` ✓
+
+---
+
 ### BUG-003: Particles Not Masked to Sky Pixels
 
 **Severity:** Critical
-**Status:** Open
+**Status:** **DONE** (2026-01-21)
 **Spec Reference:** MVP Spec Section 1, 4
 
 **Expected Behavior:**

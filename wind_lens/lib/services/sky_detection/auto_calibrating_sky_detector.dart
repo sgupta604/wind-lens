@@ -12,14 +12,23 @@ import 'sky_mask.dart';
 /// Level 2a sky detection using auto-calibrating color-based detection.
 ///
 /// This detector learns the sky color profile by sampling pixels when the
-/// user points their phone upward (pitch > 45 degrees). It then uses this
+/// user points their phone upward (pitch >= 25 degrees). It then uses this
 /// learned profile to detect sky regions in subsequent frames.
 ///
 /// ## Calibration Flow:
-/// 1. User points phone up (pitch > calibrationPitchThreshold)
-/// 2. Detector samples top 10-40% of camera frame
+/// 1. User points phone up (pitch >= 25 degrees - natural viewing angle)
+/// 2. Detector samples top 5% to dynamic bottom (based on pitch) of camera frame
 /// 3. Converts samples to HSV and builds statistical profile
 /// 4. Uses profile for per-pixel sky detection
+///
+/// ## Dynamic Sample Region (BUG-002.5 fix):
+/// At lower pitch angles, the sample region is smaller (conservative) to avoid
+/// accidentally sampling buildings/trees near the horizon:
+/// - 60+ degrees: sample top 5-50%
+/// - 45-59 degrees: sample top 5-40%
+/// - 35-44 degrees: sample top 5-30%
+/// - 25-34 degrees: sample top 5-20%
+/// - <25 degrees: sample top 5-15%
 ///
 /// ## Fallback Behavior:
 /// When not calibrated, falls back to [PitchBasedSkyMask] for basic detection.
@@ -43,12 +52,28 @@ class AutoCalibratingSkyDetector implements SkyMask {
   static const Duration recalibrationInterval = Duration(minutes: 5);
 
   /// Minimum pitch (degrees) required to trigger calibration.
-  static const double calibrationPitchThreshold = 45.0;
+  ///
+  /// Lowered from 45 to 25 degrees for BUG-002.5 fix.
+  /// 25 degrees is a natural sky-viewing angle - users typically look at
+  /// 20-40 degrees when viewing the sky. This allows calibration to trigger
+  /// during normal use instead of requiring users to point nearly straight up.
+  static const double calibrationPitchThreshold = 25.0;
 
   /// Top of the sampling region (as fraction of frame height).
-  static const double sampleRegionTop = 0.1;
+  ///
+  /// Changed from 10% to 5% for BUG-002.5 fix.
+  /// At lower pitch angles, the very top of the frame is the safest sky region.
+  /// Starting at 5% gives us more safe sky samples while staying away from
+  /// edge artifacts.
+  static const double sampleRegionTop = 0.05;
 
   /// Bottom of the sampling region (as fraction of frame height).
+  ///
+  /// NOTE: This constant is kept for backwards compatibility and as a
+  /// reference value. The actual sample region bottom is now calculated
+  /// dynamically by [_getSampleRegionBottom] based on the current pitch angle.
+  /// See BUG-002.5 fix for details.
+  @Deprecated('Use _getSampleRegionBottom() which calculates dynamically based on pitch')
   static const double sampleRegionBottom = 0.4;
 
   /// Threshold for classifying a pixel as sky (0.0-1.0).
@@ -117,6 +142,36 @@ class AutoCalibratingSkyDetector implements SkyMask {
     _fallback.updatePitch(pitchDegrees);
   }
 
+  // ============= Dynamic Sample Region =============
+
+  /// Calculates the sample region bottom boundary based on current pitch.
+  ///
+  /// At lower pitch angles, we sample more conservatively (smaller region)
+  /// to avoid accidentally sampling buildings/trees near the horizon.
+  /// At higher pitch angles, we can sample more aggressively.
+  ///
+  /// Pitch ranges and sample regions:
+  /// - 60+ degrees: sample top 5-50% (looking high up)
+  /// - 45-59 degrees: sample top 5-40% (original behavior)
+  /// - 35-44 degrees: sample top 5-30% (moderate angle)
+  /// - 25-34 degrees: sample top 5-20% (conservative)
+  /// - <25 degrees: sample top 5-15% (very conservative)
+  ///
+  /// Returns the bottom boundary as a fraction of frame height (0.0-1.0).
+  double _getSampleRegionBottom() {
+    if (_pitch >= 60) return 0.50;
+    if (_pitch >= 45) return 0.40;
+    if (_pitch >= 35) return 0.30;
+    if (_pitch >= 25) return 0.20;
+    return 0.15;
+  }
+
+  /// Public getter for sample region bottom - exposed for testing.
+  ///
+  /// Returns the current dynamic sample region bottom based on pitch.
+  /// This is primarily for testing purposes.
+  double getSampleRegionBottom() => _getSampleRegionBottom();
+
   // ============= SkyMask Interface =============
 
   @override
@@ -177,8 +232,12 @@ class AutoCalibratingSkyDetector implements SkyMask {
 
   /// Calibrates the detector from a camera frame.
   ///
-  /// Samples pixels from the top 10-40% of the frame and builds
-  /// an HSV histogram for sky color matching.
+  /// Samples pixels from the top 5% to a dynamic bottom boundary
+  /// (based on pitch angle) of the frame and builds an HSV histogram
+  /// for sky color matching.
+  ///
+  /// At lower pitch angles, the sample region is smaller (conservative)
+  /// to avoid accidentally sampling buildings/trees near the horizon.
   void _calibrateFromFrame(CameraImage image) {
     final samples = <HSV>[];
     final width = image.width;
@@ -217,9 +276,10 @@ class AutoCalibratingSkyDetector implements SkyMask {
     final bytes = image.planes[0].bytes;
     final bytesPerRow = image.planes[0].bytesPerRow;
 
-    // Sample from top 10-40% of frame
+    // Sample from top 5% to dynamic bottom based on pitch
+    // Using dynamic region to avoid sampling buildings at lower pitch angles
     final startY = (height * sampleRegionTop).floor();
-    final endY = (height * sampleRegionBottom).floor();
+    final endY = (height * _getSampleRegionBottom()).floor();
 
     // Sample every 10th pixel for speed
     const stride = 10;
@@ -257,9 +317,10 @@ class AutoCalibratingSkyDetector implements SkyMask {
     final uvRowStride = image.planes[1].bytesPerRow;
     final uvPixelStride = image.planes[1].bytesPerPixel ?? 1;
 
-    // Sample from top 10-40% of frame
+    // Sample from top 5% to dynamic bottom based on pitch
+    // Using dynamic region to avoid sampling buildings at lower pitch angles
     final startY = (height * sampleRegionTop).floor();
-    final endY = (height * sampleRegionBottom).floor();
+    final endY = (height * _getSampleRegionBottom()).floor();
 
     // Sample every 10th pixel for speed
     const stride = 10;

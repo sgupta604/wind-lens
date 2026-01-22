@@ -88,17 +88,18 @@ void main() {
     });
 
     group('calibration trigger', () {
-      test('does not calibrate when pitch < 45 degrees', () {
-        detector.updatePitch(30.0);
+      test('does not calibrate when pitch < 25 degrees', () {
+        detector.updatePitch(20.0);
 
         // Simulate frame processing - can't actually test without CameraImage
         // But we can verify the detector is still uncalibrated
         expect(detector.isCalibrated, false);
       });
 
-      test('calibration threshold is 45 degrees', () {
+      test('calibration threshold is 25 degrees', () {
         // This test verifies the constant value
-        expect(AutoCalibratingSkyDetector.calibrationPitchThreshold, 45.0);
+        // Lowered from 45 to 25 for BUG-002.5 fix - natural viewing angle
+        expect(AutoCalibratingSkyDetector.calibrationPitchThreshold, 25.0);
       });
     });
 
@@ -116,11 +117,15 @@ void main() {
     });
 
     group('configuration constants', () {
-      test('sample region top is 10%', () {
-        expect(AutoCalibratingSkyDetector.sampleRegionTop, 0.1);
+      test('sample region top is 5%', () {
+        // Changed from 10% to 5% for BUG-002.5 fix - safer sky sampling at lower angles
+        expect(AutoCalibratingSkyDetector.sampleRegionTop, 0.05);
       });
 
-      test('sample region bottom is 40%', () {
+      test('sample region bottom base is 40% (but now dynamic)', () {
+        // sampleRegionBottom is deprecated/reference - actual bottom is calculated
+        // by _getSampleRegionBottom() based on pitch
+        // ignore: deprecated_member_use_from_same_package
         expect(AutoCalibratingSkyDetector.sampleRegionBottom, 0.4);
       });
 
@@ -195,6 +200,127 @@ void main() {
         // Should still be uncalibrated
         detector.updatePitch(60.0);
         expect(detector.isCalibrated, false);
+      });
+    });
+
+    group('dynamic sample region', () {
+      // Tests for _getSampleRegionBottom() dynamic behavior based on pitch
+      // This feature was added for BUG-002.5 fix to avoid sampling buildings
+      // at lower pitch angles.
+
+      test('getSampleRegionBottom returns 0.20 for pitch 25-34', () {
+        // At lower pitch angles, sample conservatively (5-20% of frame)
+        detector.updatePitch(25.0);
+        expect(detector.getSampleRegionBottom(), 0.20);
+
+        detector.updatePitch(30.0);
+        expect(detector.getSampleRegionBottom(), 0.20);
+
+        detector.updatePitch(34.0);
+        expect(detector.getSampleRegionBottom(), 0.20);
+      });
+
+      test('getSampleRegionBottom returns 0.30 for pitch 35-44', () {
+        // At moderate pitch angles, sample moderately (5-30% of frame)
+        detector.updatePitch(35.0);
+        expect(detector.getSampleRegionBottom(), 0.30);
+
+        detector.updatePitch(40.0);
+        expect(detector.getSampleRegionBottom(), 0.30);
+
+        detector.updatePitch(44.0);
+        expect(detector.getSampleRegionBottom(), 0.30);
+      });
+
+      test('getSampleRegionBottom returns 0.40 for pitch 45-59', () {
+        // At higher pitch angles, use original behavior (5-40% of frame)
+        detector.updatePitch(45.0);
+        expect(detector.getSampleRegionBottom(), 0.40);
+
+        detector.updatePitch(50.0);
+        expect(detector.getSampleRegionBottom(), 0.40);
+
+        detector.updatePitch(59.0);
+        expect(detector.getSampleRegionBottom(), 0.40);
+      });
+
+      test('getSampleRegionBottom returns 0.50 for pitch 60+', () {
+        // Looking quite high - sample aggressively (5-50% of frame)
+        detector.updatePitch(60.0);
+        expect(detector.getSampleRegionBottom(), 0.50);
+
+        detector.updatePitch(70.0);
+        expect(detector.getSampleRegionBottom(), 0.50);
+
+        detector.updatePitch(90.0);
+        expect(detector.getSampleRegionBottom(), 0.50);
+      });
+
+      test('getSampleRegionBottom returns 0.15 for pitch below 25', () {
+        // Very low pitch - very conservative sampling (5-15% of frame)
+        detector.updatePitch(24.0);
+        expect(detector.getSampleRegionBottom(), 0.15);
+
+        detector.updatePitch(10.0);
+        expect(detector.getSampleRegionBottom(), 0.15);
+
+        detector.updatePitch(0.0);
+        expect(detector.getSampleRegionBottom(), 0.15);
+      });
+
+      test('sample region boundary conditions', () {
+        // Test exact boundary values
+        detector.updatePitch(24.999);
+        expect(detector.getSampleRegionBottom(), 0.15); // < 25
+
+        detector.updatePitch(25.0);
+        expect(detector.getSampleRegionBottom(), 0.20); // >= 25
+
+        detector.updatePitch(34.999);
+        expect(detector.getSampleRegionBottom(), 0.20); // < 35
+
+        detector.updatePitch(35.0);
+        expect(detector.getSampleRegionBottom(), 0.30); // >= 35
+
+        detector.updatePitch(44.999);
+        expect(detector.getSampleRegionBottom(), 0.30); // < 45
+
+        detector.updatePitch(45.0);
+        expect(detector.getSampleRegionBottom(), 0.40); // >= 45
+
+        detector.updatePitch(59.999);
+        expect(detector.getSampleRegionBottom(), 0.40); // < 60
+
+        detector.updatePitch(60.0);
+        expect(detector.getSampleRegionBottom(), 0.50); // >= 60
+      });
+    });
+
+    group('calibration at lower pitch', () {
+      test('calibration can be attempted at 25 degree pitch', () {
+        // With lowered threshold, calibration should be possible at 25 degrees
+        detector.updatePitch(25.0);
+
+        // Cannot actually trigger calibration without CameraImage,
+        // but we verify the pitch threshold allows it
+        expect(
+          AutoCalibratingSkyDetector.calibrationPitchThreshold,
+          lessThanOrEqualTo(25.0),
+        );
+      });
+
+      test('calibration uses smaller sample region at lower pitch', () {
+        // At 25-degree pitch, should sample conservatively
+        detector.updatePitch(25.0);
+        final lowPitchRegion = detector.getSampleRegionBottom();
+
+        // At 60-degree pitch, should sample more aggressively
+        detector.updatePitch(60.0);
+        final highPitchRegion = detector.getSampleRegionBottom();
+
+        expect(lowPitchRegion, lessThan(highPitchRegion));
+        expect(lowPitchRegion, 0.20); // Conservative at 25 degrees
+        expect(highPitchRegion, 0.50); // Aggressive at 60 degrees
       });
     });
 

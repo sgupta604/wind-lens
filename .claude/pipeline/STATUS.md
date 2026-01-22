@@ -7,9 +7,9 @@
 
 ## Current State
 
-**Current Feature:** None (BUG-003 complete, ready for next issue)
-**Current Phase:** idle
-**Next Command:** Start next issue from POST_MVP_ISSUES.md or user request
+**Current Feature:** None (ready for next issue)
+**Current Phase:** Idle
+**Next Command:** Review POST_MVP_ISSUES.md for next issue to address
 
 **Issues Tracker:** `.claude/pipeline/POST_MVP_ISSUES.md`
 
@@ -17,13 +17,7 @@
 
 ## Pipeline Progress (Current Feature)
 
-```
-[x] /diagnose  - Complete (2026-01-21) - Root cause identified
-[x] /plan      - Complete (2026-01-21) - Implementation plan and tasks created
-[x] /implement - Complete (2026-01-21) - Sky-aware spawning implemented with TDD
-[x] /test      - Complete (2026-01-21) - All 242 tests passing
-[x] /finalize  - Complete (2026-01-21) - Committed locally
-```
+No feature currently in progress. BUG-002.5 has been completed.
 
 ---
 
@@ -52,6 +46,7 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 |-------|-------------|--------|
 | BUG-001 | Debug Panel Missing | DONE (2026-01-21) |
 | BUG-002 | Sky Detection Level 2a Auto-Calibrating | DONE (2026-01-21) |
+| BUG-002.5 | Sky Detection Not Working on Real Device | DONE (2026-01-22) |
 | BUG-003 | Particles not masked to sky pixels | DONE (2026-01-21) |
 | BUG-004 | Wind animation not world-fixed | Ready to start |
 
@@ -59,24 +54,23 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 
 ## What To Do
 
-**BUG-003 particle-masking COMPLETE!**
+**BUG-002.5 COMPLETE!**
 
-All pipeline stages complete for BUG-003:
-- `/diagnose` - Root cause identified (particles spawning everywhere)
-- `/plan` - Implementation plan with 14 tasks created
-- `/implement` - TDD implementation complete (42 lines production, 302 lines tests)
-- `/test` - All 242 tests passing, flutter analyze clean
-- `/finalize` - Local commit created, SUMMARY.md written
+Sky detection calibration threshold fix has been finalized and committed.
 
-**Results:**
-- Particles now spawn only in sky regions (true AR experience)
-- 6 new tests added for sky-aware spawning
-- Performance optimized for high/low sky fractions
-- Graceful fallback prevents infinite loops
+**What was fixed:**
+- Lowered calibration threshold from 45 to 25 degrees
+- Changed sample region top from 10% to 5%
+- Added dynamic sample region based on pitch angle
+- All 250 tests passing, flutter analyze clean
 
-**Next issue:** BUG-004 (Wind animation not world-fixed) or user request
+**Next available issues:**
+- BUG-004: Wind animation not world-fixed (High priority)
+- BUG-005: Altitude slider UX (Low priority)
 
-**Summary:** `.claude/features/particle-masking/SUMMARY.md`
+To start next issue:
+1. Review POST_MVP_ISSUES.md
+2. Run `/diagnose <issue-name>` for the next bug to fix
 
 ---
 
