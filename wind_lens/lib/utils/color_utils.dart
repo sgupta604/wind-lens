@@ -1,11 +1,33 @@
 import 'dart:math' as math;
 import '../models/hsv.dart';
 
+/// Reusable RGB color values to avoid List allocation.
+///
+/// Used by [ColorUtils.yuvToRgb] to return RGB values without creating
+/// a new List on each call. This is critical for performance when
+/// processing many pixels per frame.
+class RGB {
+  /// Red component (0-255).
+  int r;
+
+  /// Green component (0-255).
+  int g;
+
+  /// Blue component (0-255).
+  int b;
+
+  /// Creates an RGB instance with optional initial values.
+  RGB([this.r = 0, this.g = 0, this.b = 0]);
+}
+
 /// Utility functions for color conversion and image processing.
 ///
 /// Provides platform-independent color space conversions used by sky detection.
 class ColorUtils {
   ColorUtils._(); // Private constructor - static methods only
+
+  /// Pre-allocated RGB result to avoid allocation in hot path.
+  static final RGB _rgbResult = RGB();
 
   /// Converts RGB color values to HSV color space.
   ///
@@ -65,25 +87,23 @@ class ColorUtils {
   /// - [u] U chrominance (0-255, centered at 128)
   /// - [v] V chrominance (0-255, centered at 128)
   ///
-  /// Returns a list of [r, g, b] values (0-255 each).
+  /// Returns a reusable [RGB] instance with the converted values.
+  /// **WARNING:** The returned instance is shared and will be overwritten
+  /// on the next call. Copy values immediately if needed.
   ///
   /// Used for Android camera image format conversion.
-  static List<int> yuvToRgb(int y, int u, int v) {
+  static RGB yuvToRgb(int y, int u, int v) {
     // Standard YUV to RGB conversion (BT.601)
     // U and V are centered at 128
     final yf = y.toDouble();
     final uf = u - 128;
     final vf = v - 128;
 
-    int r = (yf + 1.402 * vf).round();
-    int g = (yf - 0.344 * uf - 0.714 * vf).round();
-    int b = (yf + 1.772 * uf).round();
+    // Calculate and clamp RGB values, storing in pre-allocated result
+    _rgbResult.r = (yf + 1.402 * vf).round().clamp(0, 255);
+    _rgbResult.g = (yf - 0.344 * uf - 0.714 * vf).round().clamp(0, 255);
+    _rgbResult.b = (yf + 1.772 * uf).round().clamp(0, 255);
 
-    // Clamp to 0-255 range
-    r = r.clamp(0, 255);
-    g = g.clamp(0, 255);
-    b = b.clamp(0, 255);
-
-    return [r, g, b];
+    return _rgbResult;
   }
 }

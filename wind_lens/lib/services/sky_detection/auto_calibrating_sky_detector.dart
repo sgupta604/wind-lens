@@ -263,7 +263,9 @@ class AutoCalibratingSkyDetector implements SkyMask {
     _skyHistogram = HSVHistogram.fromSamples(samples);
     _lastCalibration = DateTime.now();
 
-    debugPrint('Sky calibrated: ${samples.length} samples, profile=$_skyHistogram');
+    if (kDebugMode) {
+      debugPrint('Sky calibrated: ${samples.length} samples, profile=$_skyHistogram');
+    }
   }
 
   /// Samples pixels from BGRA8888 format (iOS).
@@ -342,7 +344,7 @@ class AutoCalibratingSkyDetector implements SkyMask {
         final v = vPlane[uvIndex];
 
         final rgb = ColorUtils.yuvToRgb(y, u, v);
-        samples.add(ColorUtils.rgbToHsv(rgb[0], rgb[1], rgb[2]));
+        samples.add(ColorUtils.rgbToHsv(rgb.r, rgb.g, rgb.b));
       }
     }
   }
@@ -410,8 +412,6 @@ class AutoCalibratingSkyDetector implements SkyMask {
     _cachedSkyFraction = totalProcessed > 0
         ? skyPixelCount / totalProcessed
         : _fallback.skyFraction;
-
-    debugPrint('Sky fraction: ${(_cachedSkyFraction * 100).toStringAsFixed(1)}%');
   }
 
   /// Calculates position-based sky prior.
@@ -467,7 +467,7 @@ class AutoCalibratingSkyDetector implements SkyMask {
     final vVal = vPlane[uvIndex];
 
     final rgb = ColorUtils.yuvToRgb(yVal, uVal, vVal);
-    return ColorUtils.rgbToHsv(rgb[0], rgb[1], rgb[2]);
+    return ColorUtils.rgbToHsv(rgb.r, rgb.g, rgb.b);
   }
 
   // ============= Testing Support =============
@@ -503,6 +503,8 @@ class AutoCalibratingSkyDetector implements SkyMask {
     }
     _cachedSkyFraction = 0.6;
 
-    debugPrint('Sky calibrated manually: ${hsvSamples.length} samples');
+    if (kDebugMode) {
+      debugPrint('Sky calibrated manually: ${hsvSamples.length} samples');
+    }
   }
 }

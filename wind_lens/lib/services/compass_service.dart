@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
 import '../models/compass_data.dart';
@@ -127,11 +126,6 @@ class CompassService {
 
   /// Emits a compass update with current heading and pitch values.
   void _emitUpdate() {
-    debugPrint(
-      'Heading: ${_smoothedHeading.toStringAsFixed(1)}°, '
-      'Pitch: ${_smoothedPitch.toStringAsFixed(1)}°',
-    );
-
     _controller.add(CompassData(
       heading: _smoothedHeading,
       pitch: _smoothedPitch,

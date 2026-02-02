@@ -126,10 +126,15 @@ class _ParticleOverlayState extends State<ParticleOverlay>
   /// Cached screen angle (computed each frame, not allocated).
   double _screenAngle = 0.0;
 
+  /// Notifier to trigger repaints without setState.
+  /// Incrementing the value triggers CustomPaint to repaint.
+  late ValueNotifier<int> _repaintNotifier;
+
   @override
   void initState() {
     super.initState();
     _random = Random();
+    _repaintNotifier = ValueNotifier<int>(0);
 
     // Use provided performance manager or create a new one
     _performanceManager = widget.performanceManager ?? PerformanceManager();
@@ -154,6 +159,7 @@ class _ParticleOverlayState extends State<ParticleOverlay>
   @override
   void dispose() {
     _ticker.dispose();
+    _repaintNotifier.dispose();
     super.dispose();
   }
 
@@ -305,20 +311,23 @@ class _ParticleOverlayState extends State<ParticleOverlay>
       _lastFpsCallback = now;
     }
 
-    // Trigger repaint
-    setState(() {});
+    // Trigger repaint without full widget rebuild
+    _repaintNotifier.value++;
   }
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: ParticleOverlayPainter(
-        particles: _particles,
-        skyMask: widget.skyMask,
-        windAngle: _screenAngle,
-        color: widget.altitudeLevel.particleColor,
+    return RepaintBoundary(
+      child: CustomPaint(
+        painter: ParticleOverlayPainter(
+          repaintNotifier: _repaintNotifier,
+          particles: _particles,
+          skyMask: widget.skyMask,
+          windAngle: _screenAngle,
+          color: widget.altitudeLevel.particleColor,
+        ),
+        size: Size.infinite,
       ),
-      size: Size.infinite,
     );
   }
 }
@@ -332,6 +341,7 @@ class _ParticleOverlayState extends State<ParticleOverlay>
 /// 4. Renders a core pass (thinner, sharper, higher opacity)
 ///
 /// Paint objects are pre-allocated to avoid GC pressure.
+/// Colors are cached for common opacity levels to avoid withValues() calls.
 class ParticleOverlayPainter extends CustomPainter {
   /// The list of particles to render.
   final List<Particle> particles;
@@ -358,13 +368,36 @@ class ParticleOverlayPainter extends CustomPainter {
     ..strokeCap = StrokeCap.round
     ..strokeWidth = 1.5;
 
+  /// Cached glow colors for opacity levels 0.0-1.0 in 0.1 increments.
+  /// Avoids Color.withValues() allocations in render loop.
+  late final List<Color> _glowColors;
+
+  /// Cached core colors for opacity levels 0.0-1.0 in 0.1 increments.
+  /// Avoids Color.withValues() allocations in render loop.
+  late final List<Color> _coreColors;
+
   /// Creates a new ParticleOverlayPainter.
+  ///
+  /// The [repaintNotifier] triggers repaints when its value changes,
+  /// avoiding the need for setState() in the parent widget.
   ParticleOverlayPainter({
+    required Listenable repaintNotifier,
     required this.particles,
     required this.skyMask,
     required this.windAngle,
     required this.color,
-  });
+  }) : super(repaint: repaintNotifier) {
+    // Pre-compute colors for common opacity levels (0.0 to 1.0 in 0.1 steps)
+    // This avoids calling withValues() 2000+ times per frame
+    _glowColors = List.generate(11, (i) {
+      final baseOpacity = i / 10.0;
+      return color.withValues(alpha: baseOpacity * 0.3);
+    });
+    _coreColors = List.generate(11, (i) {
+      final baseOpacity = i / 10.0;
+      return color.withValues(alpha: baseOpacity * 0.9);
+    });
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -381,6 +414,9 @@ class ParticleOverlayPainter extends CustomPainter {
       // Skip nearly invisible particles
       if (baseOpacity < 0.01) continue;
 
+      // Quantize opacity to cached color index (0-10 for 0.0-1.0 range)
+      final opacityIndex = (baseOpacity * 10).round().clamp(0, 10);
+
       // Convert normalized coordinates to screen coordinates
       final startX = p.x * size.width;
       final startY = p.y * size.height;
@@ -392,12 +428,12 @@ class ParticleOverlayPainter extends CustomPainter {
       final start = Offset(startX, startY);
       final end = Offset(endX, endY);
 
-      // PASS 1: The glow (wider, blurred, lower opacity)
-      _glowPaint.color = color.withValues(alpha: baseOpacity * 0.3);
+      // PASS 1: The glow (wider, blurred, lower opacity) - use cached color
+      _glowPaint.color = _glowColors[opacityIndex];
       canvas.drawLine(start, end, _glowPaint);
 
-      // PASS 2: The core (thinner, sharper, higher opacity)
-      _corePaint.color = color.withValues(alpha: baseOpacity * 0.9);
+      // PASS 2: The core (thinner, sharper, higher opacity) - use cached color
+      _corePaint.color = _coreColors[opacityIndex];
       canvas.drawLine(start, end, _corePaint);
     }
   }

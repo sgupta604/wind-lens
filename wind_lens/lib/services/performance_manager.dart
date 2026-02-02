@@ -1,7 +1,7 @@
 /// Adaptive performance manager for particle count optimization.
 ///
 /// Monitors frame rate and automatically adjusts the particle count
-/// to maintain smooth rendering. Uses a rolling window of frame times
+/// to maintain smooth rendering. Uses a circular buffer of frame times
 /// to calculate average FPS and adjusts particle count accordingly.
 ///
 /// Performance adjustment rules:
@@ -21,15 +21,24 @@ class PerformanceManager {
   /// Current adaptive particle count.
   int _particleCount = 2000;
 
-  /// Rolling window of recent FPS values for averaging.
-  /// Pre-allocated to avoid allocations in hot path.
-  final List<double> _recentFps = [];
+  /// Number of frames to average for FPS calculation.
+  static const int _fpsWindowSize = 30;
+
+  /// Circular buffer of recent FPS values for averaging.
+  /// Pre-allocated with fixed size to avoid allocations in hot path.
+  final List<double> _recentFps = List.filled(_fpsWindowSize, 0.0);
+
+  /// Current index in the circular buffer.
+  int _fpsIndex = 0;
+
+  /// Number of FPS samples recorded (0 to _fpsWindowSize).
+  int _fpsCount = 0;
+
+  /// Running sum of FPS values for O(1) average calculation.
+  double _fpsSum = 0.0;
 
   /// Most recent calculated FPS for display purposes.
   double _currentFps = 60.0;
-
-  /// Number of frames to average for FPS calculation.
-  static const int _fpsWindowSize = 30;
 
   /// Minimum allowed particle count.
   static const int _minParticles = 500;
@@ -81,21 +90,25 @@ class PerformanceManager {
     // Clamp FPS to reasonable range (0-120)
     final clampedFps = fps.clamp(0.0, 120.0);
 
-    // Add to rolling window
-    _recentFps.add(clampedFps);
-
-    // Remove oldest if window is full
-    if (_recentFps.length > _fpsWindowSize) {
-      _recentFps.removeAt(0);
+    // Circular buffer update with O(1) average calculation
+    if (_fpsCount < _fpsWindowSize) {
+      // Buffer not yet full - just add to next slot
+      _recentFps[_fpsCount] = clampedFps;
+      _fpsSum += clampedFps;
+      _fpsCount++;
+    } else {
+      // Buffer full - remove oldest value from sum, add new value
+      _fpsSum -= _recentFps[_fpsIndex];
+      _recentFps[_fpsIndex] = clampedFps;
+      _fpsSum += clampedFps;
+      _fpsIndex = (_fpsIndex + 1) % _fpsWindowSize;
     }
 
-    // Calculate average FPS
-    if (_recentFps.isNotEmpty) {
-      _currentFps = _recentFps.reduce((a, b) => a + b) / _recentFps.length;
-    }
+    // O(1) average calculation
+    _currentFps = _fpsCount > 0 ? _fpsSum / _fpsCount : 60.0;
 
     // Only adjust after we have a full window
-    if (_recentFps.length == _fpsWindowSize) {
+    if (_fpsCount == _fpsWindowSize) {
       _adjustParticleCount();
     }
   }
@@ -109,15 +122,22 @@ class PerformanceManager {
     if (_currentFps < _lowFpsThreshold && _particleCount > _minParticles) {
       // Performance struggling, reduce particles aggressively
       _particleCount = (_particleCount * 0.7).round().clamp(_minParticles, _maxParticles);
-      // Clear window to avoid rapid-fire adjustments
-      _recentFps.clear();
+      // Reset circular buffer to avoid rapid-fire adjustments
+      _resetBuffer();
     } else if (_currentFps > _highFpsThreshold && _particleCount < _maxParticles) {
       // Room for more particles, slowly increase
       _particleCount = (_particleCount * 1.1).round().clamp(_minParticles, _maxParticles);
-      // Clear window to avoid rapid-fire adjustments
-      _recentFps.clear();
+      // Reset circular buffer to avoid rapid-fire adjustments
+      _resetBuffer();
     }
     // If FPS is between 45-58, do nothing (stable range)
+  }
+
+  /// Resets the circular buffer without reallocating.
+  void _resetBuffer() {
+    _fpsIndex = 0;
+    _fpsCount = 0;
+    _fpsSum = 0.0;
   }
 
   /// Resets the manager to default values.
@@ -126,6 +146,6 @@ class PerformanceManager {
   void reset() {
     _particleCount = 2000;
     _currentFps = 60.0;
-    _recentFps.clear();
+    _resetBuffer();
   }
 }
