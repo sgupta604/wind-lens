@@ -1,16 +1,17 @@
 # Pipeline Status
 
 > **Claude: READ THIS FILE FIRST on every new session.**
-> Then check ROADMAP.md for feature order.
+> Then check ROADMAP_PHASE2.md for next features.
 
 ---
 
 ## Current State
 
-**Current Feature:** None - All post-MVP bugs completed!
-**Current Phase:** complete
-**Next Command:** N/A - Ready for new features or user testing
+**Current Feature:** Ready for Phase 2
+**Current Phase:** idle
+**Next Command:** Pick from ROADMAP_PHASE2.md (recommend: `performance-optimization`)
 
+**Phase 2 Roadmap:** `.claude/pipeline/ROADMAP_PHASE2.md`
 **Issues Tracker:** `.claude/pipeline/POST_MVP_ISSUES.md`
 
 ---
@@ -84,27 +85,50 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 
 ## What To Do
 
-**🎉 ALL POST-MVP BUGS COMPLETED! 🎉**
+**🎉 MVP + POST-MVP BUGS COMPLETE - READY FOR PHASE 2! 🎉**
 
-All identified bugs have been successfully resolved:
-- BUG-001 (Debug Panel) - DONE
-- BUG-002 (Sky Detection Auto-Calibrating) - DONE
-- BUG-002.5 (Sky Detection Real Device) - DONE
-- BUG-003 (Particle Masking) - DONE
-- BUG-004 (World-Fixed Wind Animation) - DONE
-- BUG-005 (Altitude Slider UX) - DONE
+### Phase 2 Features (in priority order)
 
-**Wind Lens Status:**
-- MVP complete with all 8 features implemented
-- All 6 post-MVP bugs fixed
-- 254 tests passing, flutter analyze clean
-- Ready for production use
+See `.claude/pipeline/ROADMAP_PHASE2.md` for full details.
 
-**Ready for:**
-- Final manual testing on physical device
-- User acceptance testing
-- App store submission preparation
-- New feature development based on user feedback
+**Phase 2a: Foundation (do first)**
+1. `performance-optimization` - Fix FPS (currently 5, should be 45-60)
+2. `particle-colors` - Improve visibility against sky
+3. `compass-widget` - Small compass in corner
+
+**Phase 2b: Location & Data**
+4. `location-awareness` - GPS + heading for real data
+5. `sky-viewport` - Calculate visible sky cone
+6. `real-wind-data` - Integrate EDR API
+
+**Phase 2c: Advanced**
+7. `map-view` - Toggle AR ↔ top-down weather map
+8. `altitude-input` - Input specific altitude in feet
+
+### To Start a Feature
+
+```bash
+/research <feature-name>
+/plan <feature-name>
+/implement <feature-name>
+/test <feature-name>
+/finalize <feature-name>
+```
+
+### User Testing Notes (2026-01-22)
+
+**Working:**
+- Sky detection calibrates on cloudy day
+- Particles masked to sky regions
+- World anchoring correct
+- Drag gesture on altitude slider
+
+**Issues:**
+- FPS: 5 (very low - investigate first)
+- Particle colors hard to see
+- Trees not well detected
+
+**Screenshot:** `/workspace/IMG_4343.PNG`
 
 ---
 
