@@ -1,10 +1,12 @@
 ---
-description: Research a feature before planning - gathers context, constraints, and decisions needed
+description: Research a feature before planning - spawns research-agent to gather requirements and context
 ---
 
 # Feature Research
 
-Research and gather all context needed before planning a feature. This is the FIRST step in the pipeline and MUST be completed before `/plan`.
+Research and gather all context needed before planning a feature. This command spawns the **research-agent** to thoroughly analyze requirements, existing code, and constraints.
+
+This is the FIRST step in the pipeline and MUST be completed before `/plan`.
 
 ## Usage
 
@@ -15,65 +17,78 @@ Research and gather all context needed before planning a feature. This is the FI
 ## Examples
 
 ```
+/research project-setup
 /research sky-detection
-/research particle-rendering
-/research compass-integration
+/research particle-system
 ```
 
 ## What This Does
 
-1. **Creates feature directory**: `.claude/features/<feature-name>/`
-2. **Gathers context**:
-   - Reads CLAUDE.md and project conventions
+1. **Spawns the research-agent** to perform thorough research
+2. **Creates feature directory**: `.claude/features/<feature-name>/`
+3. **Agent gathers context**:
+   - Reads feature README for context
+   - Reads ROADMAP.md for dependencies
+   - Reads CLAUDE.md for project conventions
    - Reads WIND_LENS_MVP_SPEC.md for requirements
-   - Searches existing codebase for related code
-   - Identifies dependencies and constraints
-3. **Documents findings** in `YYYY-MM-DDTHH:MM_research.md`:
-   - Feature requirements from spec
-   - Existing code analysis
-   - Technical constraints
-   - Open questions (MUST be resolved before planning)
-   - Recommended approach
-   - Risks and mitigations
+   - Analyzes existing codebase
+   - Identifies constraints and risks
+4. **Agent creates research document**: `YYYY-MM-DDTHH:MM_research.md`
 
-## Research Document Template
+## The Research Agent
 
-The research document MUST include:
+The research-agent is specialized in:
+- Extracting requirements from specifications
+- Analyzing existing code for reuse/modification
+- Identifying risks and constraints
+- Documenting open questions
+- Recommending implementation approach
+
+See `.claude/agents/research-agent.md` for full details.
+
+## Research Document Output
+
+The agent creates `.claude/features/<feature-name>/YYYY-MM-DDTHH:MM_research.md` containing:
 
 ```markdown
 # Research: <feature-name>
 
 ## Metadata
-- **Feature:** <feature-name>
-- **Created:** <timestamp>
-- **Status:** research-complete | needs-clarification
+- Feature, timestamp, status
+
+## Feature Context
+- From ROADMAP.md and README
 
 ## Requirements from Spec
-[Extract relevant sections from WIND_LENS_MVP_SPEC.md]
+- Functional requirements (checkboxes)
+- Technical requirements (with specific values)
+- Code examples from spec
+- Warnings/critical notes
 
 ## Existing Code Analysis
-[What exists? What needs to change? What's the current state?]
+- Project state
+- Code to reuse
+- Code to modify
+- Patterns to follow
 
-## Technical Constraints
-[From CLAUDE.md, performance targets, device requirements]
+## Constraints
+- Performance, platform, dependencies
+
+## Risk Assessment
+- Technical risks with mitigations
+- Complexity rating
 
 ## Open Questions
-- [ ] Question 1 (MUST resolve before planning)
-- [ ] Question 2
+- Questions with recommendations
+- Status: resolved or needs input
 
 ## Recommended Approach
-[Based on research, what's the best path forward?]
-
-## Risks and Mitigations
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| ... | ... | ... |
-
-## Dependencies
-[Other features/code this depends on]
+- Implementation strategy
+- Order of work
+- What to defer
 
 ## Next Step
-Run `/plan <feature-name>` after all open questions are resolved.
+- /plan if ready, or resolve questions first
 ```
 
 ## Pipeline Enforcement
@@ -87,12 +102,21 @@ The `/plan` command will check for:
 
 If any check fails, `/plan` will refuse to proceed.
 
-## Output Location
+## Status Values
 
-Research documents are saved to:
-- `.claude/features/<feature-name>/YYYY-MM-DDTHH:MM_research.md`
+- **research-complete** → Ready for `/plan`
+- **needs-clarification** → Open questions need user input
 
-This directory is committed to git so research is preserved.
+## After Research
+
+When research completes:
+
+1. Agent updates `STATUS.md` with new phase
+2. If status is `research-complete`:
+   - Agent prompts: "Research done. Run `/plan <feature-name>`?"
+3. If status is `needs-clarification`:
+   - Agent lists open questions needing resolution
+   - User must answer before proceeding
 
 ## User Input
 

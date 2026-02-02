@@ -32,6 +32,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `/test` passes | Prompt: "Tests passed! Run `/finalize <feature>`?" |
 | `/test` fails | Prompt: "Tests failed. Run `/diagnose <feature>`?" |
 | `/diagnose` completes | Prompt: "Diagnosis done. Run `/plan <feature>` to fix?" |
+| User says "different approach" / "try another way" | `/rework <feature>` |
 
 **After each command completes, Claude MUST:**
 1. Update `.claude/pipeline/STATUS.md` with new phase
@@ -55,12 +56,13 @@ If tests fail:
 
 | Step | Command | Agent | Purpose |
 |------|---------|-------|---------|
-| 1 | `/research <feature>` | - | Gather context, extract requirements |
+| 1 | `/research <feature>` | research-agent | Gather context, extract requirements |
 | 2 | `/plan <feature>` | plan-agent | Design architecture, create tasks |
 | 3 | `/implement <feature>` | execute-agent | Build feature following TDD |
 | 4 | `/test <feature>` | test-agent | Validate with full test suite |
 | 5a | `/finalize <feature>` | finalize-agent | Commit and PR (on success) |
 | 5b | `/diagnose <feature>` | diagnose-agent | Root cause analysis (on failure) |
+| - | `/rework <feature>` | - | User wants different approach |
 
 ### What Claude CANNOT Do
 

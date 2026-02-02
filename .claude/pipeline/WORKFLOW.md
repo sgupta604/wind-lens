@@ -24,6 +24,16 @@
 │        ▼              ▼          ▼          ▼          ▼          ▼         │
 │   failure.md    diagnosis.md  plan.md   impl.md   success.md  PR Created   │
 └─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           REWORK PATH FLOW                                   │
+│                                                                             │
+│   User: "try different approach" → /rework → /plan → /implement → ...      │
+│                                       │          │                          │
+│                                       ▼          ▼                          │
+│                                  rework.md   new plan.md                    │
+│                                  (archives old approach)                    │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Directory Structure
