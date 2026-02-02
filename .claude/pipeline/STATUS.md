@@ -9,7 +9,7 @@
 
 **Current Feature:** None (waiting for user)
 **Current Phase:** idle
-**Next Command:** `/research particle-colors` (recommended) or user choice
+**Next Command:** `/research wind-streamlines` (recommended) or user choice
 
 **Phase 2 Roadmap:** `.claude/pipeline/ROADMAP_PHASE2.md`
 **Issues Tracker:** `.claude/pipeline/POST_MVP_ISSUES.md`
@@ -129,25 +129,26 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 
 ## What To Do
 
-**Next Feature: particle-colors (Phase 2a Feature 2)**
+**Next Feature: wind-streamlines (Phase 2a - HIGH PRIORITY)**
 
 ### Phase 2 Features (in priority order)
 
 See `.claude/pipeline/ROADMAP_PHASE2.md` for full details.
 
-**Phase 2a: Foundation (do first)**
+**Phase 2a: Foundation & Visuals**
 1. ~~`performance-optimization`~~ - Fix FPS (5 → 45+) **DONE**
-2. `particle-colors` - Improve visibility against sky **<-- NEXT**
-3. `compass-widget` - Small compass in corner
+2. `wind-streamlines` - Windy.com style flowing trails **<-- NEXT**
+3. `particle-colors` - Can merge with wind-streamlines
+4. `compass-widget` - Small compass in corner
 
 **Phase 2b: Location & Data**
-4. `location-awareness` - GPS + heading for real data
-5. `sky-viewport` - Calculate visible sky cone
-6. `real-wind-data` - Integrate EDR API
+5. `location-awareness` - GPS + heading for real data
+6. `sky-viewport` - Calculate visible sky cone
+7. `real-wind-data` - Integrate EDR API
 
 **Phase 2c: Advanced**
-7. `map-view` - Toggle AR <-> top-down weather map
-8. `altitude-input` - Input specific altitude in feet
+8. `map-view` - Toggle AR <-> top-down weather map
+9. `altitude-input` - Input specific altitude in feet
 
 ### To Start a Feature
 
@@ -159,20 +160,23 @@ See `.claude/pipeline/ROADMAP_PHASE2.md` for full details.
 /finalize <feature-name>
 ```
 
-### User Testing Notes (2026-01-22)
+### User Testing Notes (2026-02-02)
 
 **Working:**
-- Sky detection calibrates on cloudy day
-- Particles masked to sky regions
-- World anchoring correct
-- Drag gesture on altitude slider
+- Sky detection calibrates on cloudy day ✅
+- Sky detection works under overhangs/porches ✅ (fixed BUG-006)
+- Particles masked to sky regions ✅
+- World anchoring correct ✅
+- Drag gesture on altitude slider ✅
+- FPS: 45+ (fixed from 5) ✅
 
-**Issues:**
-- FPS: 5 (very low - investigating now)
-- Particle colors hard to see
-- Trees not well detected
+**Current Issues:**
+- Particle appearance: "sprinkles" not ideal - want Windy.com style streamlines
+- Trees not well recognized by sky detection (deferred)
 
-**Screenshot:** `/workspace/IMG_4343.PNG`
+**Screenshots:**
+- `/workspace/images/app_img.PNG` - Current app (working, but dots)
+- `/workspace/images/windy_img_goal.png` - Target visual (Windy.com streamlines)
 
 ---
 

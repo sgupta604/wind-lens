@@ -25,7 +25,8 @@
 | 5 | map-view | Medium | High | Toggle AR ↔ top-down weather map view |
 | 6 | real-wind-data | High | High | Integrate EDR API for real wind data |
 | 7 | altitude-input | Low | Medium | Input specific altitude in feet |
-| 8 | performance-optimization | Medium | Medium | Fix FPS issues (currently 5, target 45-60) |
+| 8 | performance-optimization | ~~Medium~~ | ~~Medium~~ | ~~Fix FPS issues~~ **DONE** (2026-02-02) |
+| 9 | wind-streamlines | **High** | High | Flowing wind trails like Windy.com (replaces dot particles) |
 
 ---
 
@@ -264,32 +265,101 @@ Sky coverage radius = f(pitch, altitude_level)
 
 ### Feature 8: performance-optimization
 
-**Priority:** Medium
-**Complexity:** Medium
-**Blocked by:** None
+**Status:** ✅ **DONE** (2026-02-02)
+
+**Summary:** Fixed FPS from 5 to 45+ through debugPrint removal, setState elimination, and memory allocation reduction. See `.claude/features/performance-optimization/SUMMARY.md`
+
+---
+
+### Feature 9: wind-streamlines
+
+**Priority:** High
+**Complexity:** High
+**Blocked by:** None (but combines well with particle-colors)
 
 **What to Build:**
-- Investigate and fix low FPS (currently showing 5 FPS in screenshot)
-- Profile render loop for bottlenecks
-- Optimize sky detection frame processing
-- Reduce particle count adaptively
+- Replace current dot/sprinkle particles with **flowing wind streamlines** like Windy.com
+- Particles leave animated trails showing wind direction and flow
+- Trail length varies by altitude (longer at jet stream, shorter at surface)
+- Color gradient based on wind speed (blue→green→yellow→red→purple)
+- Toggle option to switch between "Dots" and "Streamlines" view modes
+
+**Reference:**
+- Current: `/workspace/images/app_img.PNG` (dot sprinkles)
+- Goal: `/workspace/images/windy_img_goal.png` (Windy.com flowing streamlines)
 
 **Why Needed:**
-- Screenshot shows FPS: 5 (should be 45-60)
-- Poor performance ruins AR experience
-- May be sky detection or particle rendering issue
+- Current dots look like "sprinkles" - don't convey wind motion
+- Streamlines show actual wind flow direction intuitively
+- Windy.com style is industry standard for wind visualization
+- Much more visually compelling and informative
+
+**Technical Specifications:**
+
+*Trail Length (by altitude):*
+| Level | Trail Length | Rationale |
+|-------|--------------|-----------|
+| Jet Stream | 15-20% screen width | Fast winds = long dramatic trails |
+| Mid-level | 8-12% screen width | Medium winds = medium trails |
+| Surface | 4-6% screen width | Slow winds = shorter trails |
+
+*Speed-Based Color Gradient:*
+| Speed (m/s) | Color | Hex |
+|-------------|-------|-----|
+| 0-5 | Blue | #3B82F6 |
+| 5-10 | Cyan | #06B6D4 |
+| 10-20 | Green | #22C55E |
+| 20-35 | Yellow | #EAB308 |
+| 35-50 | Orange | #F97316 |
+| 50+ | Red/Purple | #EF4444 → #A855F7 |
+
+*Particle Trail Implementation:*
+```dart
+class StreamlineParticle {
+  List<Offset> trailPoints;  // History of positions (10-30 points)
+  double age;
+  double speed;
+  double direction;
+
+  void update(double dt, WindData wind) {
+    // Add current position to trail
+    trailPoints.add(currentPosition);
+    // Remove oldest point if trail too long
+    if (trailPoints.length > maxTrailLength) {
+      trailPoints.removeAt(0);
+    }
+    // Move particle based on wind
+    currentPosition += windVelocity * dt;
+  }
+}
+```
+
+*Rendering:*
+- Draw trail as curved path (not straight line)
+- Trail fades from full opacity (head) to transparent (tail)
+- Use quadratic bezier curves for smooth flow
+- Optional: slight glow/blur on trail for visibility
+
+*View Mode Toggle:*
+- Add toggle in UI (or long-press altitude slider)
+- Options: "Dots" | "Streamlines"
+- Save preference to local storage
 
 **Technical Notes:**
-- PerformanceManager exists but may not be working
-- Sky detection processFrame() should be <16ms
-- Check if image downscaling is working
-- Profile on release build, not debug
+- May need to reduce particle count for performance (streamlines more expensive)
+- Consider using `Path` and `drawPath` for smooth trails
+- Pre-allocate trail point arrays to avoid GC
+- Use `Float32List` for trail coordinates if needed
+- Test on device - ensure 45+ FPS maintained
 
 **Acceptance Criteria:**
-- [ ] Maintain 45+ FPS on target devices
-- [ ] Adaptive particle reduction when needed
-- [ ] Sky detection under 16ms per frame
-- [ ] No jank or stuttering
+- [ ] Particles render as flowing streamlines (not dots)
+- [ ] Trail length varies by altitude level
+- [ ] Colors shift based on wind speed (blue→purple gradient)
+- [ ] Toggle to switch between Dots and Streamlines views
+- [ ] Performance maintained at 45+ FPS
+- [ ] Trails fade smoothly from head to tail
+- [ ] Direction of flow clearly visible
 
 ---
 
@@ -298,20 +368,23 @@ Sky coverage radius = f(pitch, altitude_level)
 Based on dependencies:
 
 ```
-Phase 2a: Foundation
-  1. performance-optimization (fix FPS issue first)
-  2. particle-colors (quick win for UX)
-  3. compass-widget (quick win, no dependencies)
+Phase 2a: Foundation & Visuals
+  1. ✅ performance-optimization (DONE - 2026-02-02)
+  2. wind-streamlines (HIGH PRIORITY - Windy.com style trails) <-- NEXT
+  3. particle-colors (can merge with wind-streamlines)
+  4. compass-widget (quick win, no dependencies)
 
 Phase 2b: Location & Data
-  4. location-awareness (foundation for real data)
-  5. sky-viewport (depends on location)
-  6. real-wind-data (depends on location + viewport)
+  5. location-awareness (foundation for real data)
+  6. sky-viewport (depends on location)
+  7. real-wind-data (depends on location + viewport)
 
 Phase 2c: Advanced Features
-  7. map-view (depends on location + data)
-  8. altitude-input (polish, low priority)
+  8. map-view (depends on location + data)
+  9. altitude-input (polish, low priority)
 ```
+
+**Note:** wind-streamlines and particle-colors can potentially be combined into a single feature since both deal with particle appearance. Consider implementing together.
 
 ---
 
