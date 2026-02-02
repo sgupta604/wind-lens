@@ -362,6 +362,177 @@ void main() {
         expect(detector.needsCalibration, false);
       });
     });
+
+    group('position weight (for testing)', () {
+      // Tests for position weight calculation
+      // Added as part of BUG-006 fix: reduced top bias to rely more on color matching
+
+      test('getPositionWeight at top (0.0) returns 0.85 (not 1.0)', () {
+        // Reduced from 1.0 to 0.85 to rely more on color matching
+        final weight = detector.getPositionWeight(0.0);
+        expect(weight, closeTo(0.85, 0.01));
+      });
+
+      test('getPositionWeight at y=0.1 returns 0.85', () {
+        // Still in the top region (< 0.2)
+        final weight = detector.getPositionWeight(0.1);
+        expect(weight, closeTo(0.85, 0.01));
+      });
+
+      test('getPositionWeight at y=0.19 returns 0.85', () {
+        // Just below the 0.2 threshold
+        final weight = detector.getPositionWeight(0.19);
+        expect(weight, closeTo(0.85, 0.01));
+      });
+
+      test('getPositionWeight at y=0.5 returns moderate value', () {
+        // Middle of frame should have moderate weight
+        final weight = detector.getPositionWeight(0.5);
+        expect(weight, greaterThan(0.2));
+        expect(weight, lessThan(0.7));
+      });
+
+      test('getPositionWeight at y=0.85 returns near zero', () {
+        // Bottom threshold returns zero
+        final weight = detector.getPositionWeight(0.85);
+        expect(weight, closeTo(0.0, 0.01));
+      });
+
+      test('getPositionWeight at y=0.9 returns zero', () {
+        // Below bottom threshold
+        final weight = detector.getPositionWeight(0.9);
+        expect(weight, closeTo(0.0, 0.01));
+      });
+
+      test('position weight decreases from top to bottom', () {
+        // Weight should monotonically decrease
+        final top = detector.getPositionWeight(0.0);
+        final middle = detector.getPositionWeight(0.5);
+        final bottom = detector.getPositionWeight(0.85);
+
+        expect(top, greaterThan(middle));
+        expect(middle, greaterThan(bottom));
+      });
+    });
+
+    group('forceRecalibrate', () {
+      // Tests for manual recalibration feature
+      // Added as part of BUG-006 fix to allow users to trigger recalibration
+
+      test('forceRecalibrate clears calibrated state', () {
+        // First calibrate the detector
+        detector.calibrateManually([
+          _TestHSV(200.0, 0.4, 0.9),
+          _TestHSV(198.0, 0.42, 0.88),
+          _TestHSV(202.0, 0.38, 0.92),
+        ]);
+        expect(detector.isCalibrated, isTrue);
+
+        // Force recalibration
+        detector.forceRecalibrate();
+
+        // Should no longer be calibrated
+        expect(detector.isCalibrated, isFalse);
+      });
+
+      test('forceRecalibrate sets needsCalibration to true', () {
+        // First calibrate the detector
+        detector.calibrateManually([
+          _TestHSV(200.0, 0.4, 0.9),
+        ]);
+        expect(detector.needsCalibration, isFalse);
+
+        // Force recalibration
+        detector.forceRecalibrate();
+
+        // Should need recalibration
+        expect(detector.needsCalibration, isTrue);
+      });
+
+      test('forceRecalibrate on uncalibrated detector does not throw', () {
+        // Calling forceRecalibrate when not calibrated should be safe
+        expect(() => detector.forceRecalibrate(), returnsNormally);
+        expect(detector.isCalibrated, isFalse);
+      });
+
+      test('can recalibrate after forceRecalibrate', () {
+        // Calibrate
+        detector.calibrateManually([_TestHSV(200.0, 0.4, 0.9)]);
+        expect(detector.isCalibrated, isTrue);
+
+        // Force recalibrate
+        detector.forceRecalibrate();
+        expect(detector.isCalibrated, isFalse);
+
+        // Calibrate again
+        detector.calibrateManually([_TestHSV(210.0, 0.5, 0.85)]);
+        expect(detector.isCalibrated, isTrue);
+      });
+    });
+
+    group('sampling regions', () {
+      // Tests for multi-region sampling constants and behavior
+      // Added as part of BUG-006 fix (sky detection regression under overhangs)
+
+      test('sampling regions list is not empty', () {
+        // The detector should have multiple sampling regions defined
+        expect(
+          AutoCalibratingSkyDetector.samplingRegions.isNotEmpty,
+          isTrue,
+        );
+      });
+
+      test('sampling regions includes top center region', () {
+        // Original sampling region should still be present
+        final regions = AutoCalibratingSkyDetector.samplingRegions;
+        final hasTopCenter = regions.any((r) =>
+            r[0] >= 0.15 && // startX around 0.20
+            r[1] <= 0.85 && // endX around 0.80
+            r[2] <= 0.10 && // startY near top (0.05)
+            r[3] <= 0.25); // endY in top portion (0.20)
+        expect(hasTopCenter, isTrue);
+      });
+
+      test('sampling regions includes middle center region', () {
+        // New region to sample from center of frame
+        final regions = AutoCalibratingSkyDetector.samplingRegions;
+        final hasMiddleCenter = regions.any((r) =>
+            r[2] >= 0.25 && // startY in middle (0.30)
+            r[3] <= 0.55); // endY before bottom half (0.50)
+        expect(hasMiddleCenter, isTrue);
+      });
+
+      test('sampling regions covers multiple vertical positions', () {
+        // Regions should sample from different Y positions
+        final regions = AutoCalibratingSkyDetector.samplingRegions;
+        final minYs = regions.map((r) => r[2]).toList();
+        final uniqueRanges = minYs.toSet().length;
+        // Should have at least 2 different vertical starting positions
+        expect(uniqueRanges, greaterThanOrEqualTo(2));
+      });
+
+      test('all sampling regions have valid boundaries', () {
+        // Each region should have valid [startX, endX, startY, endY]
+        final regions = AutoCalibratingSkyDetector.samplingRegions;
+        for (final region in regions) {
+          expect(region.length, 4);
+          expect(region[0], greaterThanOrEqualTo(0.0)); // startX >= 0
+          expect(region[1], lessThanOrEqualTo(1.0)); // endX <= 1
+          expect(region[0], lessThan(region[1])); // startX < endX
+          expect(region[2], greaterThanOrEqualTo(0.0)); // startY >= 0
+          expect(region[3], lessThanOrEqualTo(1.0)); // endY <= 1
+          expect(region[2], lessThan(region[3])); // startY < endY
+        }
+      });
+
+      test('sampling regions has at least 4 regions', () {
+        // Per the plan: top center, middle center, top left, top right
+        expect(
+          AutoCalibratingSkyDetector.samplingRegions.length,
+          greaterThanOrEqualTo(4),
+        );
+      });
+    });
   });
 }
 

@@ -267,7 +267,7 @@ class _ARViewScreenState extends State<ARViewScreen> {
 
   /// Builds the debug panel widget showing detailed metrics.
   ///
-  /// Shows: Heading, Pitch, Sky%, Altitude, Wind, FPS, Particles
+  /// Shows: Heading, Pitch, Sky%, Altitude, Wind, FPS, Particles, Recal button
   Widget _buildDebugPanel() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -295,9 +295,39 @@ class _ARViewScreenState extends State<ARViewScreen> {
           _buildDebugText('FPS: ${_currentFps.toStringAsFixed(0)}'),
           const SizedBox(height: 4),
           _buildDebugText('Particles: $_currentParticleCount'),
+          const SizedBox(height: 8),
+          // Recalibrate sky button - allows user to force recalibration
+          // when under overhang or if automatic calibration failed
+          GestureDetector(
+            onTap: _onRecalibratePressed,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text(
+                'Recal Sky',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  /// Handles the recalibrate button press.
+  ///
+  /// Forces the sky detector to recalibrate on the next frame.
+  /// Provides haptic feedback to confirm the action.
+  void _onRecalibratePressed() {
+    HapticFeedback.mediumImpact();
+    _skyDetector.forceRecalibrate();
   }
 
   /// Builds a single line of debug text.

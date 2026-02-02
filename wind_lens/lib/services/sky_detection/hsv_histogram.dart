@@ -11,6 +11,44 @@ import '../../models/hsv.dart';
 /// 1. Hard boundary check (within percentile range)
 /// 2. Gaussian-like scoring based on distance from mean
 class HSVHistogram {
+  // ============= Sky Color Heuristics =============
+
+  /// Returns true if the HSV color is consistent with sky appearance.
+  ///
+  /// Sky colors include:
+  /// - Blue sky: Hue 180-250, moderate saturation (0.1-0.7), bright (V >= 0.35)
+  /// - Gray/overcast: Low saturation (< 0.15), bright (V >= 0.35)
+  ///
+  /// Rejects:
+  /// - Brown/tan (porch ceilings): Hue 20-45
+  /// - Green (foliage): Hue 80-150
+  /// - Dark colors (shadows): V < 0.35
+  /// - Highly saturated colors: S > 0.7
+  ///
+  /// This method is used during calibration to filter out non-sky samples
+  /// when the user is under an overhang or porch.
+  static bool isSkyLikeColor(HSV hsv) {
+    // Reject dark colors regardless of hue/saturation (shadows, dark objects)
+    if (hsv.v < 0.35) {
+      return false;
+    }
+
+    // Very low saturation = gray (overcast sky, clouds, haze)
+    // Any hue is acceptable when saturation is very low
+    if (hsv.s < 0.15) {
+      return true; // Already checked V >= 0.35 above
+    }
+
+    // For colors with noticeable saturation, check if they're in blue sky range
+    // Blue sky hue range: 180-250 degrees
+    final isBlueHue = hsv.h >= 180 && hsv.h <= 250;
+
+    // Sky has moderate saturation (not too vivid, not too gray)
+    final isReasonableSaturation = hsv.s >= 0.1 && hsv.s <= 0.7;
+
+    return isBlueHue && isReasonableSaturation;
+  }
+
   /// Range and statistical values for Hue channel.
   final double hueMin;
   final double hueMax;

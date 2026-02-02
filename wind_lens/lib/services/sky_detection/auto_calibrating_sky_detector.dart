@@ -51,6 +51,28 @@ class AutoCalibratingSkyDetector implements SkyMask {
   /// Time between automatic recalibrations.
   static const Duration recalibrationInterval = Duration(minutes: 5);
 
+  // ============= Multi-Region Sampling Configuration =============
+  // Added for BUG-006 fix: sky detection fails under overhangs/porches
+
+  /// Regions to sample during calibration.
+  ///
+  /// Each region is defined as [startX, endX, startY, endY] fractions.
+  /// Sampling from multiple regions allows the detector to find actual sky
+  /// even when the top of the frame contains an overhang, porch ceiling,
+  /// or other obstruction.
+  ///
+  /// Regions:
+  /// - Top center: Original sampling region (safest for open sky)
+  /// - Middle center: Captures sky visible through/around obstructions
+  /// - Top left corner: Catches sky at frame edges
+  /// - Top right corner: Catches sky at frame edges
+  static const List<List<double>> samplingRegions = [
+    [0.20, 0.80, 0.05, 0.20], // Top center (original)
+    [0.25, 0.75, 0.30, 0.50], // Middle center (new)
+    [0.05, 0.30, 0.05, 0.25], // Top left corner (new)
+    [0.70, 0.95, 0.05, 0.25], // Top right corner (new)
+  ];
+
   /// Minimum pitch (degrees) required to trigger calibration.
   ///
   /// Lowered from 45 to 25 degrees for BUG-002.5 fix.
@@ -172,6 +194,29 @@ class AutoCalibratingSkyDetector implements SkyMask {
   /// This is primarily for testing purposes.
   double getSampleRegionBottom() => _getSampleRegionBottom();
 
+  // ============= Manual Recalibration =============
+
+  /// Forces immediate recalibration from the next camera frame.
+  ///
+  /// Call this when the user requests manual recalibration.
+  /// The detector will recalibrate on the next frame with sufficient pitch.
+  /// User should point the camera at actual sky for best results.
+  ///
+  /// This method clears all calibration state:
+  /// - The sky color histogram
+  /// - The calibration timestamp
+  /// - The cached sky mask
+  void forceRecalibrate() {
+    _skyHistogram = null;
+    _lastCalibration = null;
+    _cachedMask = null;
+    _cachedSkyFraction = 0.0;
+
+    if (kDebugMode) {
+      debugPrint('Sky calibration: forced recalibration requested');
+    }
+  }
+
   // ============= SkyMask Interface =============
 
   @override
@@ -254,8 +299,13 @@ class AutoCalibratingSkyDetector implements SkyMask {
       _samplePixelsYUV(image, width, height, samples);
     }
 
+    // After filtering with sky color heuristics, we may have fewer samples
+    // If insufficient sky-like samples found, calibration fails
     if (samples.length < 10) {
-      debugPrint('Sky calibration: insufficient samples (${samples.length})');
+      if (kDebugMode) {
+        debugPrint('Sky calibration: insufficient sky-like samples (${samples.length}). '
+            'Ensure camera is pointing at actual sky.');
+      }
       return;
     }
 
@@ -269,6 +319,10 @@ class AutoCalibratingSkyDetector implements SkyMask {
   }
 
   /// Samples pixels from BGRA8888 format (iOS).
+  ///
+  /// Uses multi-region sampling and sky color heuristics to filter out
+  /// non-sky samples (e.g., porch ceilings, overhangs). This addresses
+  /// BUG-006 where calibration failed under overhangs.
   void _samplePixelsBGRA(
     CameraImage image,
     int width,
@@ -278,31 +332,43 @@ class AutoCalibratingSkyDetector implements SkyMask {
     final bytes = image.planes[0].bytes;
     final bytesPerRow = image.planes[0].bytesPerRow;
 
-    // Sample from top 5% to dynamic bottom based on pitch
-    // Using dynamic region to avoid sampling buildings at lower pitch angles
-    final startY = (height * sampleRegionTop).floor();
-    final endY = (height * _getSampleRegionBottom()).floor();
-
     // Sample every 10th pixel for speed
     const stride = 10;
 
-    for (int y = startY; y < endY; y += stride) {
-      for (int x = 0; x < width; x += stride) {
-        final idx = y * bytesPerRow + x * 4;
-        if (idx + 3 >= bytes.length) continue;
+    // Sample from multiple regions to find actual sky even under overhangs
+    for (final region in samplingRegions) {
+      final startX = (width * region[0]).floor();
+      final endX = (width * region[1]).floor();
+      final startY = (height * region[2]).floor();
+      final endY = (height * region[3]).floor();
 
-        // BGRA format
-        final b = bytes[idx];
-        final g = bytes[idx + 1];
-        final r = bytes[idx + 2];
-        // final a = bytes[idx + 3]; // Alpha not needed
+      for (int y = startY; y < endY; y += stride) {
+        for (int x = startX; x < endX; x += stride) {
+          final idx = y * bytesPerRow + x * 4;
+          if (idx + 3 >= bytes.length) continue;
 
-        samples.add(ColorUtils.rgbToHsv(r, g, b));
+          // BGRA format
+          final b = bytes[idx];
+          final g = bytes[idx + 1];
+          final r = bytes[idx + 2];
+
+          final hsv = ColorUtils.rgbToHsv(r, g, b);
+
+          // Filter: only keep sky-like colors (blue sky or gray overcast)
+          // This rejects porch ceilings, brown wood, green foliage, etc.
+          if (HSVHistogram.isSkyLikeColor(hsv)) {
+            samples.add(hsv);
+          }
+        }
       }
     }
   }
 
   /// Samples pixels from YUV420 format (Android).
+  ///
+  /// Uses multi-region sampling and sky color heuristics to filter out
+  /// non-sky samples (e.g., porch ceilings, overhangs). This addresses
+  /// BUG-006 where calibration failed under overhangs.
   void _samplePixelsYUV(
     CameraImage image,
     int width,
@@ -319,32 +385,41 @@ class AutoCalibratingSkyDetector implements SkyMask {
     final uvRowStride = image.planes[1].bytesPerRow;
     final uvPixelStride = image.planes[1].bytesPerPixel ?? 1;
 
-    // Sample from top 5% to dynamic bottom based on pitch
-    // Using dynamic region to avoid sampling buildings at lower pitch angles
-    final startY = (height * sampleRegionTop).floor();
-    final endY = (height * _getSampleRegionBottom()).floor();
-
     // Sample every 10th pixel for speed
     const stride = 10;
 
-    for (int imgY = startY; imgY < endY; imgY += stride) {
-      for (int imgX = 0; imgX < width; imgX += stride) {
-        final yIndex = imgY * yRowStride + imgX;
-        if (yIndex >= yPlane.length) continue;
+    // Sample from multiple regions to find actual sky even under overhangs
+    for (final region in samplingRegions) {
+      final startX = (width * region[0]).floor();
+      final endX = (width * region[1]).floor();
+      final startY = (height * region[2]).floor();
+      final endY = (height * region[3]).floor();
 
-        // U and V are subsampled 2x2
-        final uvY = imgY ~/ 2;
-        final uvX = imgX ~/ 2;
-        final uvIndex = uvY * uvRowStride + uvX * uvPixelStride;
+      for (int imgY = startY; imgY < endY; imgY += stride) {
+        for (int imgX = startX; imgX < endX; imgX += stride) {
+          final yIndex = imgY * yRowStride + imgX;
+          if (yIndex >= yPlane.length) continue;
 
-        if (uvIndex >= uPlane.length || uvIndex >= vPlane.length) continue;
+          // U and V are subsampled 2x2
+          final uvY = imgY ~/ 2;
+          final uvX = imgX ~/ 2;
+          final uvIndex = uvY * uvRowStride + uvX * uvPixelStride;
 
-        final y = yPlane[yIndex];
-        final u = uPlane[uvIndex];
-        final v = vPlane[uvIndex];
+          if (uvIndex >= uPlane.length || uvIndex >= vPlane.length) continue;
 
-        final rgb = ColorUtils.yuvToRgb(y, u, v);
-        samples.add(ColorUtils.rgbToHsv(rgb.r, rgb.g, rgb.b));
+          final y = yPlane[yIndex];
+          final u = uPlane[uvIndex];
+          final v = vPlane[uvIndex];
+
+          final rgb = ColorUtils.yuvToRgb(y, u, v);
+          final hsv = ColorUtils.rgbToHsv(rgb.r, rgb.g, rgb.b);
+
+          // Filter: only keep sky-like colors (blue sky or gray overcast)
+          // This rejects porch ceilings, brown wood, green foliage, etc.
+          if (HSVHistogram.isSkyLikeColor(hsv)) {
+            samples.add(hsv);
+          }
+        }
       }
     }
   }
@@ -417,14 +492,28 @@ class AutoCalibratingSkyDetector implements SkyMask {
   /// Calculates position-based sky prior.
   ///
   /// Returns higher weight for top of frame, lower for bottom.
+  /// Reduced top bias (0.85 instead of 1.0) to rely more on color matching.
+  ///
+  /// This change addresses BUG-006 where the high position weight caused
+  /// non-sky regions (like porch ceilings) at the top of the frame to be
+  /// incorrectly classified as sky.
   double _calculatePositionWeight(double normalizedY) {
-    // Linear ramp: 1.0 at top, 0.0 at bottom
-    // With adjustment for typical sky distribution
-    if (normalizedY < 0.2) return 1.0;
-    if (normalizedY > 0.9) return 0.0;
+    // Reduced top bias - don't assume top is always sky
+    // Changed from 1.0 to 0.85 to make color matching more influential
+    if (normalizedY < 0.2) return 0.85;
 
-    return 1.0 - (normalizedY - 0.2) / 0.7;
+    // Bottom of frame (below 85%) gets zero weight
+    if (normalizedY > 0.85) return 0.0;
+
+    // Linear ramp from 0.85 at y=0.2 to 0.0 at y=0.85
+    return 0.85 - (normalizedY - 0.2) / 0.65 * 0.85;
   }
+
+  /// Public getter for position weight - exposed for testing.
+  ///
+  /// Returns the position weight for a given normalized Y coordinate.
+  /// This is primarily for testing purposes.
+  double getPositionWeight(double normalizedY) => _calculatePositionWeight(normalizedY);
 
   /// Gets pixel HSV from BGRA image.
   HSV? _getPixelHsvBGRA(CameraImage image, int x, int y) {
