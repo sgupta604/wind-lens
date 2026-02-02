@@ -7,18 +7,36 @@
 
 ## Current State
 
-**Current Feature:** Ready for Phase 2
+**Current Feature:** None - Ready for Phase 2
 **Current Phase:** idle
-**Next Command:** Pick from ROADMAP_PHASE2.md (recommend: `performance-optimization`)
+**Next Command:** Pick next from ROADMAP_PHASE2.md (recommend: `/research particle-colors`)
 
 **Phase 2 Roadmap:** `.claude/pipeline/ROADMAP_PHASE2.md`
 **Issues Tracker:** `.claude/pipeline/POST_MVP_ISSUES.md`
 
 ---
 
-## Pipeline Progress (Current Feature)
+## Most Recently Completed
 
-BUG-005: Altitude Slider Drag Gesture - **COMPLETED**
+Feature: performance-optimization - **FINALIZED** (2026-02-02)
+
+- [x] /research - Complete (2026-02-02)
+- [x] /plan - Complete (2026-02-02)
+- [x] /implement - Complete (2026-02-02)
+- [x] /test - Complete (2026-02-02)
+- [x] /finalize - Complete (2026-02-02)
+
+**Summary:** Optimized render loop from 5 FPS to target 45+ FPS through debugPrint removal, setState elimination, and memory allocation reduction. All 254 tests passing.
+
+**Documentation:** `.claude/features/performance-optimization/SUMMARY.md`
+
+---
+
+## Previously Completed
+
+### Most Recent: BUG-005
+
+BUG-005: Altitude Slider Drag Gesture - **COMPLETED** (2026-01-22)
 
 - [x] /diagnose - Complete (from `.claude/active-work/altitude-slider/diagnosis.md`)
 - [x] /plan - Complete (2026-01-22)
@@ -80,20 +98,21 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 | BUG-003 | Particles not masked to sky pixels | DONE (2026-01-21) |
 | BUG-004 | Wind animation not world-fixed | DONE (2026-01-22) |
 | BUG-005 | Altitude slider UX (drag gesture) | DONE (2026-01-22) |
+| P2A-001 | Performance optimization (5 FPS → 45+ FPS) | DONE (2026-02-02) |
 
 ---
 
 ## What To Do
 
-**🎉 MVP + POST-MVP BUGS COMPLETE - READY FOR PHASE 2! 🎉**
+**Next Feature: particle-colors (Phase 2a Feature 2)**
 
 ### Phase 2 Features (in priority order)
 
 See `.claude/pipeline/ROADMAP_PHASE2.md` for full details.
 
 **Phase 2a: Foundation (do first)**
-1. `performance-optimization` - Fix FPS (currently 5, should be 45-60)
-2. `particle-colors` - Improve visibility against sky
+1. ~~`performance-optimization`~~ - Fix FPS (5 → 45+) **DONE**
+2. `particle-colors` - Improve visibility against sky **<-- NEXT**
 3. `compass-widget` - Small compass in corner
 
 **Phase 2b: Location & Data**
@@ -102,7 +121,7 @@ See `.claude/pipeline/ROADMAP_PHASE2.md` for full details.
 6. `real-wind-data` - Integrate EDR API
 
 **Phase 2c: Advanced**
-7. `map-view` - Toggle AR ↔ top-down weather map
+7. `map-view` - Toggle AR <-> top-down weather map
 8. `altitude-input` - Input specific altitude in feet
 
 ### To Start a Feature
@@ -124,7 +143,7 @@ See `.claude/pipeline/ROADMAP_PHASE2.md` for full details.
 - Drag gesture on altitude slider
 
 **Issues:**
-- FPS: 5 (very low - investigate first)
+- FPS: 5 (very low - investigating now)
 - Particle colors hard to see
 - Trees not well detected
 
