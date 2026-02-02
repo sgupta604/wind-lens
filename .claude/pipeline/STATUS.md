@@ -7,9 +7,9 @@
 
 ## Current State
 
-**Current Feature:** None - Ready for Phase 2
+**Current Feature:** None (waiting for user)
 **Current Phase:** idle
-**Next Command:** Pick next from ROADMAP_PHASE2.md (recommend: `/research particle-colors`)
+**Next Command:** `/research particle-colors` (recommended) or user choice
 
 **Phase 2 Roadmap:** `.claude/pipeline/ROADMAP_PHASE2.md`
 **Issues Tracker:** `.claude/pipeline/POST_MVP_ISSUES.md`
@@ -18,11 +18,25 @@
 
 ## Most Recently Completed
 
-Feature: performance-optimization - **FINALIZED** (2026-02-02)
+Feature: sky-detection-regression (BUG-006) - **FINALIZED** (2026-02-02)
 
-- [x] /research - Complete (2026-02-02)
+- [x] /diagnose - Complete (2026-02-02)
 - [x] /plan - Complete (2026-02-02)
 - [x] /implement - Complete (2026-02-02)
+- [x] /test - Complete (2026-02-02) - All 295 tests passing
+- [x] /finalize - Complete (2026-02-02)
+
+**Summary:** Fixed sky detection calibration failure under overhangs/porches through multi-region sampling, sky color heuristics, reduced position bias, and manual recalibration. All 295 tests passing (254 original + 41 new).
+
+**Documentation:** `.claude/features/sky-detection-regression/SUMMARY.md`
+
+---
+
+## Previously Completed
+
+### Most Recent: Performance Optimization
+
+Feature: performance-optimization - **FINALIZED** (2026-02-02)
 - [x] /test - Complete (2026-02-02)
 - [x] /finalize - Complete (2026-02-02)
 
@@ -63,6 +77,16 @@ Changed world anchoring formula to apply 100% anchoring for all altitude levels 
 
 Feature summary: `.claude/features/wind-anchoring/SUMMARY.md`
 
+### Earlier Completed: BUG-005
+
+BUG-005: Altitude Slider Drag Gesture - **COMPLETED** (2026-01-22)
+
+- [x] /diagnose - Complete (from `.claude/active-work/altitude-slider/diagnosis.md`)
+- [x] /plan - Complete (2026-01-22)
+- [x] /implement - Complete (2026-01-22)
+- [x] /test - Complete (2026-01-22) - All 254 tests passing
+- [x] /finalize - Complete (2026-01-22)
+
 ### Earlier Completed Features
 
 See POST_MVP_ISSUES.md for details on BUG-001, BUG-002, BUG-002.5, BUG-003.
@@ -99,6 +123,7 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 | BUG-004 | Wind animation not world-fixed | DONE (2026-01-22) |
 | BUG-005 | Altitude slider UX (drag gesture) | DONE (2026-01-22) |
 | P2A-001 | Performance optimization (5 FPS → 45+ FPS) | DONE (2026-02-02) |
+| BUG-006 | Sky detection regression (overhang scenario) | DONE (2026-02-02) |
 
 ---
 

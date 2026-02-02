@@ -15,6 +15,7 @@
 | BUG-003 | Particles not masked to sky pixels | **Critical** | **DONE** | Section 4 |
 | BUG-004 | Wind animation not world-fixed | High | **DONE** | Section 5 |
 | BUG-005 | Altitude slider UX (buttons vs slider) | Low | **DONE** | Section 7 |
+| BUG-006 | Sky detection regression (particles on porch ceiling) | **Critical** | **DONE** | Section 3 |
 
 ---
 
@@ -258,6 +259,60 @@
 - `test/widgets/altitude_slider_test.dart` (+44 lines, 1 new test)
 
 **Pipeline:** `/diagnose altitude-slider` → `/plan` → `/implement` → `/test` → `/finalize` ✓
+
+---
+
+### BUG-006: Sky Detection Regression (Particles on Porch Ceiling)
+
+**Severity:** Critical
+**Status:** DONE (2026-02-02)
+**Spec Reference:** MVP Spec Section 3 - Sky Detection
+
+**Expected Behavior:**
+- Particles should ONLY appear in actual sky regions
+- When under overhang/porch, particles should appear in sky gaps, not on ceiling
+- Sky detection should accurately distinguish sky from structures
+
+**Actual Behavior (BEFORE FIX):**
+- Particles appear on porch ceiling (top of frame)
+- Actual sky (visible in middle of frame) may or may not have particles
+- Detection incorrectly classifies porch ceiling as "sky"
+
+**User Report:**
+Screenshot `/workspace/images/IMG_4344.PNG` shows particles (pink/magenta) rendering on wooden porch ceiling slats instead of the gray overcast sky visible in the middle portion of the frame.
+
+**Root Cause (confirmed):**
+The sky detection design assumes the TOP of the camera frame is sky during calibration:
+1. Calibration samples pixels from top 5-50% of frame (based on pitch angle)
+2. When user is under porch, top of frame is porch ceiling, not sky
+3. System learns porch ceiling color as "sky" color
+4. Detection uses position weight that gives maximum (1.0) to top 20% of frame
+5. Porch ceiling gets high color match + high position weight = classified as sky
+
+This is a **design flaw** that was exposed by the under-porch use case, NOT a regression from code changes.
+
+**Fix Implemented:**
+- Added `isSkyLikeColor()` static method to filter non-sky colors during calibration
+  - Accepts blue sky (hue 180-250, moderate saturation)
+  - Accepts gray/overcast sky (low saturation)
+  - Rejects brown/tan (hue 20-45), green (hue 80-150), dark shadows, highly saturated colors
+- Implemented multi-region sampling (4 regions instead of 1)
+  - Top center, middle center, top left corner, top right corner
+  - Increases chance of finding actual sky when top is obstructed
+- Reduced position weight from 1.0 to 0.85 for top of frame
+  - Makes color matching more influential than position assumption
+- Added `forceRecalibrate()` method and "Recal Sky" button in debug panel
+  - Provides manual recalibration fallback for edge cases
+- All 295 tests passing (254 original + 41 new), flutter analyze clean
+
+**Components Modified:**
+- `lib/services/sky_detection/hsv_histogram.dart` (+25 lines)
+- `lib/services/sky_detection/auto_calibrating_sky_detector.dart` (~100 lines modified)
+- `lib/screens/ar_view_screen.dart` (+25 lines)
+- `test/services/sky_detection/hsv_histogram_test.dart` (+130 lines, 24 tests)
+- `test/services/sky_detection/auto_calibrating_sky_detector_test.dart` (+100 lines, 17 tests)
+
+**Pipeline:** `/diagnose sky-detection-regression` → `/plan` → `/implement` → `/test` → `/finalize` ✓
 
 ---
 
