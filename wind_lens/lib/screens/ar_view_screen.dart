@@ -13,6 +13,7 @@ import 'package:camera/camera.dart';
 import '../services/sky_detection/auto_calibrating_sky_detector.dart';
 import '../widgets/altitude_slider.dart';
 import '../widgets/camera_view.dart';
+import '../widgets/compass_widget.dart';
 import '../widgets/info_bar.dart';
 import '../widgets/particle_overlay.dart';
 
@@ -251,6 +252,13 @@ class _ARViewScreenState extends State<ARViewScreen> {
                 windDirection: _windData.directionDegrees,
                 altitude: _altitudeLevel,
               ),
+            ),
+
+            // Layer 7: Compass widget positioned above InfoBar
+            Positioned(
+              left: 16,
+              bottom: bottomPadding + 76, // 16px margin + ~60px InfoBar height
+              child: CompassWidget(heading: _heading),
             ),
           ],
         ),

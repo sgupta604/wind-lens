@@ -7,20 +7,76 @@
 
 ## Current State
 
-**Current Feature:** None (BUG-007 finalized)
-**Current Phase:** Ready for next feature
-**Next Command:** `/research compass-widget` (recommended)
+**Current Feature:** None (awaiting next feature selection)
+**Current Phase:** idle
+**Next Command:** Select next feature from ROADMAP_PHASE2.md
 
-### Recommended Next Feature
+### Last Completed Feature
 
-**compass-widget** - Small compass widget in corner showing direction (Quick win, low complexity)
+compass-widget (P2A-003) - **FINALIZED** (2026-02-03)
+
+- [x] /research - Complete (2026-02-03)
+- [x] /plan - Complete (2026-02-03)
+- [x] /implement - Complete (2026-02-03)
+- [x] /test - Complete (2026-02-03) - All 375 tests passing
+- [x] /finalize - Complete (2026-02-03)
+
+**Research Document:** `.claude/features/compass-widget/2026-02-03T19:30_research.md`
+**Plan Document:** `.claude/features/compass-widget/2026-02-03T19:28_plan.md`
+**Tasks:** `.claude/features/compass-widget/tasks.md`
+**Implementation:** `.claude/active-work/compass-widget/implementation.md`
 
 **Phase 2 Roadmap:** `.claude/pipeline/ROADMAP_PHASE2.md`
 **Issues Tracker:** `.claude/pipeline/POST_MVP_ISSUES.md`
 
 ---
 
+## Implementation Summary (2026-02-03)
+
+**Feature:** Compass Widget - Small circular compass in bottom-left corner
+
+**What was implemented:**
+- CompassWidget (68x68px) with glassmorphism styling
+- CompassPainter for dial rendering with cardinal directions (N/S/E/W)
+- Red "N" label and red triangle direction indicator
+- Dial rotates based on device heading
+- Integrated into ARViewScreen as Layer 7
+
+**Files Created:**
+- `/workspace/wind_lens/lib/widgets/compass_widget.dart` (229 lines)
+- `/workspace/wind_lens/test/widgets/compass_widget_test.dart` (217 lines)
+
+**Files Modified:**
+- `/workspace/wind_lens/lib/screens/ar_view_screen.dart` (added import + Layer 7)
+
+**Test Results:**
+- All 375 tests passing (358 original + 17 new)
+- No regressions
+- Flutter analyze lib/ - No issues found
+- Test report: `.claude/active-work/compass-widget/test-success.md`
+
+---
+
 ## Most Recently Completed
+
+Feature: compass-widget (P2A-003) - **FINALIZED** (2026-02-03)
+
+- [x] /research - Complete (2026-02-03)
+- [x] /plan - Complete (2026-02-03)
+- [x] /implement - Complete (2026-02-03)
+- [x] /test - Complete (2026-02-03) - All 375 tests passing
+- [x] /finalize - Complete (2026-02-03)
+
+**Summary:** Added circular compass widget (68x68px) in bottom-left corner showing device heading with rotating cardinal directions (N, S, E, W). N label is red and prominent. Glassmorphism styling matches AltitudeSlider and InfoBar. Widget positioned above InfoBar as Layer 7 in ARViewScreen. Added 17 new tests (375 total).
+
+**Documentation:** `.claude/features/compass-widget/SUMMARY.md`
+**Commit:** (pending push)
+
+---
+
+## Previously Completed
+
+### Previous: Streamline Ghosting Fix
 
 Feature: streamline-ghosting (BUG-007) - **FINALIZED** (2026-02-03)
 
@@ -146,12 +202,13 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 | BUG-006 | Sky detection regression (overhang scenario) | DONE (2026-02-02) |
 | P2A-002 | wind-streamlines (Windy.com style trails) | DONE (2026-02-03) |
 | BUG-007 | Streamline ghosting (ghost trails on respawn) | DONE (2026-02-03) |
+| P2A-003 | compass-widget | DONE (2026-02-03) |
 
 ---
 
 ## What To Do
 
-**Next: Run `/finalize streamline-ghosting` to commit the bug fix**
+**Next: Select next feature from Phase 2 roadmap**
 
 ### Phase 2 Features (in priority order)
 
@@ -161,7 +218,7 @@ See `.claude/pipeline/ROADMAP_PHASE2.md` for full details.
 1. ~~`performance-optimization`~~ - Fix FPS (5 to 45+) **DONE**
 2. ~~`wind-streamlines`~~ - Windy.com style flowing trails **DONE**
 3. `particle-colors` - Can merge with wind-streamlines (included in wind-streamlines)
-4. `compass-widget` - Small compass in corner **<-- RECOMMENDED NEXT (Quick win)**
+4. ~~`compass-widget`~~ - Small compass in corner **DONE**
 
 **Phase 2b: Location & Data**
 5. `location-awareness` - GPS + heading for real data
@@ -171,12 +228,6 @@ See `.claude/pipeline/ROADMAP_PHASE2.md` for full details.
 **Phase 2c: Advanced**
 8. `map-view` - Toggle AR <-> top-down weather map
 9. `altitude-input` - Input specific altitude in feet
-
-### To Continue
-
-```bash
-/research compass-widget  # Start next Phase 2a feature (recommended quick win)
-```
 
 ### User Testing Notes (2026-02-03)
 
@@ -189,15 +240,13 @@ See `.claude/pipeline/ROADMAP_PHASE2.md` for full details.
 - FPS: 45+ (fixed from 5)
 - Streamline visualization implemented (Windy.com style)
 - Streamline ghosting fix implemented (BUG-007) **COMPLETE**
+- Compass widget implemented (P2A-003) **COMPLETE**
 
 **Known Limitations:**
 - Trees not well recognized by sky detection (deferred - ML would be required)
 
 **Device Testing Required:**
-- Build on iOS device and validate streamline appearance
-- Verify FPS maintains 45+ with streamlines enabled
-- Test user experience with ViewMode toggle
-- Validate BUG-007 fix removes ghost trails (all automated tests pass)
+- Compass widget (compass rotates correctly with device heading, glassmorphism visible)
 
 **Screenshots:**
 - `/workspace/images/app_img.PNG` - Previous app with dots

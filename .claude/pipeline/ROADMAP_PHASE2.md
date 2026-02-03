@@ -9,9 +9,9 @@
 
 **MVP:** Complete (8/8 features)
 **Post-MVP Bugs:** Complete (6/6 fixed)
-**Phase 2a Features:** 2/4 complete (performance-optimization, wind-streamlines DONE)
-**Tests:** 354 passing
-**Ready for:** Remaining Phase 2 features
+**Phase 2a Features:** 4/4 complete (performance-optimization, wind-streamlines, particle-colors, compass-widget DONE)
+**Tests:** 375 passing
+**Ready for:** Phase 2b features (location-awareness, sky-viewport, real-wind-data)
 
 ---
 
@@ -107,32 +107,34 @@ Sky coverage radius = f(pitch, altitude_level)
 
 ### Feature 3: compass-widget
 
-**Priority:** Medium
-**Complexity:** Low
-**Blocked by:** None
+**Status:** ✅ **DONE** (2026-02-03)
 
-**What to Build:**
-- Small circular compass in corner of screen
+**What Was Built:**
+- Circular compass widget (68x68px) in bottom-left corner
 - Shows N/S/E/W cardinal directions
-- Rotates based on device heading
-- Indicator showing which way camera is pointing
+- Rotates based on device heading from CompassService
+- Red triangle indicator at top shows camera direction
+- Glassmorphism styling matching AltitudeSlider and InfoBar
+- N label is red and larger (14px) than other labels (12px)
 
-**Why Needed:**
-- User feedback: want to know which direction they're facing
-- Helps orient user when viewing wind patterns
-- Common AR app convention
-
-**Technical Notes:**
-- Use existing CompassService heading
-- Simple CustomPainter for compass dial
-- Position in bottom-left or top-right corner (not obscuring altitude slider)
-- Semi-transparent background (glassmorphism like other UI)
+**Technical Implementation:**
+- StatelessWidget with heading parameter
+- CompassPainter CustomPainter for dial rendering
+- Positioned 60px above InfoBar as Layer 7 in ARViewScreen
+- shouldRepaint optimization (only repaints when heading changes)
+- Edge case handling (0°, 180°, 360°, negative, overflow)
 
 **Acceptance Criteria:**
-- [ ] Compass widget visible in corner
-- [ ] Rotates smoothly with device heading
-- [ ] Shows N/S/E/W labels
-- [ ] Doesn't obscure other UI elements
+- [x] Compass widget visible in corner
+- [x] Rotates smoothly with device heading
+- [x] Shows N/S/E/W labels
+- [x] Doesn't obscure other UI elements
+- [x] All 375 tests passing (added 17 new tests)
+- [x] No analyzer errors
+
+**Summary:** Implemented circular compass widget showing device heading with rotating cardinal directions. See `.claude/features/compass-widget/SUMMARY.md`
+
+**Commit:** (pending push)
 
 ---
 
@@ -375,14 +377,14 @@ class StreamlineParticle {
 Based on dependencies:
 
 ```
-Phase 2a: Foundation & Visuals
+Phase 2a: Foundation & Visuals (COMPLETE)
   1. ✅ performance-optimization (DONE - 2026-02-02)
   2. ✅ wind-streamlines (DONE - 2026-02-03 - Windy.com style trails)
-  3. particle-colors (can merge with wind-streamlines - already included)
-  4. compass-widget (quick win, no dependencies) <-- RECOMMENDED NEXT
+  3. ✅ particle-colors (included in wind-streamlines)
+  4. ✅ compass-widget (DONE - 2026-02-03)
 
-Phase 2b: Location & Data
-  5. location-awareness (foundation for real data)
+Phase 2b: Location & Data <-- RECOMMENDED NEXT
+  5. location-awareness (foundation for real data) <-- START HERE
   6. sky-viewport (depends on location)
   7. real-wind-data (depends on location + viewport)
 
