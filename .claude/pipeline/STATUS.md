@@ -7,24 +7,25 @@
 
 ## Current State
 
-**Current Feature:** None (awaiting next feature selection)
+**Current Feature:** None (ready for next feature)
 **Current Phase:** idle
-**Next Command:** Select next feature from ROADMAP_PHASE2.md
+**Next Command:** Check ROADMAP_PHASE2.md for next feature
 
 ### Last Completed Feature
 
-compass-widget (P2A-003) - **FINALIZED** (2026-02-03)
+compass-widget-bugs (BUG-008) - **FINALIZED** (2026-02-03)
 
-- [x] /research - Complete (2026-02-03)
+- [x] /diagnose - Complete (2026-02-03)
 - [x] /plan - Complete (2026-02-03)
 - [x] /implement - Complete (2026-02-03)
 - [x] /test - Complete (2026-02-03) - All 375 tests passing
 - [x] /finalize - Complete (2026-02-03)
 
-**Research Document:** `.claude/features/compass-widget/2026-02-03T19:30_research.md`
-**Plan Document:** `.claude/features/compass-widget/2026-02-03T19:28_plan.md`
-**Tasks:** `.claude/features/compass-widget/tasks.md`
-**Implementation:** `.claude/active-work/compass-widget/implementation.md`
+**Diagnosis Document:** `.claude/active-work/compass-widget-bugs/diagnosis.md`
+**Plan Document:** `.claude/features/compass-widget-bugs/2026-02-03T19:57_plan.md`
+**Tasks:** `.claude/features/compass-widget-bugs/tasks.md`
+**Implementation:** `.claude/active-work/compass-widget-bugs/implementation.md`
+**Summary:** `.claude/features/compass-widget-bugs/SUMMARY.md`
 
 **Phase 2 Roadmap:** `.claude/pipeline/ROADMAP_PHASE2.md`
 **Issues Tracker:** `.claude/pipeline/POST_MVP_ISSUES.md`
@@ -33,31 +34,43 @@ compass-widget (P2A-003) - **FINALIZED** (2026-02-03)
 
 ## Implementation Summary (2026-02-03)
 
-**Feature:** Compass Widget - Small circular compass in bottom-left corner
+**Bug Fix:** Compass Widget Bugs (BUG-008) - Position overlap with InfoBar
 
-**What was implemented:**
-- CompassWidget (68x68px) with glassmorphism styling
-- CompassPainter for dial rendering with cardinal directions (N/S/E/W)
-- Red "N" label and red triangle direction indicator
-- Dial rotates based on device heading
-- Integrated into ARViewScreen as Layer 7
-
-**Files Created:**
-- `/workspace/wind_lens/lib/widgets/compass_widget.dart` (229 lines)
-- `/workspace/wind_lens/test/widgets/compass_widget_test.dart` (217 lines)
+**What was fixed:**
+- Bug 1 (Position): Changed compass bottom offset from 76px to 92px, adding 16px visible gap above InfoBar
+- Bug 2 (Static): Verified compass rotation is working correctly - no code changes needed
 
 **Files Modified:**
-- `/workspace/wind_lens/lib/screens/ar_view_screen.dart` (added import + Layer 7)
+- `/workspace/wind_lens/lib/screens/ar_view_screen.dart` (line 260 - single line change)
 
 **Test Results:**
-- All 375 tests passing (358 original + 17 new)
+- All 375 tests passing
 - No regressions
 - Flutter analyze lib/ - No issues found
-- Test report: `.claude/active-work/compass-widget/test-success.md`
+- Test report: `.claude/active-work/compass-widget-bugs/test-success.md`
 
 ---
 
 ## Most Recently Completed
+
+Bug Fix: compass-widget-bugs (BUG-008) - **FINALIZED** (2026-02-03)
+
+- [x] /diagnose - Complete (2026-02-03)
+- [x] /plan - Complete (2026-02-03)
+- [x] /implement - Complete (2026-02-03)
+- [x] /test - Complete (2026-02-03) - All 375 tests passing
+- [x] /finalize - Complete (2026-02-03)
+
+**Summary:** Fixed compass widget position overlap with InfoBar by increasing bottom offset from 76px to 92px (adds 16px visible gap). Verified compass rotation logic is working correctly (no fix needed for Bug 2). Single-line change, zero regressions. All 375 tests passing.
+
+**Documentation:** `.claude/features/compass-widget-bugs/SUMMARY.md`
+**Commit:** (pending)
+
+---
+
+## Previously Completed
+
+### Previous: Compass Widget Feature
 
 Feature: compass-widget (P2A-003) - **FINALIZED** (2026-02-03)
 
@@ -71,10 +84,6 @@ Feature: compass-widget (P2A-003) - **FINALIZED** (2026-02-03)
 
 **Documentation:** `.claude/features/compass-widget/SUMMARY.md`
 **Commit:** 2c93e83 - feat(ui): add compass widget showing device heading
-
----
-
-## Previously Completed
 
 ### Previous: Streamline Ghosting Fix
 
@@ -203,6 +212,7 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 | P2A-002 | wind-streamlines (Windy.com style trails) | DONE (2026-02-03) |
 | BUG-007 | Streamline ghosting (ghost trails on respawn) | DONE (2026-02-03) |
 | P2A-003 | compass-widget | DONE (2026-02-03) |
+| BUG-008 | Compass widget bugs (position overlap + rotation check) | DONE (2026-02-03) |
 
 ---
 
@@ -246,7 +256,8 @@ See `.claude/pipeline/ROADMAP_PHASE2.md` for full details.
 - Trees not well recognized by sky detection (deferred - ML would be required)
 
 **Device Testing Required:**
-- Compass widget (compass rotates correctly with device heading, glassmorphism visible)
+- Compass widget position (verify 16px gap above InfoBar)
+- Compass rotation (verify smooth rotation with device heading)
 
 **Screenshots:**
 - `/workspace/images/app_img.PNG` - Previous app with dots

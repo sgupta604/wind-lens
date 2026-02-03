@@ -257,7 +257,7 @@ class _ARViewScreenState extends State<ARViewScreen> {
             // Layer 7: Compass widget positioned above InfoBar
             Positioned(
               left: 16,
-              bottom: bottomPadding + 76, // 16px margin + ~60px InfoBar height
+              bottom: bottomPadding + 92, // BUG-008: 16px margin + ~60px InfoBar height + 16px gap
               child: CompassWidget(heading: _heading),
             ),
           ],

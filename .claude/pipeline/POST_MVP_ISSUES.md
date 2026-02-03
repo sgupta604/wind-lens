@@ -17,6 +17,7 @@
 | BUG-005 | Altitude slider UX (buttons vs slider) | Low | **DONE** | Section 7 |
 | BUG-006 | Sky detection regression (particles on porch ceiling) | **Critical** | **DONE** | Section 3 |
 | BUG-007 | Streamline ghosting (ghost trails on respawn) | **Critical** | **DONE** | Section 4 |
+| BUG-008 | Compass widget bugs (position overlap + rotation) | Low | **DONE** | N/A |
 
 ---
 
@@ -371,6 +372,47 @@ The `Particle` class already had a `resetTrail()` method (sets `trailCount = 0` 
 **Commit:** 08065c0 - fix(particles): prevent streamline ghosting on particle respawn
 
 **Pipeline:** `/diagnose streamline-ghosting` → `/plan` → `/implement` → `/test` → `/finalize` ✓
+
+---
+
+### BUG-008: Compass Widget Bugs
+
+**Severity:** Low
+**Status:** DONE (2026-02-03)
+**Spec Reference:** N/A (post-feature bug fix)
+
+**Expected Behavior:**
+- Compass widget should have visible gap above InfoBar for visual clarity
+- Compass dial should rotate smoothly with device heading
+
+**Actual Behavior (BEFORE FIX):**
+- Bug 1: Compass positioned too close to InfoBar (no visible gap)
+- Bug 2: User reported compass not rotating (investigation revealed it was working correctly)
+
+**User Report:**
+Screenshot `/workspace/images/IMG_4361.PNG` showed compass widget touching/overlapping InfoBar at bottom of screen. User also reported compass dial not rotating with device heading.
+
+**Root Cause (confirmed):**
+- **Bug 1 (Position):** Compass bottom offset was `bottomPadding + 76` which positioned it immediately adjacent to InfoBar with no visible gap
+- **Bug 2 (Static):** Code analysis revealed rotation IS working correctly. The `canvas.rotate(-heading * pi / 180)` is properly applied, `shouldRepaint` returns true when heading changes, and setState triggers rebuild. Screenshot verification showed compass correctly rotated to 137.9 degrees. User may have expected more responsive rotation (smoothing factor 0.1 and 1.0 degree dead zone provide smooth, jitter-free rotation).
+
+**Fix Implemented:**
+- Changed compass bottom offset from 76 to 92, adding 16px visible gap above InfoBar
+- Updated comment to document the 16px gap
+- No code changes for Bug 2 (rotation working as designed)
+- All 375 tests passing, flutter analyze lib/ clean
+
+**Components Modified:**
+- `lib/screens/ar_view_screen.dart` (line 260 - single line change)
+
+**Documentation:**
+- `.claude/features/compass-widget-bugs/SUMMARY.md`
+- `.claude/features/compass-widget-bugs/2026-02-03T19:57_plan.md`
+- `.claude/features/compass-widget-bugs/tasks.md`
+
+**Commit:** (pending) - fix(ui): adjust compass widget position above InfoBar
+
+**Pipeline:** `/diagnose compass-widget-bugs` → `/plan` → `/implement` → `/test` → `/finalize` ✓
 
 ---
 
