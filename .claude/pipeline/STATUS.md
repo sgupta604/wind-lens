@@ -64,7 +64,7 @@ Bug Fix: compass-widget-bugs (BUG-008) - **FINALIZED** (2026-02-03)
 **Summary:** Fixed compass widget position overlap with InfoBar by increasing bottom offset from 76px to 92px (adds 16px visible gap). Verified compass rotation logic is working correctly (no fix needed for Bug 2). Single-line change, zero regressions. All 375 tests passing.
 
 **Documentation:** `.claude/features/compass-widget-bugs/SUMMARY.md`
-**Commit:** (pending)
+**Commit:** 4483af9 - fix(ui): adjust compass widget position above InfoBar
 
 ---
 

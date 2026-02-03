@@ -410,7 +410,7 @@ Screenshot `/workspace/images/IMG_4361.PNG` showed compass widget touching/overl
 - `.claude/features/compass-widget-bugs/2026-02-03T19:57_plan.md`
 - `.claude/features/compass-widget-bugs/tasks.md`
 
-**Commit:** (pending) - fix(ui): adjust compass widget position above InfoBar
+**Commit:** 4483af9 - fix(ui): adjust compass widget position above InfoBar
 
 **Pipeline:** `/diagnose compass-widget-bugs` → `/plan` → `/implement` → `/test` → `/finalize` ✓
 
