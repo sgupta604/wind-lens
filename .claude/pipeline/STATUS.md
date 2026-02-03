@@ -7,48 +7,39 @@
 
 ## Current State
 
-**Current Feature:** wind-streamlines
-**Current Phase:** test-complete
-**Next Command:** `/finalize wind-streamlines`
+**Current Feature:** None (ready for next Phase 2 feature)
+**Current Phase:** Idle
+**Next Command:** See ROADMAP_PHASE2.md for next features
 
-### Pipeline Progress: wind-streamlines
+### Next Recommended Feature
 
-- [x] /research - Complete (2026-02-02)
-- [x] /plan - Complete (2026-02-02)
-- [x] /implement - Complete (2026-02-03) - 354 tests passing
-- [x] /test - Complete (2026-02-03) - All 354 tests PASS
-- [ ] /finalize - Not started
-
-**Research Document:** `.claude/features/wind-streamlines/2026-02-02T23:45_research.md`
-**Plan Document:** `.claude/features/wind-streamlines/2026-02-02T23:55_plan.md`
-**Task Breakdown:** `.claude/features/wind-streamlines/tasks.md`
-**Implementation Summary:** `.claude/active-work/wind-streamlines/implementation.md`
-**Test Success Report:** `.claude/active-work/wind-streamlines/test-success.md`
+**compass-widget** - Small compass widget in corner showing direction (Quick win, low complexity)
 
 **Phase 2 Roadmap:** `.claude/pipeline/ROADMAP_PHASE2.md`
 **Issues Tracker:** `.claude/pipeline/POST_MVP_ISSUES.md`
 
-### Implementation Summary (2026-02-03)
-
-**New Files:**
-- `lib/models/view_mode.dart` - ViewMode enum (dots, streamlines)
-- `lib/utils/wind_colors.dart` - Speed-based color gradient utility
-- `test/models/view_mode_test.dart` - 10 tests
-- `test/utils/wind_colors_test.dart` - 21 tests
-
-**Modified Files:**
-- `lib/models/particle.dart` - Trail storage (Float32List circular buffer)
-- `lib/models/altitude_level.dart` - streamlineTrailPoints (12/18/25)
-- `lib/widgets/particle_overlay.dart` - Streamline rendering mode
-- `lib/screens/ar_view_screen.dart` - Toggle UI, particle count adjustment
-
-**Test Results:**
-- All 354 tests pass (was 295, added 59 new)
-- No regressions in existing functionality
-
 ---
 
 ## Most Recently Completed
+
+Feature: wind-streamlines (P2A-002) - **FINALIZED** (2026-02-03)
+
+- [x] /research - Complete (2026-02-02)
+- [x] /plan - Complete (2026-02-02)
+- [x] /implement - Complete (2026-02-03)
+- [x] /test - Complete (2026-02-03) - All 354 tests passing
+- [x] /finalize - Complete (2026-02-03)
+
+**Summary:** Implemented Windy.com-style flowing wind streamlines with speed-based color gradient (blue→purple), altitude-specific trail lengths, and ViewMode toggle. Added 59 new tests (354 total, up from 295). Uses efficient Float32List circular buffer for trail storage. Zero regressions.
+
+**Documentation:** `.claude/features/wind-streamlines/SUMMARY.md`
+**Commit:** 02f345a - feat(particles): add Windy.com-style wind streamlines
+
+---
+
+## Previously Completed
+
+### Previous: Sky Detection Regression Fix
 
 Feature: sky-detection-regression (BUG-006) - **FINALIZED** (2026-02-02)
 
@@ -62,11 +53,7 @@ Feature: sky-detection-regression (BUG-006) - **FINALIZED** (2026-02-02)
 
 **Documentation:** `.claude/features/sky-detection-regression/SUMMARY.md`
 
----
-
-## Previously Completed
-
-### Most Recent: Performance Optimization
+### Earlier: Performance Optimization
 
 Feature: performance-optimization - **FINALIZED** (2026-02-02)
 - [x] /test - Complete (2026-02-02)
@@ -78,9 +65,9 @@ Feature: performance-optimization - **FINALIZED** (2026-02-02)
 
 ---
 
-## Previously Completed
+## Earlier Completed Features
 
-### Most Recent: BUG-005
+### BUG-005: Altitude Slider Drag Gesture
 
 BUG-005: Altitude Slider Drag Gesture - **COMPLETED** (2026-01-22)
 
@@ -90,11 +77,7 @@ BUG-005: Altitude Slider Drag Gesture - **COMPLETED** (2026-01-22)
 - [x] /test - Complete (2026-01-22) - All 254 tests passing
 - [x] /finalize - Complete (2026-01-22)
 
----
-
-## Previously Completed
-
-### Most Recent: BUG-004
+### BUG-004: Wind Animation Not World-Fixed
 
 BUG-004: Wind Animation Not World-Fixed - **COMPLETED** (2026-01-22)
 
@@ -109,17 +92,7 @@ Changed world anchoring formula to apply 100% anchoring for all altitude levels 
 
 Feature summary: `.claude/features/wind-anchoring/SUMMARY.md`
 
-### Earlier Completed: BUG-005
-
-BUG-005: Altitude Slider Drag Gesture - **COMPLETED** (2026-01-22)
-
-- [x] /diagnose - Complete (from `.claude/active-work/altitude-slider/diagnosis.md`)
-- [x] /plan - Complete (2026-01-22)
-- [x] /implement - Complete (2026-01-22)
-- [x] /test - Complete (2026-01-22) - All 254 tests passing
-- [x] /finalize - Complete (2026-01-22)
-
-### Earlier Completed Features
+### Earlier Completed Bugs
 
 See POST_MVP_ISSUES.md for details on BUG-001, BUG-002, BUG-002.5, BUG-003.
 
@@ -156,13 +129,13 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 | BUG-005 | Altitude slider UX (drag gesture) | DONE (2026-01-22) |
 | P2A-001 | Performance optimization (5 FPS to 45+ FPS) | DONE (2026-02-02) |
 | BUG-006 | Sky detection regression (overhang scenario) | DONE (2026-02-02) |
-| P2A-002 | wind-streamlines (Windy.com style trails) | TEST COMPLETE (2026-02-03) |
+| P2A-002 | wind-streamlines (Windy.com style trails) | DONE (2026-02-03) |
 
 ---
 
 ## What To Do
 
-**Current: Run `/finalize wind-streamlines` to commit and finalize**
+**Next: Choose next Phase 2 feature from ROADMAP_PHASE2.md**
 
 ### Phase 2 Features (in priority order)
 
@@ -170,9 +143,9 @@ See `.claude/pipeline/ROADMAP_PHASE2.md` for full details.
 
 **Phase 2a: Foundation & Visuals**
 1. ~~`performance-optimization`~~ - Fix FPS (5 to 45+) **DONE**
-2. `wind-streamlines` - Windy.com style flowing trails **<-- TEST COMPLETE, NEED /finalize**
+2. ~~`wind-streamlines`~~ - Windy.com style flowing trails **DONE**
 3. `particle-colors` - Can merge with wind-streamlines (included in wind-streamlines)
-4. `compass-widget` - Small compass in corner
+4. `compass-widget` - Small compass in corner **<-- RECOMMENDED NEXT (Quick win)**
 
 **Phase 2b: Location & Data**
 5. `location-awareness` - GPS + heading for real data
@@ -186,10 +159,10 @@ See `.claude/pipeline/ROADMAP_PHASE2.md` for full details.
 ### To Continue
 
 ```bash
-/finalize wind-streamlines # All tests pass - ready to finalize
+/research compass-widget  # Recommended next feature
 ```
 
-### User Testing Notes (2026-02-02)
+### User Testing Notes (2026-02-03)
 
 **Working:**
 - Sky detection calibrates on cloudy day
@@ -198,14 +171,20 @@ See `.claude/pipeline/ROADMAP_PHASE2.md` for full details.
 - World anchoring correct
 - Drag gesture on altitude slider
 - FPS: 45+ (fixed from 5)
+- Streamline visualization implemented (Windy.com style) **NEW**
 
-**Current Issues:**
-- Particle appearance: "sprinkles" not ideal - want Windy.com style streamlines **<-- IMPLEMENTED**
-- Trees not well recognized by sky detection (deferred)
+**Known Limitations:**
+- Trees not well recognized by sky detection (deferred - ML would be required)
+- Streamlines visual quality needs device testing validation
+
+**Device Testing Required:**
+- Build on iOS device and validate streamline appearance
+- Verify FPS maintains 45+ with streamlines enabled
+- Test user experience with ViewMode toggle
 
 **Screenshots:**
-- `/workspace/images/app_img.PNG` - Current app (working, but dots)
-- `/workspace/images/windy_img_goal.png` - Target visual (Windy.com streamlines)
+- `/workspace/images/app_img.PNG` - Previous app with dots
+- `/workspace/images/windy_img_goal.png` - Reference (Windy.com streamlines)
 
 ---
 

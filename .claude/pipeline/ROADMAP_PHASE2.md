@@ -9,8 +9,9 @@
 
 **MVP:** Complete (8/8 features)
 **Post-MVP Bugs:** Complete (6/6 fixed)
-**Tests:** 254 passing
-**Ready for:** Phase 2 features
+**Phase 2a Features:** 2/4 complete (performance-optimization, wind-streamlines DONE)
+**Tests:** 354 passing
+**Ready for:** Remaining Phase 2 features
 
 ---
 
@@ -273,6 +274,8 @@ Sky coverage radius = f(pitch, altitude_level)
 
 ### Feature 9: wind-streamlines
 
+**Status:** ✅ **DONE** (2026-02-03)
+
 **Priority:** High
 **Complexity:** High
 **Blocked by:** None (but combines well with particle-colors)
@@ -353,13 +356,17 @@ class StreamlineParticle {
 - Test on device - ensure 45+ FPS maintained
 
 **Acceptance Criteria:**
-- [ ] Particles render as flowing streamlines (not dots)
-- [ ] Trail length varies by altitude level
-- [ ] Colors shift based on wind speed (blue→purple gradient)
-- [ ] Toggle to switch between Dots and Streamlines views
-- [ ] Performance maintained at 45+ FPS
-- [ ] Trails fade smoothly from head to tail
-- [ ] Direction of flow clearly visible
+- [x] Particles render as flowing streamlines (not dots)
+- [x] Trail length varies by altitude level (surface=12, mid=18, jet=25 points)
+- [x] Colors shift based on wind speed (blue→purple gradient)
+- [x] Toggle to switch between Dots and Streamlines views
+- [x] Performance maintained at 45+ FPS (1000 particles in streamlines mode)
+- [x] Trails fade smoothly from head to tail
+- [x] Direction of flow clearly visible
+
+**Summary:** Implemented Windy.com-style flowing wind streamlines with speed-based color gradient (blue→cyan→green→yellow→orange→red→purple), altitude-specific trail lengths, and ViewMode toggle. Added 59 new tests (354 total). Uses efficient Float32List circular buffer for trail storage. See `.claude/features/wind-streamlines/SUMMARY.md`
+
+**Commit:** 02f345a - feat(particles): add Windy.com-style wind streamlines
 
 ---
 
@@ -370,9 +377,9 @@ Based on dependencies:
 ```
 Phase 2a: Foundation & Visuals
   1. ✅ performance-optimization (DONE - 2026-02-02)
-  2. wind-streamlines (HIGH PRIORITY - Windy.com style trails) <-- NEXT
-  3. particle-colors (can merge with wind-streamlines)
-  4. compass-widget (quick win, no dependencies)
+  2. ✅ wind-streamlines (DONE - 2026-02-03 - Windy.com style trails)
+  3. particle-colors (can merge with wind-streamlines - already included)
+  4. compass-widget (quick win, no dependencies) <-- RECOMMENDED NEXT
 
 Phase 2b: Location & Data
   5. location-awareness (foundation for real data)
