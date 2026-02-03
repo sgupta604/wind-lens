@@ -134,7 +134,7 @@ Sky coverage radius = f(pitch, altitude_level)
 
 **Summary:** Implemented circular compass widget showing device heading with rotating cardinal directions. See `.claude/features/compass-widget/SUMMARY.md`
 
-**Commit:** (pending push)
+**Commit:** 2c93e83 - feat(ui): add compass widget showing device heading
 
 ---
 

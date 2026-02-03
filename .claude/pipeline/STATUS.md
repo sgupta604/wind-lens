@@ -70,7 +70,7 @@ Feature: compass-widget (P2A-003) - **FINALIZED** (2026-02-03)
 **Summary:** Added circular compass widget (68x68px) in bottom-left corner showing device heading with rotating cardinal directions (N, S, E, W). N label is red and prominent. Glassmorphism styling matches AltitudeSlider and InfoBar. Widget positioned above InfoBar as Layer 7 in ARViewScreen. Added 17 new tests (375 total).
 
 **Documentation:** `.claude/features/compass-widget/SUMMARY.md`
-**Commit:** (pending push)
+**Commit:** 2c93e83 - feat(ui): add compass widget showing device heading
 
 ---
 
