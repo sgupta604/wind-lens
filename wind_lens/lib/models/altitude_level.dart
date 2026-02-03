@@ -115,4 +115,19 @@ extension AltitudeLevelProperties on AltitudeLevel {
         AltitudeLevel.midLevel => 0.7,
         AltitudeLevel.jetStream => 0.5,
       };
+
+  /// Number of trail points to use for streamlines rendering.
+  ///
+  /// Higher altitudes use more trail points for longer, more dramatic streamlines:
+  /// - surface: 12 points (shorter trails, ~4-6% screen width)
+  /// - midLevel: 18 points (medium trails, ~8-12% screen width)
+  /// - jetStream: 25 points (long trails, ~15-20% screen width)
+  ///
+  /// This creates visual hierarchy where jet stream winds appear faster
+  /// and more dramatic than surface winds.
+  int get streamlineTrailPoints => switch (this) {
+        AltitudeLevel.surface => 12,
+        AltitudeLevel.midLevel => 18,
+        AltitudeLevel.jetStream => 25,
+      };
 }

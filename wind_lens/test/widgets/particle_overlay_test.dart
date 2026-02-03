@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wind_lens/models/altitude_level.dart';
+import 'package:wind_lens/models/view_mode.dart';
 import 'package:wind_lens/models/wind_data.dart';
 import 'package:wind_lens/services/sky_detection/sky_mask.dart';
 import 'package:wind_lens/widgets/particle_overlay.dart';
@@ -981,6 +982,154 @@ void main() {
       expect(overlay.previousHeading, 359.0);
 
       // Widget should render correctly
+      expect(find.byType(ParticleOverlay), findsOneWidget);
+    });
+  });
+
+  group('ParticleOverlay ViewMode Integration', () {
+    late MockSkyMask mockSkyMask;
+
+    setUp(() {
+      mockSkyMask = MockSkyMask();
+    });
+
+    testWidgets('accepts viewMode parameter', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ParticleOverlay(
+              skyMask: mockSkyMask,
+              viewMode: ViewMode.streamlines,
+            ),
+          ),
+        ),
+      );
+
+      final overlay = tester.widget<ParticleOverlay>(
+        find.byType(ParticleOverlay),
+      );
+      expect(overlay.viewMode, ViewMode.streamlines);
+    });
+
+    testWidgets('viewMode defaults to dots', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ParticleOverlay(
+              skyMask: mockSkyMask,
+            ),
+          ),
+        ),
+      );
+
+      final overlay = tester.widget<ParticleOverlay>(
+        find.byType(ParticleOverlay),
+      );
+      expect(overlay.viewMode, ViewMode.dots);
+    });
+
+    testWidgets('renders in dots mode without error', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ParticleOverlay(
+              skyMask: mockSkyMask,
+              viewMode: ViewMode.dots,
+              particleCount: 100,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 16));
+      await tester.pump(const Duration(milliseconds: 16));
+
+      expect(find.byType(ParticleOverlay), findsOneWidget);
+    });
+
+    testWidgets('renders in streamlines mode without error', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ParticleOverlay(
+              skyMask: mockSkyMask,
+              viewMode: ViewMode.streamlines,
+              particleCount: 100,
+            ),
+          ),
+        ),
+      );
+
+      // Run several frames to build up trail points
+      for (int i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+
+      expect(find.byType(ParticleOverlay), findsOneWidget);
+    });
+
+    testWidgets('can switch between modes', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ParticleOverlay(
+              skyMask: mockSkyMask,
+              viewMode: ViewMode.dots,
+              particleCount: 100,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 16));
+
+      // Switch to streamlines
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ParticleOverlay(
+              skyMask: mockSkyMask,
+              viewMode: ViewMode.streamlines,
+              particleCount: 100,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 16));
+
+      final overlay = tester.widget<ParticleOverlay>(
+        find.byType(ParticleOverlay),
+      );
+      expect(overlay.viewMode, ViewMode.streamlines);
+    });
+
+    testWidgets('streamlines mode works with wind data', (tester) async {
+      final windData = WindData(
+        uComponent: 3.0,
+        vComponent: 4.0,
+        altitude: 10.0,
+        timestamp: DateTime.now(),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ParticleOverlay(
+              skyMask: mockSkyMask,
+              viewMode: ViewMode.streamlines,
+              windData: windData,
+              particleCount: 100,
+            ),
+          ),
+        ),
+      );
+
+      // Run frames to build trails
+      for (int i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+
       expect(find.byType(ParticleOverlay), findsOneWidget);
     });
   });

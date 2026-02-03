@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../models/altitude_level.dart';
 import '../models/compass_data.dart';
+import '../models/view_mode.dart';
 import '../models/wind_data.dart';
 import '../services/compass_service.dart';
 import '../services/fake_wind_service.dart';
@@ -19,12 +20,13 @@ import '../widgets/particle_overlay.dart';
 ///
 /// This screen provides a fullscreen camera preview with a black background,
 /// designed for augmented reality wind visualization. It includes:
-/// - Wind-driven particle animation
+/// - Wind-driven particle animation with two view modes (dots/streamlines)
 /// - World-fixed particle direction (adjusts for compass heading)
 /// - Altitude selection with visual depth effects (parallax)
 /// - Toggleable debug panel (3-finger tap to show/hide)
 /// - User-facing info bar with wind speed, direction, and altitude
 /// - Adaptive performance management
+/// - View mode toggle (long-press altitude slider or use debug panel button)
 class ARViewScreen extends StatefulWidget {
   const ARViewScreen({super.key});
 
@@ -79,6 +81,12 @@ class _ARViewScreenState extends State<ARViewScreen> {
 
   /// Whether the sky detector is calibrated.
   bool _isCalibrated = false;
+
+  /// Current view mode for particle rendering.
+  ///
+  /// - dots: Traditional short line segments (default)
+  /// - streamlines: Flowing trails with speed-based colors
+  ViewMode _viewMode = ViewMode.dots;
 
   @override
   void initState() {
@@ -162,6 +170,17 @@ class _ARViewScreenState extends State<ARViewScreen> {
     });
   }
 
+  /// Toggles the view mode between dots and streamlines.
+  ///
+  /// Provides haptic feedback on toggle. In streamlines mode,
+  /// the particle count may be reduced for better performance.
+  void _toggleViewMode() {
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _viewMode = _viewMode.toggle();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
@@ -188,6 +207,9 @@ class _ARViewScreenState extends State<ARViewScreen> {
               altitudeLevel: _altitudeLevel,
               previousHeading: _previousHeading,
               onFpsUpdate: _onFpsUpdate,
+              viewMode: _viewMode,
+              // Reduce particle count in streamlines mode for better performance
+              particleCount: _viewMode == ViewMode.streamlines ? 1000 : 2000,
             ),
 
             // Layer 3: Debug toggle button (always visible)
@@ -203,14 +225,18 @@ class _ARViewScreenState extends State<ARViewScreen> {
               ),
 
             // Layer 5: Altitude slider positioned at right edge, vertically centered
+            // Long-press toggles view mode (dots/streamlines)
             Positioned(
               right: 16,
               top: 0,
               bottom: 0,
               child: Center(
-                child: AltitudeSlider(
-                  value: _altitudeLevel,
-                  onChanged: _onAltitudeChanged,
+                child: GestureDetector(
+                  onLongPress: _toggleViewMode,
+                  child: AltitudeSlider(
+                    value: _altitudeLevel,
+                    onChanged: _onAltitudeChanged,
+                  ),
                 ),
               ),
             ),
@@ -295,6 +321,30 @@ class _ARViewScreenState extends State<ARViewScreen> {
           _buildDebugText('FPS: ${_currentFps.toStringAsFixed(0)}'),
           const SizedBox(height: 4),
           _buildDebugText('Particles: $_currentParticleCount'),
+          const SizedBox(height: 4),
+          _buildDebugText('Mode: ${_viewMode.displayName}'),
+          const SizedBox(height: 8),
+          // View mode toggle button
+          GestureDetector(
+            onTap: _toggleViewMode,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: _viewMode == ViewMode.streamlines
+                    ? Colors.purple.withValues(alpha: 0.7)
+                    : Colors.grey.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                _viewMode == ViewMode.dots ? 'Streamlines' : 'Dots',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
           const SizedBox(height: 8),
           // Recalibrate sky button - allows user to force recalibration
           // when under overhang or if automatic calibration failed

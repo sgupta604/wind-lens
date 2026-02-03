@@ -103,5 +103,37 @@ void main() {
         expect(AltitudeLevel.values[2], AltitudeLevel.jetStream);
       });
     });
+
+    group('streamlineTrailPoints', () {
+      test('surface has streamlineTrailPoints of 12', () {
+        expect(AltitudeLevel.surface.streamlineTrailPoints, 12);
+      });
+
+      test('midLevel has streamlineTrailPoints of 18', () {
+        expect(AltitudeLevel.midLevel.streamlineTrailPoints, 18);
+      });
+
+      test('jetStream has streamlineTrailPoints of 25', () {
+        expect(AltitudeLevel.jetStream.streamlineTrailPoints, 25);
+      });
+
+      test('streamlineTrailPoints increases with altitude', () {
+        expect(
+          AltitudeLevel.surface.streamlineTrailPoints,
+          lessThan(AltitudeLevel.midLevel.streamlineTrailPoints),
+        );
+        expect(
+          AltitudeLevel.midLevel.streamlineTrailPoints,
+          lessThan(AltitudeLevel.jetStream.streamlineTrailPoints),
+        );
+      });
+
+      test('all trail points are within maxTrailPoints limit (30)', () {
+        for (final level in AltitudeLevel.values) {
+          expect(level.streamlineTrailPoints, lessThanOrEqualTo(30));
+          expect(level.streamlineTrailPoints, greaterThan(0));
+        }
+      });
+    });
   });
 }

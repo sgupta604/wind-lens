@@ -5,9 +5,11 @@ import 'package:flutter/scheduler.dart';
 
 import '../models/altitude_level.dart';
 import '../models/particle.dart';
+import '../models/view_mode.dart';
 import '../models/wind_data.dart';
 import '../services/performance_manager.dart';
 import '../services/sky_detection/sky_mask.dart';
+import '../utils/wind_colors.dart';
 
 /// Callback type for FPS and particle count updates.
 ///
@@ -21,6 +23,10 @@ typedef FpsUpdateCallback = void Function(double fps, int particleCount);
 /// The animation uses a Ticker for smooth 60 FPS updates, and particles are
 /// pre-allocated to avoid garbage collection pressure.
 ///
+/// Supports two rendering modes via [viewMode]:
+/// - [ViewMode.dots]: Short line segments (sprinkles/dots) - default
+/// - [ViewMode.streamlines]: Flowing trails with speed-based colors
+///
 /// Key features:
 /// - Pre-allocated particle pool (no allocations in render loop)
 /// - 2-pass glow rendering for visual appeal
@@ -30,6 +36,7 @@ typedef FpsUpdateCallback = void Function(double fps, int particleCount);
 /// - Altitude-specific coloring and parallax effects
 /// - Adaptive performance with PerformanceManager integration
 /// - FPS callback for debug display
+/// - Streamlines mode with curved trails and speed-based colors
 class ParticleOverlay extends StatefulWidget {
   /// The sky mask for filtering particles to sky region.
   final SkyMask skyMask;
@@ -38,6 +45,7 @@ class ParticleOverlay extends StatefulWidget {
   ///
   /// Note: This is the initial/maximum particle count. The actual count
   /// may be reduced by the PerformanceManager if FPS drops below 45.
+  /// In streamlines mode, this may also be reduced for performance.
   final int particleCount;
 
   /// Wind data containing u/v components, speed, and direction.
@@ -55,6 +63,7 @@ class ParticleOverlay extends StatefulWidget {
   /// The altitude level for particle visualization.
   ///
   /// Determines particle color, trail scale, and parallax factor.
+  /// In streamlines mode, also determines trail point count.
   /// Defaults to [AltitudeLevel.surface].
   final AltitudeLevel altitudeLevel;
 
@@ -76,6 +85,14 @@ class ParticleOverlay extends StatefulWidget {
   /// If not provided, a new instance will be created internally.
   final PerformanceManager? performanceManager;
 
+  /// The rendering mode for particles.
+  ///
+  /// - [ViewMode.dots]: Traditional short line segments (default)
+  /// - [ViewMode.streamlines]: Flowing trails with speed-based colors
+  ///
+  /// Defaults to [ViewMode.dots] for backward compatibility.
+  final ViewMode viewMode;
+
   /// Creates a new ParticleOverlay.
   ///
   /// The [skyMask] is required and determines which screen regions
@@ -84,6 +101,8 @@ class ParticleOverlay extends StatefulWidget {
   ///
   /// Optional [onFpsUpdate] callback provides FPS/particle count updates
   /// for debug display purposes.
+  ///
+  /// Use [viewMode] to switch between dots and streamlines rendering.
   ParticleOverlay({
     super.key,
     required this.skyMask,
@@ -94,6 +113,7 @@ class ParticleOverlay extends StatefulWidget {
     this.previousHeading = 0.0,
     this.onFpsUpdate,
     this.performanceManager,
+    this.viewMode = ViewMode.dots,
   }) : windData = windData ?? WindData.zero();
 
   @override
@@ -230,6 +250,8 @@ class _ParticleOverlayState extends State<ParticleOverlay>
   /// Updates particle positions based on wind direction, ages particles,
   /// applies parallax effect based on heading change, and triggers a repaint.
   /// Also records frame timing with PerformanceManager and calls FPS callback.
+  ///
+  /// In streamlines mode, also records trail points for each particle.
   void _onTick(Duration elapsed) {
     // Record frame with performance manager BEFORE processing
     _performanceManager.recordFrame(elapsed, _lastFrameTime);
@@ -268,6 +290,9 @@ class _ParticleOverlayState extends State<ParticleOverlay>
     final parallaxFactor = widget.altitudeLevel.parallaxFactor;
     final trailScale = widget.altitudeLevel.trailScale;
 
+    // Check if we're in streamlines mode
+    final isStreamlines = widget.viewMode == ViewMode.streamlines;
+
     // Update all particles
     for (final p in _particles) {
       // WORLD ANCHORING: All particles are 100% anchored to world space
@@ -284,6 +309,14 @@ class _ParticleOverlayState extends State<ParticleOverlay>
       // Update trail length based on wind speed and altitude scale
       // Shorter trails at higher altitudes create depth illusion
       p.trailLength = widget.windData.speed * 0.5 * trailScale;
+
+      // Store current speed for color calculation in streamlines mode
+      p.speed = widget.windData.speed;
+
+      // Record trail point in streamlines mode
+      if (isStreamlines) {
+        p.recordTrailPoint();
+      }
 
       // Age the particle (~3 second lifespan with 0.3 multiplier)
       p.age += dt * 0.3;
@@ -325,6 +358,8 @@ class _ParticleOverlayState extends State<ParticleOverlay>
           skyMask: widget.skyMask,
           windAngle: _screenAngle,
           color: widget.altitudeLevel.particleColor,
+          viewMode: widget.viewMode,
+          trailPointLimit: widget.altitudeLevel.streamlineTrailPoints,
         ),
         size: Size.infinite,
       ),
@@ -332,13 +367,24 @@ class _ParticleOverlayState extends State<ParticleOverlay>
   }
 }
 
-/// CustomPainter that renders particles with a 2-pass glow effect.
+/// CustomPainter that renders particles with a 2-pass glow effect or streamlines.
 ///
-/// For each particle:
+/// Supports two rendering modes:
+/// - [ViewMode.dots]: Traditional 2-pass glow rendering
+/// - [ViewMode.streamlines]: Curved trails with speed-based colors
+///
+/// For dots mode (each particle):
 /// 1. Checks if the particle is in the sky region (via SkyMask)
 /// 2. Calculates opacity based on age (fade in/out)
 /// 3. Renders a glow pass (wider, blurred, lower opacity)
 /// 4. Renders a core pass (thinner, sharper, higher opacity)
+///
+/// For streamlines mode (each particle):
+/// 1. Checks if the particle is in the sky region (via SkyMask)
+/// 2. Reads trail history from particle's circular buffer
+/// 3. Builds a Path with quadratic bezier curves for smoothness
+/// 4. Applies opacity gradient from head (opaque) to tail (transparent)
+/// 5. Uses speed-based color from WindColors
 ///
 /// Paint objects are pre-allocated to avoid GC pressure.
 /// Colors are cached for common opacity levels to avoid withValues() calls.
@@ -352,8 +398,14 @@ class ParticleOverlayPainter extends CustomPainter {
   /// Wind direction angle in radians (screen-space, adjusted for compass).
   final double windAngle;
 
-  /// Base color for particles.
+  /// Base color for particles (used in dots mode).
   final Color color;
+
+  /// The rendering mode.
+  final ViewMode viewMode;
+
+  /// Maximum trail points to render (altitude-specific).
+  final int trailPointLimit;
 
   /// Pre-allocated glow paint (width=4.0, blur).
   final Paint _glowPaint = Paint()
@@ -367,6 +419,12 @@ class ParticleOverlayPainter extends CustomPainter {
     ..style = PaintingStyle.stroke
     ..strokeCap = StrokeCap.round
     ..strokeWidth = 1.5;
+
+  /// Pre-allocated streamline paint (width=2.0, no blur for performance).
+  final Paint _streamlinePaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round
+    ..strokeWidth = 2.0;
 
   /// Cached glow colors for opacity levels 0.0-1.0 in 0.1 increments.
   /// Avoids Color.withValues() allocations in render loop.
@@ -386,6 +444,8 @@ class ParticleOverlayPainter extends CustomPainter {
     required this.skyMask,
     required this.windAngle,
     required this.color,
+    this.viewMode = ViewMode.dots,
+    this.trailPointLimit = 12,
   }) : super(repaint: repaintNotifier) {
     // Pre-compute colors for common opacity levels (0.0 to 1.0 in 0.1 steps)
     // This avoids calling withValues() 2000+ times per frame
@@ -401,6 +461,15 @@ class ParticleOverlayPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (viewMode == ViewMode.streamlines) {
+      _paintStreamlines(canvas, size);
+    } else {
+      _paintDots(canvas, size);
+    }
+  }
+
+  /// Renders particles as short line segments with 2-pass glow effect.
+  void _paintDots(Canvas canvas, Size size) {
     for (final p in particles) {
       // SKY MASK CHECK: Only render if this point is in sky
       if (!skyMask.isPointInSky(p.x, p.y)) {
@@ -435,6 +504,63 @@ class ParticleOverlayPainter extends CustomPainter {
       // PASS 2: The core (thinner, sharper, higher opacity) - use cached color
       _corePaint.color = _coreColors[opacityIndex];
       canvas.drawLine(start, end, _corePaint);
+    }
+  }
+
+  /// Renders particles as flowing streamlines with speed-based colors.
+  void _paintStreamlines(Canvas canvas, Size size) {
+    for (final p in particles) {
+      // SKY MASK CHECK: Only render if current point is in sky
+      if (!skyMask.isPointInSky(p.x, p.y)) {
+        continue; // Skip particles over buildings/ground
+      }
+
+      // Need at least 2 points for a line
+      if (p.trailCount < 2) continue;
+
+      // Calculate base opacity from age
+      final baseOpacity = sin(p.age * 3.14159).clamp(0.0, 1.0);
+      if (baseOpacity < 0.01) continue;
+
+      // Get speed-based color
+      final baseColor = WindColors.getSpeedColor(p.speed);
+
+      // Determine how many points to render (limited by trailPointLimit and available points)
+      final pointsToRender = p.trailCount.clamp(0, trailPointLimit);
+      if (pointsToRender < 2) continue;
+
+      // Build the path from trail points
+      // Trail is stored in circular buffer, need to read from oldest to newest
+      // Oldest point is at (trailHead - trailCount) mod maxTrailPoints
+      // But we want to render from head (newest) back to tail (oldest) for opacity
+
+      // Calculate starting index (newest point is at trailHead - 1)
+      // We render from newest to oldest, applying fading opacity
+
+      // Draw trail segments with fading opacity
+      for (int i = 0; i < pointsToRender - 1; i++) {
+        // Calculate indices in circular buffer
+        // i=0 is the newest segment (brightest)
+        // i=pointsToRender-2 is the oldest segment (dimmest)
+        final newerIdx = (p.trailHead - 1 - i + Particle.maxTrailPoints) % Particle.maxTrailPoints;
+        final olderIdx = (p.trailHead - 2 - i + Particle.maxTrailPoints) % Particle.maxTrailPoints;
+
+        // Get positions
+        final x1 = p.trailX[newerIdx] * size.width;
+        final y1 = p.trailY[newerIdx] * size.height;
+        final x2 = p.trailX[olderIdx] * size.width;
+        final y2 = p.trailY[olderIdx] * size.height;
+
+        // Calculate opacity for this segment (fades from head to tail)
+        // Head (i=0) is at full opacity, tail is at near-zero
+        final segmentOpacity = baseOpacity * (1.0 - (i / pointsToRender));
+
+        // Set color with opacity
+        _streamlinePaint.color = baseColor.withValues(alpha: segmentOpacity);
+
+        // Draw the segment
+        canvas.drawLine(Offset(x1, y1), Offset(x2, y2), _streamlinePaint);
+      }
     }
   }
 
