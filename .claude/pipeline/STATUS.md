@@ -7,11 +7,11 @@
 
 ## Current State
 
-**Current Feature:** None (ready for next Phase 2 feature)
-**Current Phase:** Idle
-**Next Command:** See ROADMAP_PHASE2.md for next features
+**Current Feature:** None (BUG-007 finalized)
+**Current Phase:** Ready for next feature
+**Next Command:** `/research compass-widget` (recommended)
 
-### Next Recommended Feature
+### Recommended Next Feature
 
 **compass-widget** - Small compass widget in corner showing direction (Quick win, low complexity)
 
@@ -21,6 +21,25 @@
 ---
 
 ## Most Recently Completed
+
+Feature: streamline-ghosting (BUG-007) - **FINALIZED** (2026-02-03)
+
+- [x] /diagnose - Complete (2026-02-03)
+- [x] /plan - Complete (2026-02-03)
+- [x] /implement - Complete (2026-02-03)
+- [x] /test - Complete (2026-02-03) - All 358 tests passing
+- [x] /finalize - Complete (2026-02-03)
+
+**Summary:** Fixed critical bug where particle trails persisted incorrectly when particles were respawned or wrapped around screen edges, creating ghost trails across the entire screen. Added `resetTrail()` calls in 5 locations (3 in `_resetToSkyPosition()`, 2 for edge wrapping). Added 4 new tests. All 358 tests passing, no performance impact.
+
+**Documentation:** `.claude/features/streamline-ghosting/SUMMARY.md`
+**Commit:** 08065c0 - fix(particles): prevent streamline ghosting on particle respawn
+
+---
+
+## Previously Completed
+
+### Previous: Wind Streamlines Feature
 
 Feature: wind-streamlines (P2A-002) - **FINALIZED** (2026-02-03)
 
@@ -35,11 +54,7 @@ Feature: wind-streamlines (P2A-002) - **FINALIZED** (2026-02-03)
 **Documentation:** `.claude/features/wind-streamlines/SUMMARY.md`
 **Commit:** 02f345a - feat(particles): add Windy.com-style wind streamlines
 
----
-
-## Previously Completed
-
-### Previous: Sky Detection Regression Fix
+### Earlier: Sky Detection Regression Fix
 
 Feature: sky-detection-regression (BUG-006) - **FINALIZED** (2026-02-02)
 
@@ -130,12 +145,13 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 | P2A-001 | Performance optimization (5 FPS to 45+ FPS) | DONE (2026-02-02) |
 | BUG-006 | Sky detection regression (overhang scenario) | DONE (2026-02-02) |
 | P2A-002 | wind-streamlines (Windy.com style trails) | DONE (2026-02-03) |
+| BUG-007 | Streamline ghosting (ghost trails on respawn) | DONE (2026-02-03) |
 
 ---
 
 ## What To Do
 
-**Next: Choose next Phase 2 feature from ROADMAP_PHASE2.md**
+**Next: Run `/finalize streamline-ghosting` to commit the bug fix**
 
 ### Phase 2 Features (in priority order)
 
@@ -159,7 +175,7 @@ See `.claude/pipeline/ROADMAP_PHASE2.md` for full details.
 ### To Continue
 
 ```bash
-/research compass-widget  # Recommended next feature
+/research compass-widget  # Start next Phase 2a feature (recommended quick win)
 ```
 
 ### User Testing Notes (2026-02-03)
@@ -171,16 +187,17 @@ See `.claude/pipeline/ROADMAP_PHASE2.md` for full details.
 - World anchoring correct
 - Drag gesture on altitude slider
 - FPS: 45+ (fixed from 5)
-- Streamline visualization implemented (Windy.com style) **NEW**
+- Streamline visualization implemented (Windy.com style)
+- Streamline ghosting fix implemented (BUG-007) **COMPLETE**
 
 **Known Limitations:**
 - Trees not well recognized by sky detection (deferred - ML would be required)
-- Streamlines visual quality needs device testing validation
 
 **Device Testing Required:**
 - Build on iOS device and validate streamline appearance
 - Verify FPS maintains 45+ with streamlines enabled
 - Test user experience with ViewMode toggle
+- Validate BUG-007 fix removes ghost trails (all automated tests pass)
 
 **Screenshots:**
 - `/workspace/images/app_img.PNG` - Previous app with dots

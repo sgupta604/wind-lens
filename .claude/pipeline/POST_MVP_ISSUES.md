@@ -16,6 +16,7 @@
 | BUG-004 | Wind animation not world-fixed | High | **DONE** | Section 5 |
 | BUG-005 | Altitude slider UX (buttons vs slider) | Low | **DONE** | Section 7 |
 | BUG-006 | Sky detection regression (particles on porch ceiling) | **Critical** | **DONE** | Section 3 |
+| BUG-007 | Streamline ghosting (ghost trails on respawn) | **Critical** | **DONE** | Section 4 |
 
 ---
 
@@ -313,6 +314,63 @@ This is a **design flaw** that was exposed by the under-porch use case, NOT a re
 - `test/services/sky_detection/auto_calibrating_sky_detector_test.dart` (+100 lines, 17 tests)
 
 **Pipeline:** `/diagnose sky-detection-regression` → `/plan` → `/implement` → `/test` → `/finalize` ✓
+
+---
+
+### BUG-007: Streamline Ghosting (Ghost Trails on Respawn)
+
+**Severity:** Critical
+**Status:** DONE (2026-02-03)
+**Spec Reference:** MVP Spec Section 4 - Particle System
+
+**Expected Behavior:**
+- Particle trails should only show the recent movement path in streamlines mode
+- When particles are respawned or wrapped around screen edges, trails should be cleared
+- No ghost trails should persist from previous particle positions
+
+**Actual Behavior (BEFORE FIX):**
+- Long diagonal ghost trails appeared across the entire screen
+- Trails persisted after particles were recycled via `_resetToSkyPosition()`
+- Cross-screen diagonal lines appeared when particles wrapped at edges
+- Artifacts accumulated over time, making visualization unusable
+
+**User Report:**
+Screenshots `/workspace/images/IMG_4357.PNG` through `/workspace/images/IMG_4360.PNG` show severe ghost trail artifacts in streamlines mode, with diagonal lines spanning the entire screen.
+
+**Root Cause (confirmed):**
+The particle trail buffer (`trailX` and `trailY` Float32List) was not being cleared in two critical scenarios:
+
+1. **Particle respawn via `_resetToSkyPosition()`:** When particles expired or moved out of sky regions, they were teleported to new positions, but the trail buffer retained old coordinates. This caused the renderer to draw lines from the old position to the new position, creating ghost trails.
+
+2. **Screen edge wrapping:** When particles wrapped around screen edges (x or y coordinate exceeding bounds), the trail buffer was not cleared, causing cross-screen diagonal lines to appear.
+
+The `Particle` class already had a `resetTrail()` method (sets `trailCount = 0` and `trailWriteIndex = 0`) that was correctly called in the `reset()` method, but this method was not being invoked in the two problematic code paths.
+
+**Fix Implemented:**
+- Added `p.resetTrail()` calls in `_resetToSkyPosition()` (all 3 code paths: high sky fraction, found position, fallback)
+- Added conditional trail reset on screen edge wrapping (streamlines mode only)
+- Added 4 new tests to verify fix and prevent regression
+- All 358 tests passing (354 original + 4 new), flutter analyze clean
+- Zero performance impact (O(1) operation)
+
+**Components Modified:**
+- `lib/widgets/particle_overlay.dart` - Added resetTrail() calls in 5 locations
+  - Lines 206, 217, 225: In `_resetToSkyPosition()` method
+  - Lines 327-336: In edge wrapping logic with `wrapped` flag tracking
+- `test/widgets/particle_overlay_test.dart` - Added 4 BUG-007 tests
+  - "particles reset via _resetToSkyPosition have cleared trail"
+  - "streamlines mode clears trail on screen edge wrap"
+  - "dots mode edge wrap does not affect particle state unnecessarily"
+  - "no ghost trail segments after particle respawn in streamlines mode"
+
+**Documentation:**
+- `.claude/features/streamline-ghosting/SUMMARY.md`
+- `.claude/features/streamline-ghosting/2026-02-03T00:30_plan.md`
+- `.claude/features/streamline-ghosting/tasks.md`
+
+**Commit:** 08065c0 - fix(particles): prevent streamline ghosting on particle respawn
+
+**Pipeline:** `/diagnose streamline-ghosting` → `/plan` → `/implement` → `/test` → `/finalize` ✓
 
 ---
 
