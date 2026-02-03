@@ -203,6 +203,7 @@ class _ParticleOverlayState extends State<ParticleOverlay>
       p.x = _random.nextDouble();
       p.y = _random.nextDouble();
       p.age = 0.0;
+      p.resetTrail(); // BUG-007: Clear trail to prevent ghost lines after teleport
       return;
     }
 
@@ -213,6 +214,7 @@ class _ParticleOverlayState extends State<ParticleOverlay>
         p.x = x;
         p.y = y;
         p.age = 0.0;
+        p.resetTrail(); // BUG-007: Clear trail to prevent ghost lines after teleport
         return;
       }
     }
@@ -220,6 +222,7 @@ class _ParticleOverlayState extends State<ParticleOverlay>
     p.x = _random.nextDouble();
     p.y = _random.nextDouble();
     p.age = 0.0;
+    p.resetTrail(); // BUG-007: Clear trail to prevent ghost lines after teleport
   }
 
   /// Adjusts the particle pool size when performance manager changes count.
@@ -322,10 +325,15 @@ class _ParticleOverlayState extends State<ParticleOverlay>
       p.age += dt * 0.3;
 
       // Wrap around screen edges (instead of just resetting)
-      if (p.x < 0) p.x += 1.0;
-      if (p.x > 1) p.x -= 1.0;
-      if (p.y < 0) p.y += 1.0;
-      if (p.y > 1) p.y -= 1.0;
+      // BUG-007: Track wrapping to reset trail in streamlines mode
+      bool wrapped = false;
+      if (p.x < 0) { p.x += 1.0; wrapped = true; }
+      if (p.x > 1) { p.x -= 1.0; wrapped = true; }
+      if (p.y < 0) { p.y += 1.0; wrapped = true; }
+      if (p.y > 1) { p.y -= 1.0; wrapped = true; }
+      if (wrapped && isStreamlines) {
+        p.resetTrail(); // BUG-007: Clear trail to prevent cross-screen ghost lines
+      }
 
       // Reset expired particles OR particles that drifted out of sky
       if (p.isExpired || !widget.skyMask.isPointInSky(p.x, p.y)) {
