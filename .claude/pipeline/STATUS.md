@@ -7,11 +7,42 @@
 
 ## Current State
 
-**Current Feature:** None (ready for next feature)
+**Current Feature:** none
 **Current Phase:** idle
-**Next Command:** Check ROADMAP_PHASE2.md for next feature
+**Next Command:** Ready for next feature (see ROADMAP_PHASE2.md)
 
-### Last Completed Feature
+### Last Completed Pipeline
+
+compass-freeze (BUG-009) - **FINALIZED** (2026-02-06)
+
+- [x] /diagnose - Complete (2026-02-06)
+- [x] /plan - Complete (2026-02-06)
+- [x] /implement - Complete (2026-02-06) - 382 tests passing, 7 new regression tests
+- [x] /test - Complete (2026-02-06) - All 382 tests passing, no regressions
+- [x] /finalize - Complete (2026-02-06) - Committed locally
+
+**Diagnosis Document:** `.claude/active-work/compass-freeze/diagnosis.md`
+**Plan Document:** `.claude/features/compass-freeze/2026-02-06T04:45_plan.md`
+**Tasks:** `.claude/features/compass-freeze/tasks.md`
+**Implementation:** `.claude/active-work/compass-freeze/implementation.md`
+**Test Report:** `.claude/active-work/compass-freeze/test-success.md`
+
+### Previously Completed Feature
+
+compass-freeze (BUG-009) - **FINALIZED** (2026-02-06)
+
+- [x] /diagnose - Complete (2026-02-06)
+- [x] /plan - Complete (2026-02-06)
+- [x] /implement - Complete (2026-02-06)
+- [x] /test - Complete (2026-02-06) - All 382 tests passing
+- [x] /finalize - Complete (2026-02-06) - Committed locally
+
+**Summary:** Fixed compass widget freeze (stops updating after ~1 second). Root cause: dead zone check blocked smoothing, creating convergence trap. Fix: reordered code so smoothing always runs, dead zone only gates stream emission. Added 7 regression tests. All 382 tests passing, zero regressions.
+
+**Documentation:** `.claude/features/compass-freeze/SUMMARY.md`
+**Commit:** (local, not pushed) - fix(compass): prevent compass widget freeze from dead zone convergence trap
+
+### Earlier Completed Feature
 
 compass-widget-bugs (BUG-008) - **FINALIZED** (2026-02-03)
 
@@ -32,22 +63,28 @@ compass-widget-bugs (BUG-008) - **FINALIZED** (2026-02-03)
 
 ---
 
-## Implementation Summary (2026-02-03)
+## Implementation Summary (2026-02-06)
 
-**Bug Fix:** Compass Widget Bugs (BUG-008) - Position overlap with InfoBar
+**Bug Fix:** Compass Widget Freeze (BUG-009) - Compass stops updating after ~1 second
 
 **What was fixed:**
-- Bug 1 (Position): Changed compass bottom offset from 76px to 92px, adding 16px visible gap above InfoBar
-- Bug 2 (Static): Verified compass rotation is working correctly - no code changes needed
+- Root cause: Dead zone check was blocking smoothing calculation, creating a convergence trap
+- Fix: Reordered code so smoothing always runs, dead zone only gates stream emission
+- Also added: Error handlers to sensor subscriptions, test helpers for unit testing
 
 **Files Modified:**
-- `/workspace/wind_lens/lib/screens/ar_view_screen.dart` (line 260 - single line change)
+- `/workspace/wind_lens/lib/services/compass_service.dart` (145 → 203 lines)
+  - Fixed dead zone logic in `_onMagnetometerEvent()` and `_onAccelerometerEvent()`
+  - Added `@visibleForTesting` test helpers for both sensor types
+  - Added error handlers to sensor stream subscriptions
+- `/workspace/wind_lens/test/services/compass_service_test.dart` (273 → 549 lines)
+  - Added 7 new regression tests for convergence trap scenario
 
 **Test Results:**
-- All 375 tests passing
+- All 382 tests passing (375 existing + 7 new)
 - No regressions
 - Flutter analyze lib/ - No issues found
-- Test report: `.claude/active-work/compass-widget-bugs/test-success.md`
+- Test report: `.claude/active-work/compass-freeze/test-success.md`
 
 ---
 
@@ -213,6 +250,7 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 | BUG-007 | Streamline ghosting (ghost trails on respawn) | DONE (2026-02-03) |
 | P2A-003 | compass-widget | DONE (2026-02-03) |
 | BUG-008 | Compass widget bugs (position overlap + rotation check) | DONE (2026-02-03) |
+| BUG-009 | Compass widget freeze (stops updating after ~1s) | DONE (2026-02-06) |
 
 ---
 

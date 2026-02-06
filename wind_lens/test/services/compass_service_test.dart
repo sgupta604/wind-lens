@@ -269,4 +269,284 @@ void main() {
       expect(rawPitch, closeTo(-90.0, 0.01));
     });
   });
+
+  // Helper: compute magnetometer x,y values that produce a given heading.
+  // Since rawHeading = atan2(y, x) * 180 / pi, we need:
+  //   x = cos(heading * pi / 180)
+  //   y = sin(heading * pi / 180)
+  double _magX(double headingDeg) => cos(headingDeg * pi / 180);
+  double _magY(double headingDeg) => sin(headingDeg * pi / 180);
+
+  // Helper: compute accelerometer y,z values that produce a given pitch.
+  // Since rawPitch = atan2(-z, y) * 180 / pi, we need:
+  //   y = cos(pitch * pi / 180)
+  //   z = -sin(pitch * pi / 180)
+  double _accelY(double pitchDeg) => cos(pitchDeg * pi / 180);
+  double _accelZ(double pitchDeg) => -sin(pitchDeg * pi / 180);
+
+  group('Heading Convergence Regression Tests (BUG-009)', () {
+    late CompassService compassService;
+
+    setUp(() {
+      compassService = CompassService();
+    });
+
+    tearDown(() {
+      compassService.dispose();
+    });
+
+    test('heading should converge very close to target after many events at constant raw heading', () {
+      // Simulate 200 magnetometer events all pointing at 90 degrees.
+      // With the fix (smoothing always runs), the smoothed heading should
+      // converge extremely close to 90 degrees (within 0.1 degree).
+      // With the bug (smoothing blocked by dead zone), the heading gets
+      // stuck about 0.7 degrees away from the target and never reaches it.
+      const targetHeading = 90.0;
+      for (int i = 0; i < 200; i++) {
+        compassService.simulateMagnetometerEvent(
+          _magX(targetHeading),
+          _magY(targetHeading),
+        );
+      }
+
+      // After 200 events with smoothingFactor=0.1, the heading MUST be
+      // within 0.5 degrees of the target if smoothing runs continuously.
+      // With the bug, it gets stuck at ~89.3 degrees (0.7 away from 90).
+      expect(
+        compassService.heading,
+        closeTo(targetHeading, 0.5),
+        reason: 'Heading should converge very close to target (within 0.5 deg) '
+            'after 200 events. BUG-009: dead zone blocks smoothing, '
+            'causing heading to freeze ~0.7 deg from target.',
+      );
+    });
+
+    test('heading should track to new direction after initial convergence', () {
+      // BUG-009 REGRESSION TEST: This is the core test for the convergence trap.
+      // First converge to heading A, then change to heading B (small step)
+      // and verify the compass tracks to B (not stuck at A).
+      const headingA = 90.0;
+      // Use a SMALL change (5 degrees) - large enough to initially exceed
+      // dead zone from A, but the bug will trap it after a few events
+      // because smoothing brings the internal state close to A, and the
+      // dead zone then blocks further smoothing toward B.
+      const headingB = 95.0;
+
+      // Phase 1: Converge to heading A (100 events)
+      for (int i = 0; i < 100; i++) {
+        compassService.simulateMagnetometerEvent(
+          _magX(headingA),
+          _magY(headingA),
+        );
+      }
+      final headingAfterA = compassService.heading;
+      // Verify convergence to A
+      expect(
+        headingAfterA,
+        closeTo(headingA, 2.0),
+        reason: 'Should converge to heading A first',
+      );
+
+      // Phase 2: Change to heading B (100 events, small delta)
+      for (int i = 0; i < 100; i++) {
+        compassService.simulateMagnetometerEvent(
+          _magX(headingB),
+          _magY(headingB),
+        );
+      }
+
+      // The compass MUST track to heading B. With the buggy code, after
+      // converging to ~89.3 at A, sending B=95 gives delta=5.7 which
+      // passes the dead zone initially. But after a few smoothing steps
+      // the smoothed heading gets close enough to 95 that delta < 1.0
+      // and it freezes again at ~94.3. That's still close to 95, so this
+      // tests the GENERAL tracking capability. The more critical test is
+      // the slow rotation test below.
+      expect(
+        compassService.heading,
+        closeTo(headingB, 2.0),
+        reason: 'Heading should track to new direction B after convergence at A '
+            '(BUG-009: dead zone must not block smoothing)',
+      );
+    });
+
+    test('heading should not freeze permanently after convergence', () async {
+      // BUG-009 CRITICAL REGRESSION TEST: Verify that the stream keeps
+      // emitting after initial convergence. With the buggy code, emissions
+      // stop permanently once the smoothed heading gets within the dead zone
+      // of the raw heading.
+      const headingA = 90.0;
+
+      // Phase 1: Converge to heading A
+      for (int i = 0; i < 100; i++) {
+        compassService.simulateMagnetometerEvent(
+          _magX(headingA),
+          _magY(headingA),
+        );
+      }
+
+      // Allow stream events to flush
+      await Future<void>.delayed(Duration.zero);
+
+      // Phase 2: Listen for events and then change heading slightly
+      final events = <CompassData>[];
+      final sub = compassService.stream.listen((data) {
+        events.add(data);
+      });
+
+      await Future<void>.delayed(Duration.zero);
+
+      // Send 50 events at heading B = 93 (3 degrees from A's convergence point ~89.3)
+      // With the buggy code: delta = 93 - 89.3 = 3.7 initially passes dead zone,
+      // but after a few steps smoothed gets close to 93 and freezes again.
+      // More importantly, test that events ARE emitted.
+      const headingB = 93.0;
+      for (int i = 0; i < 50; i++) {
+        compassService.simulateMagnetometerEvent(
+          _magX(headingB),
+          _magY(headingB),
+        );
+      }
+
+      await Future<void>.delayed(Duration.zero);
+      await sub.cancel();
+
+      // With the fix, smoothing always runs and the heading should be close to B.
+      // More importantly, we should have received stream events during the change.
+      expect(
+        events.length,
+        greaterThan(0),
+        reason: 'Stream should emit events when heading changes after convergence',
+      );
+    });
+
+    test('heading should track slow rotation continuously', () {
+      // Simulate slow rotation: 0.5-degree increments over many events.
+      // With dead zone = 1.0 degree and smoothing = 0.1, the compass
+      // should still track the overall rotation even if individual steps
+      // are small, because the accumulated delta should grow.
+      double currentTarget = 0.0;
+      for (int i = 0; i < 200; i++) {
+        currentTarget = (currentTarget + 0.5) % 360;
+        compassService.simulateMagnetometerEvent(
+          _magX(currentTarget),
+          _magY(currentTarget),
+        );
+      }
+      // After 200 steps of 0.5 degrees = 100 degrees total rotation.
+      // The smoothed heading should have moved significantly from 0.
+      // With a working smoothing filter, it should be in the general
+      // direction of ~100 degrees (with smoothing lag).
+      expect(
+        compassService.heading,
+        greaterThan(20.0),
+        reason: 'Heading should track slow rotation and not freeze near 0',
+      );
+    });
+
+    test('stream should emit events during a large heading change', () async {
+      // Verify that the stream actually emits CompassData events
+      // as the heading changes significantly.
+      final events = <CompassData>[];
+      final sub = compassService.stream.listen((data) {
+        events.add(data);
+      });
+
+      // Allow the stream listener to be established
+      await Future<void>.delayed(Duration.zero);
+
+      // Simulate a large heading change: 0 -> 90 degrees
+      const targetHeading = 90.0;
+      for (int i = 0; i < 50; i++) {
+        compassService.simulateMagnetometerEvent(
+          _magX(targetHeading),
+          _magY(targetHeading),
+        );
+      }
+
+      // Allow microtasks to complete for stream delivery
+      await Future<void>.delayed(Duration.zero);
+
+      await sub.cancel();
+
+      // During a 90-degree change, there should be multiple emissions
+      // (not zero, which would indicate the dead zone is blocking everything)
+      expect(
+        events.length,
+        greaterThan(0),
+        reason: 'Stream should emit events during a large heading change',
+      );
+    });
+  });
+
+  group('Pitch Convergence Regression Tests (BUG-009)', () {
+    late CompassService compassService;
+
+    setUp(() {
+      compassService = CompassService();
+    });
+
+    tearDown(() {
+      compassService.dispose();
+    });
+
+    test('pitch should converge very close to target after many events', () {
+      // Simulate 200 accelerometer events all at pitch = 45 degrees.
+      // With the fix, smoothing always runs and pitch converges very close.
+      // With the bug, pitch gets stuck ~1.4 degrees away (pitchDeadZone=2.0).
+      const targetPitch = 45.0;
+      for (int i = 0; i < 200; i++) {
+        compassService.simulateAccelerometerEvent(
+          _accelY(targetPitch),
+          _accelZ(targetPitch),
+        );
+      }
+
+      // After 200 events the pitch MUST be within 1.0 degree.
+      // With the bug, it freezes ~1.4 degrees from target.
+      expect(
+        compassService.pitch,
+        closeTo(targetPitch, 1.0),
+        reason: 'Pitch should converge very close to target (within 1.0 deg) '
+            'after 200 events. BUG-009: dead zone blocks smoothing.',
+      );
+    });
+
+    test('pitch should track to new direction after initial convergence', () {
+      // BUG-009 REGRESSION TEST for pitch: converge to pitch A, then
+      // change to pitch B and verify tracking.
+      const pitchA = 45.0;
+      const pitchB = -30.0;
+
+      // Phase 1: Converge to pitch A (100 events)
+      for (int i = 0; i < 100; i++) {
+        compassService.simulateAccelerometerEvent(
+          _accelY(pitchA),
+          _accelZ(pitchA),
+        );
+      }
+      expect(
+        compassService.pitch,
+        closeTo(pitchA, 2.0),
+        reason: 'Should converge to pitch A first',
+      );
+
+      // Phase 2: Change to pitch B (100 events)
+      for (int i = 0; i < 100; i++) {
+        compassService.simulateAccelerometerEvent(
+          _accelY(pitchB),
+          _accelZ(pitchB),
+        );
+      }
+
+      // The pitch MUST track to B. If the dead zone blocks smoothing,
+      // it will be stuck near A.
+      expect(
+        compassService.pitch,
+        closeTo(pitchB, 3.0),
+        reason: 'Pitch should track to new direction B after convergence at A '
+            '(BUG-009: dead zone must not block smoothing)',
+      );
+    });
+  });
 }
