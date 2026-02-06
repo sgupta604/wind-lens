@@ -64,22 +64,19 @@ void main() {
       });
     });
 
-    group('Dead Zones', () {
-      test('should have heading dead zone of 1.0 degrees', () {
-        // The service should ignore heading changes smaller than 1.0 degree
-        expect(CompassService.headingDeadZone, 1.0);
+    group('Constants', () {
+      test('should have smoothing factor of 0.15', () {
+        // Smoothing factor raised from 0.1 to 0.15 to compensate for
+        // timer-based 20 Hz update rate (vs 50-100 Hz sensor rate).
+        expect(CompassService.smoothingFactor, 0.15);
       });
 
-      test('should have pitch dead zone of 2.0 degrees', () {
-        // The service should ignore pitch changes smaller than 2.0 degrees
-        expect(CompassService.pitchDeadZone, 2.0);
-      });
-    });
-
-    group('Smoothing', () {
-      test('should have smoothing factor of 0.1', () {
-        // Lower smoothing factor = smoother but more laggy
-        expect(CompassService.smoothingFactor, 0.1);
+      test('should have emit interval of 50ms (20 Hz)', () {
+        // Timer-based emission at 20 Hz for smooth, consistent updates.
+        expect(
+          CompassService.emitInterval,
+          const Duration(milliseconds: 50),
+        );
       });
     });
 
@@ -270,6 +267,223 @@ void main() {
     });
   });
 
+  group('Timer Architecture Tests (BUG-009 v2)', () {
+    late CompassService compassService;
+
+    setUp(() {
+      compassService = CompassService();
+    });
+
+    tearDown(() {
+      compassService.dispose();
+    });
+
+    group('_lerpAngle circular interpolation', () {
+      test('should interpolate clockwise through 0 (350 -> 10)', () {
+        // Set raw heading to 10 degrees, smoothed starts at 350.
+        // The shortest path from 350 to 10 is +20 degrees (clockwise
+        // through 360/0), NOT -340 degrees (counterclockwise).
+        compassService.setRawHeading(350.0);
+        compassService.tick(); // Initialize smoothed to near 350
+        // Run many ticks to converge near 350
+        for (int i = 0; i < 200; i++) {
+          compassService.tick();
+        }
+        expect(compassService.heading, closeTo(350.0, 1.0));
+
+        // Now change target to 10 degrees
+        compassService.setRawHeading(10.0);
+        // After several ticks, heading should move clockwise through 0
+        for (int i = 0; i < 100; i++) {
+          compassService.tick();
+        }
+        // Should be close to 10, NOT have gone backwards through 180
+        expect(
+          compassService.heading,
+          closeTo(10.0, 2.0),
+          reason: '_lerpAngle should interpolate 350->10 through 0 (clockwise)',
+        );
+      });
+
+      test('should interpolate counterclockwise through 0 (10 -> 350)', () {
+        // Set raw heading to 10, converge, then change to 350.
+        // The shortest path from 10 to 350 is -20 degrees (counterclockwise
+        // through 360/0), NOT +340 degrees (clockwise).
+        compassService.setRawHeading(10.0);
+        for (int i = 0; i < 200; i++) {
+          compassService.tick();
+        }
+        expect(compassService.heading, closeTo(10.0, 1.0));
+
+        // Now change target to 350 degrees
+        compassService.setRawHeading(350.0);
+        for (int i = 0; i < 100; i++) {
+          compassService.tick();
+        }
+        // Should be close to 350, having gone counterclockwise through 0
+        expect(
+          compassService.heading,
+          closeTo(350.0, 2.0),
+          reason: '_lerpAngle should interpolate 10->350 through 0 (counterclockwise)',
+        );
+      });
+
+      test('should interpolate linearly for normal case (45 -> 90)', () {
+        // No wraparound needed -- should move linearly from 45 to 90.
+        compassService.setRawHeading(45.0);
+        for (int i = 0; i < 200; i++) {
+          compassService.tick();
+        }
+        expect(compassService.heading, closeTo(45.0, 1.0));
+
+        compassService.setRawHeading(90.0);
+        for (int i = 0; i < 100; i++) {
+          compassService.tick();
+        }
+        expect(
+          compassService.heading,
+          closeTo(90.0, 2.0),
+          reason: '_lerpAngle should interpolate 45->90 linearly',
+        );
+      });
+    });
+
+    group('tick() and stream emission', () {
+      test('tick() should emit one CompassData event to the stream', () async {
+        final events = <CompassData>[];
+        final sub = compassService.stream.listen((data) {
+          events.add(data);
+        });
+
+        await Future<void>.delayed(Duration.zero);
+
+        compassService.setRawHeading(45.0);
+        compassService.tick();
+
+        await Future<void>.delayed(Duration.zero);
+        await sub.cancel();
+
+        expect(events.length, 1,
+            reason: 'One tick should produce exactly one stream event');
+        expect(events.first.heading, isA<double>());
+        expect(events.first.pitch, isA<double>());
+      });
+
+      test('multiple ticks should emit multiple events', () async {
+        final events = <CompassData>[];
+        final sub = compassService.stream.listen((data) {
+          events.add(data);
+        });
+
+        await Future<void>.delayed(Duration.zero);
+
+        compassService.setRawHeading(90.0);
+        for (int i = 0; i < 10; i++) {
+          compassService.tick();
+        }
+
+        await Future<void>.delayed(Duration.zero);
+        await sub.cancel();
+
+        expect(events.length, 10,
+            reason: '10 ticks should produce exactly 10 stream events');
+      });
+
+      test('continuous emission during stationary hold (100+ ticks)', () async {
+        // BUG-009 v2 CRITICAL TEST: Verify that the timer-based architecture
+        // does NOT stop emitting after convergence. With the old dead zone
+        // architecture, emission stopped after ~35 events. With the new
+        // timer architecture, tick() ALWAYS emits.
+        final events = <CompassData>[];
+        final sub = compassService.stream.listen((data) {
+          events.add(data);
+        });
+
+        await Future<void>.delayed(Duration.zero);
+
+        // Set heading and tick 100 times (simulating stationary hold)
+        compassService.setRawHeading(90.0);
+        for (int i = 0; i < 100; i++) {
+          compassService.tick();
+        }
+
+        await Future<void>.delayed(Duration.zero);
+        await sub.cancel();
+
+        // ALL 100 ticks must produce stream events -- no dead zone suppression
+        expect(
+          events.length,
+          100,
+          reason: 'Timer-based architecture must emit on every tick, '
+              'even after convergence. BUG-009 v2: dead zone suppressed '
+              'emission after ~35 events.',
+        );
+      });
+
+      test('continuous emission during slow rotation', () async {
+        // BUG-009 v2 REGRESSION TEST: Verify continuous emission during
+        // slow rotation. Each tick should emit regardless of heading delta.
+        final events = <CompassData>[];
+        final sub = compassService.stream.listen((data) {
+          events.add(data);
+        });
+
+        await Future<void>.delayed(Duration.zero);
+
+        // Simulate slow rotation: 0.5 degree per tick over 100 ticks
+        for (int i = 0; i < 100; i++) {
+          compassService.setRawHeading((i * 0.5) % 360);
+          compassService.tick();
+        }
+
+        await Future<void>.delayed(Duration.zero);
+        await sub.cancel();
+
+        // All 100 ticks must produce events
+        expect(
+          events.length,
+          100,
+          reason: 'Every tick during slow rotation must emit a stream event',
+        );
+
+        // Verify heading actually tracked the rotation
+        expect(
+          events.last.heading,
+          greaterThan(5.0),
+          reason: 'Heading should track slow rotation, not freeze at 0',
+        );
+      });
+    });
+
+    group('setRawHeading and setRawPitch test helpers', () {
+      test('setRawHeading sets raw heading for next tick', () {
+        compassService.setRawHeading(180.0);
+        // After many ticks, heading should converge to 180
+        for (int i = 0; i < 200; i++) {
+          compassService.tick();
+        }
+        expect(
+          compassService.heading,
+          closeTo(180.0, 1.0),
+          reason: 'setRawHeading should set the target for smoothing',
+        );
+      });
+
+      test('setRawPitch sets raw pitch for next tick', () {
+        compassService.setRawPitch(45.0);
+        // After many ticks, pitch should converge to 45
+        for (int i = 0; i < 200; i++) {
+          compassService.tick();
+        }
+        expect(
+          compassService.pitch,
+          closeTo(45.0, 1.0),
+          reason: 'setRawPitch should set the target for smoothing',
+        );
+      });
+    });
+  });
+
   // Helper: compute magnetometer x,y values that produce a given heading.
   // Since rawHeading = atan2(y, x) * 180 / pi, we need:
   //   x = cos(heading * pi / 180)
@@ -297,10 +511,8 @@ void main() {
 
     test('heading should converge very close to target after many events at constant raw heading', () {
       // Simulate 200 magnetometer events all pointing at 90 degrees.
-      // With the fix (smoothing always runs), the smoothed heading should
-      // converge extremely close to 90 degrees (within 0.1 degree).
-      // With the bug (smoothing blocked by dead zone), the heading gets
-      // stuck about 0.7 degrees away from the target and never reaches it.
+      // With the timer-based architecture (smoothingFactor=0.15), the
+      // smoothed heading should converge very close to 90 degrees.
       const targetHeading = 90.0;
       for (int i = 0; i < 200; i++) {
         compassService.simulateMagnetometerEvent(
@@ -309,15 +521,13 @@ void main() {
         );
       }
 
-      // After 200 events with smoothingFactor=0.1, the heading MUST be
-      // within 0.5 degrees of the target if smoothing runs continuously.
-      // With the bug, it gets stuck at ~89.3 degrees (0.7 away from 90).
+      // After 200 events with smoothingFactor=0.15, the heading MUST be
+      // within 0.5 degrees of the target.
       expect(
         compassService.heading,
         closeTo(targetHeading, 0.5),
         reason: 'Heading should converge very close to target (within 0.5 deg) '
-            'after 200 events. BUG-009: dead zone blocks smoothing, '
-            'causing heading to freeze ~0.7 deg from target.',
+            'after 200 events.',
       );
     });
 
@@ -326,10 +536,6 @@ void main() {
       // First converge to heading A, then change to heading B (small step)
       // and verify the compass tracks to B (not stuck at A).
       const headingA = 90.0;
-      // Use a SMALL change (5 degrees) - large enough to initially exceed
-      // dead zone from A, but the bug will trap it after a few events
-      // because smoothing brings the internal state close to A, and the
-      // dead zone then blocks further smoothing toward B.
       const headingB = 95.0;
 
       // Phase 1: Converge to heading A (100 events)
@@ -355,26 +561,19 @@ void main() {
         );
       }
 
-      // The compass MUST track to heading B. With the buggy code, after
-      // converging to ~89.3 at A, sending B=95 gives delta=5.7 which
-      // passes the dead zone initially. But after a few smoothing steps
-      // the smoothed heading gets close enough to 95 that delta < 1.0
-      // and it freezes again at ~94.3. That's still close to 95, so this
-      // tests the GENERAL tracking capability. The more critical test is
-      // the slow rotation test below.
+      // The compass MUST track to heading B.
       expect(
         compassService.heading,
         closeTo(headingB, 2.0),
         reason: 'Heading should track to new direction B after convergence at A '
-            '(BUG-009: dead zone must not block smoothing)',
+            '(BUG-009: must not freeze after convergence)',
       );
     });
 
     test('heading should not freeze permanently after convergence', () async {
       // BUG-009 CRITICAL REGRESSION TEST: Verify that the stream keeps
-      // emitting after initial convergence. With the buggy code, emissions
-      // stop permanently once the smoothed heading gets within the dead zone
-      // of the raw heading.
+      // emitting after initial convergence. With the old dead zone
+      // architecture, emissions stopped permanently.
       const headingA = 90.0;
 
       // Phase 1: Converge to heading A
@@ -396,10 +595,7 @@ void main() {
 
       await Future<void>.delayed(Duration.zero);
 
-      // Send 50 events at heading B = 93 (3 degrees from A's convergence point ~89.3)
-      // With the buggy code: delta = 93 - 89.3 = 3.7 initially passes dead zone,
-      // but after a few steps smoothed gets close to 93 and freezes again.
-      // More importantly, test that events ARE emitted.
+      // Send 50 events at heading B = 93
       const headingB = 93.0;
       for (int i = 0; i < 50; i++) {
         compassService.simulateMagnetometerEvent(
@@ -411,20 +607,19 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       await sub.cancel();
 
-      // With the fix, smoothing always runs and the heading should be close to B.
-      // More importantly, we should have received stream events during the change.
+      // With the timer-based architecture, simulateMagnetometerEvent calls
+      // tick() which always emits. All 50 events should produce stream events.
       expect(
         events.length,
-        greaterThan(0),
-        reason: 'Stream should emit events when heading changes after convergence',
+        50,
+        reason: 'Stream should emit on every simulateMagnetometerEvent call '
+            '(timer architecture always emits)',
       );
     });
 
     test('heading should track slow rotation continuously', () {
       // Simulate slow rotation: 0.5-degree increments over many events.
-      // With dead zone = 1.0 degree and smoothing = 0.1, the compass
-      // should still track the overall rotation even if individual steps
-      // are small, because the accumulated delta should grow.
+      // With the timer-based architecture, every tick emits and heading tracks.
       double currentTarget = 0.0;
       for (int i = 0; i < 200; i++) {
         currentTarget = (currentTarget + 0.5) % 360;
@@ -435,8 +630,6 @@ void main() {
       }
       // After 200 steps of 0.5 degrees = 100 degrees total rotation.
       // The smoothed heading should have moved significantly from 0.
-      // With a working smoothing filter, it should be in the general
-      // direction of ~100 degrees (with smoothing lag).
       expect(
         compassService.heading,
         greaterThan(20.0),
@@ -469,12 +662,11 @@ void main() {
 
       await sub.cancel();
 
-      // During a 90-degree change, there should be multiple emissions
-      // (not zero, which would indicate the dead zone is blocking everything)
+      // With timer architecture, every simulateMagnetometerEvent emits
       expect(
         events.length,
-        greaterThan(0),
-        reason: 'Stream should emit events during a large heading change',
+        50,
+        reason: 'Stream should emit on every event (timer architecture)',
       );
     });
   });
@@ -492,8 +684,7 @@ void main() {
 
     test('pitch should converge very close to target after many events', () {
       // Simulate 200 accelerometer events all at pitch = 45 degrees.
-      // With the fix, smoothing always runs and pitch converges very close.
-      // With the bug, pitch gets stuck ~1.4 degrees away (pitchDeadZone=2.0).
+      // With smoothingFactor=0.15, pitch converges very close.
       const targetPitch = 45.0;
       for (int i = 0; i < 200; i++) {
         compassService.simulateAccelerometerEvent(
@@ -503,12 +694,11 @@ void main() {
       }
 
       // After 200 events the pitch MUST be within 1.0 degree.
-      // With the bug, it freezes ~1.4 degrees from target.
       expect(
         compassService.pitch,
         closeTo(targetPitch, 1.0),
         reason: 'Pitch should converge very close to target (within 1.0 deg) '
-            'after 200 events. BUG-009: dead zone blocks smoothing.',
+            'after 200 events.',
       );
     });
 
@@ -539,13 +729,12 @@ void main() {
         );
       }
 
-      // The pitch MUST track to B. If the dead zone blocks smoothing,
-      // it will be stuck near A.
+      // The pitch MUST track to B.
       expect(
         compassService.pitch,
         closeTo(pitchB, 3.0),
         reason: 'Pitch should track to new direction B after convergence at A '
-            '(BUG-009: dead zone must not block smoothing)',
+            '(BUG-009: must not freeze after convergence)',
       );
     });
   });

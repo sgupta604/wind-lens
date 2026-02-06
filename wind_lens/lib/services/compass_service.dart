@@ -8,9 +8,14 @@ import '../models/compass_data.dart';
 
 /// Service for managing compass heading and device pitch using device sensors.
 ///
-/// Uses the magnetometer for heading (compass direction) and accelerometer
-/// for pitch (device tilt). Implements smoothing and dead zones to reduce
-/// jitter when the device is stationary.
+/// Uses a timer-based decoupled architecture where:
+/// - **Sensor callbacks** only store the latest raw values (no processing)
+/// - **A periodic timer at 20 Hz** smooths toward raw values and always emits
+/// - **No dead zones** -- the low-pass filter itself provides jitter suppression
+///
+/// This architecture eliminates the convergence trap from the event-driven
+/// dead zone approach (BUG-009). The timer always emits, so the stream never
+/// goes silent after the smoothed value converges to the raw value.
 ///
 /// Usage:
 /// ```dart
@@ -23,22 +28,27 @@ import '../models/compass_data.dart';
 /// compassService.dispose();
 /// ```
 class CompassService {
-  /// Smoothing factor for low-pass filter.
-  /// Lower value = smoother but more lag.
-  static const double smoothingFactor = 0.1;
+  /// Smoothing factor for the low-pass filter (0.0 = no change, 1.0 = instant).
+  /// 0.15 at 20 Hz provides smooth, responsive tracking.
+  /// Raised from 0.1 to compensate for lower tick rate (20 Hz vs 50-100 Hz).
+  static const double smoothingFactor = 0.15;
 
-  /// Dead zone threshold for heading changes in degrees.
-  /// Changes smaller than this are ignored to prevent jitter.
-  static const double headingDeadZone = 1.0;
+  /// Emission rate: 20 Hz (50ms interval). Matches typical UI refresh needs
+  /// without overwhelming the widget tree with 50-100 Hz sensor data.
+  static const Duration emitInterval = Duration(milliseconds: 50);
 
-  /// Dead zone threshold for pitch changes in degrees.
-  /// Changes smaller than this are ignored to prevent jitter.
-  static const double pitchDeadZone = 2.0;
+  // --- Internal state ---
 
-  /// Current smoothed heading value (0-360 degrees from north).
+  /// Latest raw heading from magnetometer (updated at sensor hardware rate).
+  double _rawHeading = 0;
+
+  /// Latest raw pitch from accelerometer (updated at sensor hardware rate).
+  double _rawPitch = 0;
+
+  /// Current smoothed heading (updated at timer rate).
   double _smoothedHeading = 0;
 
-  /// Current smoothed pitch value (degrees of tilt).
+  /// Current smoothed pitch (updated at timer rate).
   double _smoothedPitch = 0;
 
   /// Subscription to magnetometer sensor events.
@@ -47,13 +57,18 @@ class CompassService {
   /// Subscription to accelerometer sensor events.
   StreamSubscription<AccelerometerEvent>? _accelerometerSub;
 
+  /// Periodic timer for smoothing and emission.
+  Timer? _emitTimer;
+
   /// Stream controller for broadcasting compass updates.
   final _controller = StreamController<CompassData>.broadcast();
+
+  // --- Public API ---
 
   /// Stream of [CompassData] updates.
   ///
   /// This is a broadcast stream, allowing multiple listeners.
-  /// Emits whenever heading or pitch changes beyond their dead zones.
+  /// Emits at a fixed 20 Hz rate as long as the service is started.
   Stream<CompassData> get stream => _controller.stream;
 
   /// Current smoothed heading in degrees (0-360).
@@ -62,81 +77,79 @@ class CompassService {
   /// Current smoothed pitch in degrees.
   double get pitch => _smoothedPitch;
 
-  /// Starts listening to sensor events.
+  /// Starts listening to sensor events and begins the emission timer.
   ///
-  /// Call this method to begin receiving compass updates.
-  /// Remember to call [dispose] when done to release resources.
+  /// Sensor callbacks only store raw values -- no smoothing, no emission.
+  /// The periodic timer handles smoothing and emission at a fixed 20 Hz rate.
+  ///
+  /// Call [dispose] when done to release resources.
   void start() {
     _magnetometerSub = magnetometerEventStream().listen(
-      _onMagnetometerEvent,
-      onError: (error) {
-        debugPrint('Magnetometer error: $error');
+      (event) {
+        // Only store raw heading -- no smoothing, no emission
+        _rawHeading = (atan2(event.y, event.x) * 180 / pi + 360) % 360;
       },
+      onError: (e) => debugPrint('Magnetometer error: $e'),
     );
+
     _accelerometerSub = accelerometerEventStream().listen(
-      _onAccelerometerEvent,
-      onError: (error) {
-        debugPrint('Accelerometer error: $error');
+      (event) {
+        // Only store raw pitch -- no smoothing, no emission
+        _rawPitch = atan2(-event.z, event.y) * 180 / pi;
       },
+      onError: (e) => debugPrint('Accelerometer error: $e'),
     );
+
+    // Fixed-rate timer: smooth toward raw values and always emit
+    _emitTimer = Timer.periodic(emitInterval, (_) {
+      _smoothedHeading =
+          _lerpAngle(_smoothedHeading, _rawHeading, smoothingFactor);
+      _smoothedPitch += (_rawPitch - _smoothedPitch) * smoothingFactor;
+
+      _controller.add(CompassData(
+        heading: _smoothedHeading,
+        pitch: _smoothedPitch,
+      ));
+    });
   }
 
-  /// Handles magnetometer sensor events.
+  /// Circular interpolation handling 0/360 wraparound correctly.
   ///
-  /// Calculates heading from magnetic field x and y components,
-  /// applies smoothing, then uses dead zone to gate emission only.
-  void _onMagnetometerEvent(MagnetometerEvent event) {
-    // Calculate raw heading from magnetometer data
-    // atan2(y, x) gives angle in radians, convert to degrees
-    double rawHeading = atan2(event.y, event.x) * 180 / pi;
-
-    // Normalize to 0-360 range
-    rawHeading = (rawHeading + 360) % 360;
-
-    // Handle wraparound (e.g., 359 to 1 degrees)
-    // Calculate the shortest delta around the circle
-    double delta = rawHeading - _smoothedHeading;
-    if (delta > 180) delta -= 360;
-    if (delta < -180) delta += 360;
-
-    // Always apply smoothing so internal state tracks the sensor
-    _smoothedHeading = (_smoothedHeading + delta * smoothingFactor + 360) % 360;
-
-    // Dead zone: only suppress emission of tiny changes to prevent jitter
-    if (delta.abs() < headingDeadZone) {
-      return;
-    }
-
-    _emitUpdate();
+  /// Uses shortest-path angular interpolation:
+  /// - 350 -> 10 interpolates clockwise through 0 (+20 degrees)
+  /// - 10 -> 350 interpolates counterclockwise through 0 (-20 degrees)
+  double _lerpAngle(double from, double to, double t) {
+    double diff = (to - from + 540) % 360 - 180;
+    return (from + diff * t + 360) % 360;
   }
 
-  /// Handles accelerometer sensor events.
+  // --- Test helpers ---
+
+  /// Directly sets the raw heading value for unit testing.
   ///
-  /// Calculates pitch from accelerometer z and y components,
-  /// applies smoothing, then uses dead zone to gate emission only.
-  void _onAccelerometerEvent(AccelerometerEvent event) {
-    // Calculate raw pitch from accelerometer data
-    // Using -z and y to get phone tilt angle
-    // When phone is flat (screen up): z is negative (gravity), y is ~0
-    // When phone is vertical: z is ~0, y is negative (gravity)
-    double rawPitch = atan2(-event.z, event.y) * 180 / pi;
-
-    // Calculate delta from current smoothed value
-    double delta = rawPitch - _smoothedPitch;
-
-    // Always apply smoothing so internal state tracks the sensor
-    _smoothedPitch += delta * smoothingFactor;
-
-    // Dead zone: only suppress emission of tiny changes to prevent jitter
-    if (delta.abs() < pitchDeadZone) {
-      return;
-    }
-
-    _emitUpdate();
+  /// Use with [tick] to test smoothing behavior without platform channels.
+  @visibleForTesting
+  void setRawHeading(double heading) {
+    _rawHeading = heading;
   }
 
-  /// Emits a compass update with current heading and pitch values.
-  void _emitUpdate() {
+  /// Directly sets the raw pitch value for unit testing.
+  ///
+  /// Use with [tick] to test smoothing behavior without platform channels.
+  @visibleForTesting
+  void setRawPitch(double pitch) {
+    _rawPitch = pitch;
+  }
+
+  /// Runs one cycle of smoothing + emission for unit testing.
+  ///
+  /// This is equivalent to one timer tick. Always emits a CompassData event.
+  @visibleForTesting
+  void tick() {
+    _smoothedHeading =
+        _lerpAngle(_smoothedHeading, _rawHeading, smoothingFactor);
+    _smoothedPitch += (_rawPitch - _smoothedPitch) * smoothingFactor;
+
     _controller.add(CompassData(
       heading: _smoothedHeading,
       pitch: _smoothedPitch,
@@ -145,57 +158,31 @@ class CompassService {
 
   /// Simulates a magnetometer event with raw x and y magnetic field values.
   ///
-  /// This method runs the same heading calculation and smoothing logic
-  /// as [_onMagnetometerEvent], but accepts raw doubles instead of a
-  /// [MagnetometerEvent] object, making it usable in unit tests without
-  /// platform channels.
+  /// Computes raw heading from atan2(y, x), stores it, then runs one [tick].
+  /// Backward-compatible with existing BUG-009 regression tests.
   @visibleForTesting
   void simulateMagnetometerEvent(double x, double y) {
-    double rawHeading = atan2(y, x) * 180 / pi;
-    rawHeading = (rawHeading + 360) % 360;
-
-    double delta = rawHeading - _smoothedHeading;
-    if (delta > 180) delta -= 360;
-    if (delta < -180) delta += 360;
-
-    // Always apply smoothing so internal state tracks the sensor
-    _smoothedHeading = (_smoothedHeading + delta * smoothingFactor + 360) % 360;
-
-    // Dead zone: only suppress emission of tiny changes to prevent jitter
-    if (delta.abs() < headingDeadZone) {
-      return;
-    }
-
-    _emitUpdate();
+    _rawHeading = (atan2(y, x) * 180 / pi + 360) % 360;
+    tick();
   }
 
   /// Simulates an accelerometer event with raw y and z acceleration values.
   ///
-  /// This method runs the same pitch calculation and smoothing logic
-  /// as [_onAccelerometerEvent], but accepts raw doubles instead of an
-  /// [AccelerometerEvent] object, making it usable in unit tests without
-  /// platform channels.
+  /// Computes raw pitch from atan2(-z, y), stores it, then runs one [tick].
+  /// Backward-compatible with existing BUG-009 regression tests.
   @visibleForTesting
   void simulateAccelerometerEvent(double y, double z) {
-    double rawPitch = atan2(-z, y) * 180 / pi;
-    double delta = rawPitch - _smoothedPitch;
-
-    // Always apply smoothing so internal state tracks the sensor
-    _smoothedPitch += delta * smoothingFactor;
-
-    // Dead zone: only suppress emission of tiny changes to prevent jitter
-    if (delta.abs() < pitchDeadZone) {
-      return;
-    }
-
-    _emitUpdate();
+    _rawPitch = atan2(-z, y) * 180 / pi;
+    tick();
   }
 
   /// Releases resources and stops listening to sensor events.
   ///
+  /// Cancels the emission timer, sensor subscriptions, and closes the stream.
   /// Always call this method when the service is no longer needed
   /// to prevent memory leaks.
   void dispose() {
+    _emitTimer?.cancel();
     _magnetometerSub?.cancel();
     _accelerometerSub?.cancel();
     _controller.close();

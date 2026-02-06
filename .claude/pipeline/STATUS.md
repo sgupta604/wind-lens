@@ -9,17 +9,36 @@
 
 **Current Feature:** none
 **Current Phase:** idle
-**Next Command:** Ready for next feature (see ROADMAP_PHASE2.md)
+**Next Command:** Select next feature from ROADMAP_PHASE2.md
 
-### Last Completed Pipeline
+### Last Completed Pipeline: compass-freeze v2 (BUG-009 v2) - **FINALIZED** (2026-02-06)
 
-compass-freeze (BUG-009) - **FINALIZED** (2026-02-06)
+- [x] /diagnose - Complete (2026-02-06) - v2 diagnosis: architectural rewrite needed
+- [x] /plan - Complete (2026-02-06) - Timer-based decoupled architecture designed
+- [x] /implement - Complete (2026-02-06) - Timer-based rewrite, 35 compass tests, 264 total tests, zero regressions
+- [x] /test - Complete (2026-02-06) - All 390 tests passing, static analysis clean
+- [x] /finalize - Complete (2026-02-06) - Committed locally
+
+**Diagnosis Document:** `.claude/active-work/compass-freeze/diagnosis_v2.md`
+**Plan Document:** `.claude/features/compass-freeze/2026-02-06_plan_v2.md`
+**Tasks:** `.claude/features/compass-freeze/tasks.md`
+**Implementation:** `.claude/active-work/compass-freeze/implementation_v2.md`
+**Test Report:** `.claude/active-work/compass-freeze/test-success-v2.md`
+**Summary:** `.claude/features/compass-freeze/SUMMARY.md`
+**Finalization:** `.claude/features/compass-freeze/FINALIZATION_REPORT.md`
+**Commit:** (local, not pushed) - fix(compass): rewrite CompassService with timer-based architecture to prevent freeze
+
+### Previous Attempt (Failed)
+
+compass-freeze v1 (BUG-009) - **FAILED ON DEVICE** (2026-02-06)
 
 - [x] /diagnose - Complete (2026-02-06)
 - [x] /plan - Complete (2026-02-06)
 - [x] /implement - Complete (2026-02-06) - 382 tests passing, 7 new regression tests
 - [x] /test - Complete (2026-02-06) - All 382 tests passing, no regressions
-- [x] /finalize - Complete (2026-02-06) - Committed locally
+- [x] /finalize - Complete (2026-02-06) - Committed locally (but fix didn't work on device)
+
+**Why it failed:** Reordering dead zone after smoothing still caused freeze once smoothed value converged. Dead zone architecture was fundamentally flawed.
 
 **Diagnosis Document:** `.claude/active-work/compass-freeze/diagnosis.md`
 **Plan Document:** `.claude/features/compass-freeze/2026-02-06T04:45_plan.md`
@@ -65,26 +84,30 @@ compass-widget-bugs (BUG-008) - **FINALIZED** (2026-02-03)
 
 ## Implementation Summary (2026-02-06)
 
-**Bug Fix:** Compass Widget Freeze (BUG-009) - Compass stops updating after ~1 second
+**Bug Fix:** Compass Widget Freeze (BUG-009 v2) - Compass stops updating after ~1 second
 
 **What was fixed:**
-- Root cause: Dead zone check was blocking smoothing calculation, creating a convergence trap
-- Fix: Reordered code so smoothing always runs, dead zone only gates stream emission
-- Also added: Error handlers to sensor subscriptions, test helpers for unit testing
+- Root cause: Dead zone architecture caused convergence trap (even after v1 reordering fix)
+- Fix: Full architectural rewrite to timer-based decoupled design with no dead zones
+- Architecture: Sensor callbacks store raw values; 20 Hz timer smooths and always emits
+- Circular interpolation: `_lerpAngle()` handles 0/360 wraparound correctly
 
 **Files Modified:**
-- `/workspace/wind_lens/lib/services/compass_service.dart` (145 → 203 lines)
-  - Fixed dead zone logic in `_onMagnetometerEvent()` and `_onAccelerometerEvent()`
-  - Added `@visibleForTesting` test helpers for both sensor types
-  - Added error handlers to sensor stream subscriptions
-- `/workspace/wind_lens/test/services/compass_service_test.dart` (273 → 549 lines)
-  - Added 7 new regression tests for convergence trap scenario
+- `/workspace/wind_lens/lib/services/compass_service.dart` (203 → 190 lines)
+  - Complete rewrite with timer-based architecture
+  - Removed dead zone constants and gating logic
+  - Added circular interpolation (`_lerpAngle`)
+  - Added test helpers: `setRawHeading()`, `setRawPitch()`, `tick()`
+- `/workspace/wind_lens/test/services/compass_service_test.dart` (553 → 741 lines)
+  - Added 11 new tests (circular interpolation, continuous emission, timer architecture)
+  - Removed 3 dead zone tests (no longer applicable)
+  - Net: +8 tests
 
 **Test Results:**
-- All 382 tests passing (375 existing + 7 new)
+- All 390 tests passing (382 existing + 8 new)
 - No regressions
 - Flutter analyze lib/ - No issues found
-- Test report: `.claude/active-work/compass-freeze/test-success.md`
+- Test report: `.claude/active-work/compass-freeze/test-success-v2.md`
 
 ---
 
@@ -250,7 +273,7 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 | BUG-007 | Streamline ghosting (ghost trails on respawn) | DONE (2026-02-03) |
 | P2A-003 | compass-widget | DONE (2026-02-03) |
 | BUG-008 | Compass widget bugs (position overlap + rotation check) | DONE (2026-02-03) |
-| BUG-009 | Compass widget freeze (stops updating after ~1s) | DONE (2026-02-06) |
+| BUG-009 | Compass widget freeze (stops updating after ~1s) | DONE v2 (2026-02-06) |
 
 ---
 
