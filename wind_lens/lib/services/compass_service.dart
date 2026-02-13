@@ -2,13 +2,15 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
 import '../models/compass_data.dart';
 
 /// Service for managing compass heading and device pitch using device sensors.
 ///
-/// Uses a timer-based decoupled architecture where:
+/// Uses `flutter_compass` for heading (native OS compass API) and
+/// `sensors_plus` accelerometer for pitch. Timer-based decoupled architecture:
 /// - **Sensor callbacks** only store the latest raw values (no processing)
 /// - **A periodic timer at 20 Hz** smooths toward raw values and always emits
 /// - **No dead zones** -- the low-pass filter itself provides jitter suppression
@@ -51,8 +53,8 @@ class CompassService {
   /// Current smoothed pitch (updated at timer rate).
   double _smoothedPitch = 0;
 
-  /// Subscription to magnetometer sensor events.
-  StreamSubscription<MagnetometerEvent>? _magnetometerSub;
+  /// Subscription to native compass events (flutter_compass).
+  StreamSubscription<CompassEvent>? _compassSub;
 
   /// Subscription to accelerometer sensor events.
   StreamSubscription<AccelerometerEvent>? _accelerometerSub;
@@ -84,12 +86,14 @@ class CompassService {
   ///
   /// Call [dispose] when done to release resources.
   void start() {
-    _magnetometerSub = magnetometerEventStream().listen(
+    _compassSub = FlutterCompass.events?.listen(
       (event) {
-        // Only store raw heading -- no smoothing, no emission
-        _rawHeading = (atan2(event.y, event.x) * 180 / pi + 360) % 360;
+        // Only store raw heading if valid -- null heading retains previous value
+        if (event.heading != null) {
+          _rawHeading = event.heading!;
+        }
       },
-      onError: (e) => debugPrint('Magnetometer error: $e'),
+      onError: (e) => debugPrint('Compass error: $e'),
     );
 
     _accelerometerSub = accelerometerEventStream().listen(
@@ -183,7 +187,7 @@ class CompassService {
   /// to prevent memory leaks.
   void dispose() {
     _emitTimer?.cancel();
-    _magnetometerSub?.cancel();
+    _compassSub?.cancel();
     _accelerometerSub?.cancel();
     _controller.close();
   }

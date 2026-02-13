@@ -7,11 +7,28 @@
 
 ## Current State
 
-**Current Feature:** none
-**Current Phase:** idle
+**Current Feature:** None (idle - ready for next feature)
+**Current Phase:** finalized/idle
 **Next Command:** Select next feature from ROADMAP_PHASE2.md
 
-### Last Completed Pipeline: compass-freeze v2 (BUG-009 v2) - **FINALIZED** (2026-02-06)
+### Last Completed Pipeline: compass-native - **FINALIZED** (2026-02-13)
+
+- [x] /research - Complete (2026-02-13) - Package analysis, API preservation plan
+- [x] /plan - Complete (2026-02-13) - Minimal swap: flutter_compass for heading, keep everything else
+- [x] /implement - Complete (2026-02-13) - Replaced magnetometer with flutter_compass, 392 tests passing, zero regressions
+- [x] /test - Complete (2026-02-13) - All 392 tests passing, static analysis clean
+- [x] /finalize - Complete (2026-02-13) - Committed locally
+
+**Research Document:** `.claude/features/compass-native/2026-02-13T12:00_research.md`
+**Plan Document:** `.claude/features/compass-native/2026-02-13T12:30_plan.md`
+**Tasks:** `.claude/features/compass-native/tasks.md`
+**Implementation:** `.claude/active-work/compass-native/implementation.md`
+**Test Report:** `.claude/active-work/compass-native/test-success.md`
+**Summary:** `.claude/features/compass-native/SUMMARY.md`
+**Finalization:** `.claude/features/compass-native/FINALIZATION_REPORT.md`
+**Commit:** (local, not pushed) - fix(compass): use native OS compass via flutter_compass instead of raw magnetometer
+
+### Previous Pipeline: compass-freeze v2 (BUG-009 v2) - **FINALIZED** (2026-02-06)
 
 - [x] /diagnose - Complete (2026-02-06) - v2 diagnosis: architectural rewrite needed
 - [x] /plan - Complete (2026-02-06) - Timer-based decoupled architecture designed
@@ -274,6 +291,7 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 | P2A-003 | compass-widget | DONE (2026-02-03) |
 | BUG-008 | Compass widget bugs (position overlap + rotation check) | DONE (2026-02-03) |
 | BUG-009 | Compass widget freeze (stops updating after ~1s) | DONE v2 (2026-02-06) |
+| compass-native | Native OS compass integration (flutter_compass) | DONE (2026-02-13) |
 
 ---
 

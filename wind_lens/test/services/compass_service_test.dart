@@ -671,6 +671,55 @@ void main() {
     });
   });
 
+  group('Null heading handling (compass-native)', () {
+    late CompassService compassService;
+
+    setUp(() {
+      compassService = CompassService();
+    });
+
+    tearDown(() {
+      compassService.dispose();
+    });
+
+    test('should retain previous heading when native compass returns null', () {
+      // Set initial heading, converge, then verify it holds.
+      // When flutter_compass sends null heading, _rawHeading is not updated,
+      // so the smoothed heading should hold steady at the last known value.
+      compassService.setRawHeading(90.0);
+      for (int i = 0; i < 200; i++) {
+        compassService.tick();
+      }
+      expect(compassService.heading, closeTo(90.0, 1.0));
+
+      // Tick again without changing _rawHeading (simulates null from flutter_compass)
+      compassService.tick();
+      expect(compassService.heading, closeTo(90.0, 1.0));
+    });
+
+    test('should hold steady through multiple ticks without rawHeading change', () {
+      // Set heading to 270, converge, then tick 50 more times without updating
+      // _rawHeading. The heading should remain stable (no drift).
+      compassService.setRawHeading(270.0);
+      for (int i = 0; i < 200; i++) {
+        compassService.tick();
+      }
+      final headingAfterConverge = compassService.heading;
+      expect(headingAfterConverge, closeTo(270.0, 1.0));
+
+      // 50 more ticks with no _rawHeading change (simulating sustained null headings)
+      for (int i = 0; i < 50; i++) {
+        compassService.tick();
+      }
+      expect(
+        compassService.heading,
+        closeTo(270.0, 0.5),
+        reason: 'Heading should not drift when _rawHeading is unchanged '
+            '(simulates flutter_compass returning null)',
+      );
+    });
+  });
+
   group('Pitch Convergence Regression Tests (BUG-009)', () {
     late CompassService compassService;
 
