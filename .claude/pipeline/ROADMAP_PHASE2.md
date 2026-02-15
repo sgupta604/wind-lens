@@ -8,100 +8,239 @@
 ## Current Status
 
 **MVP:** Complete (8/8 features)
-**Post-MVP Bugs:** Complete (6/6 fixed)
+**Post-MVP Bugs:** Complete (9/9 fixed - BUG-001 through BUG-009)
 **Phase 2a Features:** 4/4 complete (performance-optimization, wind-streamlines, particle-colors, compass-widget DONE)
-**Tests:** 375 passing
-**Ready for:** Phase 2b features (location-awareness, sky-viewport, real-wind-data)
+**Additional fixes:** compass-native (flutter_compass), code-cleanup (debug panel extraction)
+**Tests:** 391 passing
+**Branch:** `feature/terrain-sky-detection` (Phase 2b work)
+**Ready for:** Phase 2b - Terrain Sky Detection & Location
 
 ---
 
 ## Phase 2 Feature Summary
 
-| # | Feature | Priority | Complexity | Description |
-|---|---------|----------|------------|-------------|
-| 1 | location-awareness | **High** | Medium | GPS + heading for real data positioning |
-| 2 | sky-viewport | **High** | High | Calculate visible sky cone/bounding box |
-| 3 | compass-widget | Medium | Low | Small circular compass showing direction |
-| 4 | particle-colors | Medium | Low | Improve particle visibility in various sky conditions |
-| 5 | map-view | Medium | High | Toggle AR ↔ top-down weather map view |
-| 6 | real-wind-data | High | High | Integrate EDR API for real wind data |
-| 7 | altitude-input | Low | Medium | Input specific altitude in feet |
-| 8 | performance-optimization | ~~Medium~~ | ~~Medium~~ | ~~Fix FPS issues~~ **DONE** (2026-02-02) |
-| 9 | wind-streamlines | **High** | High | Flowing wind trails like Windy.com (replaces dot particles) |
+| # | Feature | Priority | Complexity | Status | Description |
+|---|---------|----------|------------|--------|-------------|
+| P2A-001 | performance-optimization | ~~High~~ | ~~Medium~~ | **DONE** | Fix FPS (5 to 45+) |
+| P2A-002 | wind-streamlines | ~~High~~ | ~~High~~ | **DONE** | Windy.com style flowing trails |
+| P2A-003 | compass-widget | ~~Medium~~ | ~~Low~~ | **DONE** | Compass showing heading |
+| P2A-004 | particle-colors | ~~Medium~~ | ~~Low~~ | **DONE** | Included in wind-streamlines |
+| P2B-001 | location-service | **High** | Low | TODO | GPS coordinates + permission handling |
+| P2B-002 | heywhatsthat-client | **High** | Medium | TODO | API client: submit, poll, fetch horizon data |
+| P2B-003 | horizon-cache | **High** | Low | TODO | Local storage + cache-by-location for horizon profiles |
+| P2B-004 | terrain-sky-mask | **High** | Medium | TODO | Map horizon profile onto camera view via compass + pitch + FOV |
+| P2B-005 | detection-mode-toggle | **High** | Low | TODO | UI toggle: HSV / Terrain / Combined detection modes |
+| P2B-006 | real-wind-data | High | High | TODO | Integrate OGC EDR API for real wind data |
+| P2C-001 | map-view | Medium | High | TODO | Toggle AR ↔ top-down weather map view |
+| P2C-002 | altitude-input | Low | Medium | TODO | Input specific altitude in feet |
 
 ---
 
 ## Feature Details
 
-### Feature 1: location-awareness
+---
 
-**Priority:** High
-**Complexity:** Medium
-**Blocked by:** None
+### Phase 2b: Terrain Sky Detection & Location
 
-**What to Build:**
-- Get device GPS coordinates (latitude, longitude)
-- Get compass heading (already have this via CompassService)
-- Store current location for wind data queries
-- Calculate which direction camera is pointing in world coordinates
-
-**Why Needed:**
-- Real wind data is location-specific
-- Need to know WHERE user is to fetch correct data
-- Need to know which DIRECTION they're looking to show correct wind patterns
-
-**Technical Notes:**
-- Use `geolocator` package for GPS
-- Combine with existing CompassService heading
-- Store as `UserPosition { lat, lon, heading, timestamp }`
-- Request location permission (iOS: NSLocationWhenInUseUsageDescription)
-
-**Acceptance Criteria:**
-- [ ] App requests and receives GPS location
-- [ ] Location updates as user moves
-- [ ] Heading + location combined into world-space direction
-- [ ] Debug panel shows lat/lon
+> **Branch:** `feature/terrain-sky-detection`
+> **Goal:** Use real-world terrain elevation data (via HeyWhatsThat) to pre-compute sky boundaries, replacing/complementing the current HSV color-based sky detection. Each step is independently testable and useful.
+>
+> **Reference docs:**
+> - `/workspace/heywhatsthat-api-reference (1).md` — API endpoints, integration plan, data structures
+> - `/workspace/sky-claculation.md` — FOV/frustum math, EDR query radius calculations
 
 ---
 
-### Feature 2: sky-viewport
+### P2B-001: location-service
+
+**Priority:** High
+**Complexity:** Low
+**Blocked by:** None
+**Why first:** Everything else (HeyWhatsThat, real wind data) needs GPS coordinates.
+
+**What to Build:**
+- LocationService class that provides GPS coordinates (lat, lon)
+- Request location permission (iOS + Android)
+- Stream-based updates when user moves
+- Show lat/lon in debug panel
+
+**Technical Notes:**
+- Use `geolocator` package for GPS
+- Combine with existing CompassService heading (already working)
+- Only need coarse location (~10m accuracy is fine)
+- Handle permission denied gracefully (fall back to HSV-only detection)
+
+**Acceptance Criteria:**
+- [ ] App requests and receives GPS location
+- [ ] LocationService provides stream of position updates
+- [ ] Debug panel shows lat/lon
+- [ ] Handles permission denied without crashing
+- [ ] All existing tests still pass
+
+---
+
+### P2B-002: heywhatsthat-client
+
+**Priority:** High
+**Complexity:** Medium
+**Depends on:** P2B-001 (needs lat/lon to submit panorama)
+
+**What to Build:**
+- HeyWhatsThatService class that wraps the API
+- Submit panorama: `query.cgi?lat=X&lon=Y&elev=2&public=0&return_data=1`
+- Poll for completion: `results/{id}/data` every 10 seconds
+- Fetch result: `result.json?id={id}` → extract `limits` array (360 horizon angles)
+- Return a `HorizonProfile` model with 360 elevation angles + declination
+
+**Key Data Structure:**
+```dart
+class HorizonProfile {
+  final double lat, lon;
+  final String panoramaId;
+  final List<double> horizonAngles; // 360 values, index = bearing degree
+  final double declination;         // magnetic declination for compass correction
+  final DateTime fetchedAt;
+}
+```
+
+**Technical Notes:**
+- Server-side computation takes ~2 minutes — need loading state
+- `limits` array: 360 entries, each `[lat, lon, elevation_angle_degrees]`
+- `horizonAngles[0]` = elevation angle at true north, `[90]` = east, etc.
+- Extract `declination` from result for compass correction later
+- Handle network errors, timeouts gracefully
+
+**Acceptance Criteria:**
+- [ ] Can submit a panorama request and get back a panorama ID
+- [ ] Polls until computation completes
+- [ ] Parses result.json into HorizonProfile model
+- [ ] Handles network errors without crashing
+- [ ] All existing tests still pass
+
+---
+
+### P2B-003: horizon-cache
+
+**Priority:** High
+**Complexity:** Low
+**Depends on:** P2B-002 (needs HorizonProfile to cache)
+
+**What to Build:**
+- Local persistence for HorizonProfile data
+- Cache key: rounded lat/lon (to ~100m precision)
+- Skip API call if cached profile exists within 100m of current location
+- Cache doesn't expire (terrain doesn't change)
+
+**Technical Notes:**
+- Use `shared_preferences` or local JSON file
+- Panorama computation is 2 minutes — caching avoids repeated waits
+- 360 doubles + metadata = tiny storage footprint
+- Consider pre-computing a few profiles for user's common locations (future)
+
+**Acceptance Criteria:**
+- [ ] HorizonProfile saved to local storage after fetch
+- [ ] On app launch, loads cached profile if within 100m of current GPS
+- [ ] Skips HeyWhatsThat API call when cache hit
+- [ ] Cache miss triggers new panorama request
+- [ ] All existing tests still pass
+
+---
+
+### P2B-004: terrain-sky-mask
+
+**Priority:** High
+**Complexity:** Medium
+**Depends on:** P2B-003 (needs cached HorizonProfile), existing CompassService
+
+**What to Build:**
+- TerrainSkyDetector that implements the existing SkyDetector interface
+- For each screen region, compute bearing + elevation angle from compass heading + pitch + camera FOV
+- Look up horizon angle at that bearing from HorizonProfile
+- If pixel elevation > horizon angle → sky, else → not sky
+- Apply magnetic declination correction: `trueBearing = magneticBearing + declination`
+
+**Per-frame sky mask computation:**
+```
+For each pixel/region:
+  pixel_bearing = compass_heading + (pixel_x - center_x) * (hFOV / width)
+  pixel_elevation = pitch + (center_y - pixel_y) * (vFOV / height)
+  horizon_alt = horizonAngles[round(pixel_bearing) % 360]
+  is_sky = pixel_elevation > horizon_alt
+```
+
+**Technical Notes:**
+- Interpolate between adjacent horizon angles for smoother boundaries
+- Camera FOV: ~60-70° horizontal, ~80° vertical (get from camera intrinsics or use defaults)
+- At pitch ~90° (straight up), compass heading unreliable (gimbal lock) — assume all sky
+- The mask only changes when phone rotates, so it's very stable compared to HSV
+- Must implement same `SkyDetector` interface so particle overlay can use it seamlessly
+
+**Acceptance Criteria:**
+- [ ] TerrainSkyDetector produces sky mask from horizon profile + device orientation
+- [ ] Correctly maps screen coordinates to bearing/elevation
+- [ ] Applies magnetic declination correction
+- [ ] Handles gimbal lock at high pitch angles
+- [ ] Integrates with existing particle rendering (same interface as HSV detector)
+- [ ] All existing tests still pass
+
+---
+
+### P2B-005: detection-mode-toggle
+
+**Priority:** High
+**Complexity:** Low
+**Depends on:** P2B-004 (needs TerrainSkyDetector available)
+
+**What to Build:**
+- UI control to switch sky detection mode: HSV / Terrain / Combined
+- HSV = current behavior (color-based, good for urban/buildings)
+- Terrain = HeyWhatsThat horizon (good for rural/mountains, weather-independent)
+- Combined = terrain AND HSV (terrain as coarse mask, HSV refines local obstacles)
+- Show active mode in debug panel
+- Default to HSV until terrain data loads, then auto-switch to Terrain (or Combined)
+
+**Technical Notes:**
+- Add to existing debug panel or as a small toggle near altitude slider
+- Combined mode: `is_sky = terrain_says_sky AND hsv_says_sky`
+- When terrain data not available (no GPS, no cache), gray out Terrain/Combined options
+- Save preference to local storage
+
+**Acceptance Criteria:**
+- [ ] User can toggle between HSV / Terrain / Combined
+- [ ] Default is HSV, auto-switches when terrain data ready
+- [ ] Combined mode uses intersection of both masks
+- [ ] Debug panel shows active detection mode
+- [ ] Graceful fallback when terrain data unavailable
+- [ ] All existing tests still pass
+
+---
+
+### P2B-006: real-wind-data
 
 **Priority:** High
 **Complexity:** High
-**Depends on:** location-awareness
+**Depends on:** P2B-001 (needs GPS location)
 
 **What to Build:**
-- Calculate the "cone" of sky user is viewing based on:
-  - Device pitch (how far up they're looking)
-  - Device heading (compass direction)
-  - Camera field of view (FOV)
-- Determine bounding box of sky region in world coordinates
-- Calculate how much sky data we need to fetch (radius/diameter)
-
-**Why Needed:**
-- When fetching real wind data, need to know WHICH part of the sky to get data for
-- User looking North at 45° pitch sees different sky than looking East at 30° pitch
-- Need to map screen pixels to real-world sky coordinates
+- Integrate OGC EDR API for real wind data at user's location
+- Fetch wind components (u, v) at pressure levels (1000hPa, 850hPa, 250hPa)
+- Map to existing altitude levels (surface, mid, jet stream)
+- Replace FakeWindService with real data when available
+- Query radius: 10-20km centered on user position
 
 **Technical Notes:**
-- Camera FOV typically ~60-70° horizontal
-- At 45° pitch, user sees sky from ~15° to ~75° elevation
-- Need spherical geometry for accurate mapping
-- Consider: altitude of wind data affects apparent position
-
-**Key Calculations:**
-```
-Sky viewport center = (lat, lon, heading, pitch)
-Horizontal FOV = ~60°
-Vertical FOV = ~80° (phone aspect ratio)
-Sky coverage radius = f(pitch, altitude_level)
-```
+- EDR supports `radius` and `bbox` queries
+- Cache data — wind doesn't change second-to-second
+- Refresh on significant location change or periodically (every 5-10 min)
+- Fallback to fake data on network error
+- FOV math from sky-calculation research: ~10-20km radius covers visible sky dome
 
 **Acceptance Criteria:**
-- [ ] Calculate sky viewport bounds from device orientation
-- [ ] Map screen coordinates to world sky coordinates
-- [ ] Determine data fetch radius for current view
-- [ ] Debug panel shows viewport bounds
+- [ ] Fetches real wind data from EDR API
+- [ ] Updates particles with real wind direction/speed
+- [ ] Handles API errors gracefully (falls back to fake data)
+- [ ] Caches data to reduce API calls
+- [ ] All existing tests still pass
 
 ---
 
@@ -374,36 +513,39 @@ class StreamlineParticle {
 
 ## Recommended Implementation Order
 
-Based on dependencies:
+Each step is independently testable. Don't move to the next until the current one works on device.
 
 ```
 Phase 2a: Foundation & Visuals (COMPLETE)
-  1. ✅ performance-optimization (DONE - 2026-02-02)
-  2. ✅ wind-streamlines (DONE - 2026-02-03 - Windy.com style trails)
-  3. ✅ particle-colors (included in wind-streamlines)
-  4. ✅ compass-widget (DONE - 2026-02-03)
+  ✅ P2A-001 performance-optimization (DONE - 2026-02-02)
+  ✅ P2A-002 wind-streamlines (DONE - 2026-02-03)
+  ✅ P2A-003 compass-widget (DONE - 2026-02-03)
+  ✅ P2A-004 particle-colors (included in wind-streamlines)
+  ✅ Additional: compass-native, code-cleanup, BUG-001 through BUG-009
 
-Phase 2b: Location & Data <-- RECOMMENDED NEXT
-  5. location-awareness (foundation for real data) <-- START HERE
-  6. sky-viewport (depends on location)
-  7. real-wind-data (depends on location + viewport)
+Phase 2b: Terrain Sky Detection & Location  <-- CURRENT (branch: feature/terrain-sky-detection)
+  Step 1: P2B-001 location-service         ← START HERE (GPS foundation)
+  Step 2: P2B-002 heywhatsthat-client      ← API integration
+  Step 3: P2B-003 horizon-cache            ← Local persistence
+  Step 4: P2B-004 terrain-sky-mask         ← The core feature
+  Step 5: P2B-005 detection-mode-toggle    ← User-facing control
+  Step 6: P2B-006 real-wind-data           ← Real weather data (can start after Step 1)
 
-Phase 2c: Advanced Features
-  8. map-view (depends on location + data)
-  9. altitude-input (polish, low priority)
+Phase 2c: Advanced Features (future)
+  P2C-001 map-view (depends on location + data)
+  P2C-002 altitude-input (polish, low priority)
 ```
 
-**Note:** wind-streamlines and particle-colors can potentially be combined into a single feature since both deal with particle appearance. Consider implementing together.
+**Principle:** One step at a time. Each step should work and be testable before proceeding. If something breaks, we revert to master.
 
 ---
 
 ## Deferred / Future Features
 
-These were mentioned but not prioritized for Phase 2:
-
-- **ML-based sky detection (Level 3)** - Improve tree/building recognition
+- **ML-based sky detection (Level 3)** - Improve tree/building recognition (complement terrain detection)
+- **Self-hosted SRTM** - Download NASA elevation data and compute horizons on own server (remove HeyWhatsThat dependency)
+- **Google Street View mode** - Virtual "stand anywhere" mode for checking wind data remotely
 - **Weather projections** - Show future wind patterns
-- **Better particle masking** - Improve edge detection at sky boundaries
 - **Wind anchoring refinement** - Verify accuracy with real data
 - **App Store deployment** - Prepare for release
 

@@ -41,6 +41,7 @@ dependencies:
   flutter_compass: ^0.8.1      # Native OS compass heading
   vector_math: ^2.2.0          # Vector calculations
   http: ^1.6.0                 # API calls for real wind data
+  geolocator: ^14.0.2           # GPS location access
 
 dev_dependencies:
   flutter_test:

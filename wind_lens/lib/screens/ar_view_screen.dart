@@ -7,8 +7,10 @@ import '../models/altitude_level.dart';
 import '../models/compass_data.dart';
 import '../models/view_mode.dart';
 import '../models/wind_data.dart';
+import '../models/location_data.dart';
 import '../services/compass_service.dart';
 import '../services/fake_wind_service.dart';
+import '../services/location_service.dart';
 import 'package:camera/camera.dart';
 import '../services/sky_detection/auto_calibrating_sky_detector.dart';
 import '../widgets/altitude_slider.dart';
@@ -45,6 +47,18 @@ class _ARViewScreenState extends State<ARViewScreen> {
 
   /// Subscription to the compass data stream.
   StreamSubscription<CompassData>? _compassSubscription;
+
+  /// The location service for GPS position data.
+  late LocationService _locationService;
+
+  /// Subscription to the location data stream.
+  StreamSubscription<LocationData>? _locationSubscription;
+
+  /// Current GPS latitude, or null if not yet received.
+  double? _latitude;
+
+  /// Current GPS longitude, or null if not yet received.
+  double? _longitude;
 
   /// Current compass heading in degrees (0-360).
   double _heading = 0;
@@ -98,10 +112,17 @@ class _ARViewScreenState extends State<ARViewScreen> {
     _skyDetector = AutoCalibratingSkyDetector();
     _compassService.start();
     _compassSubscription = _compassService.stream.listen(_onCompassUpdate);
+
+    _locationService = LocationService();
+    _locationService.start(); // async, fire-and-forget
+    _locationSubscription =
+        _locationService.stream.listen(_onLocationUpdate);
   }
 
   @override
   void dispose() {
+    _locationSubscription?.cancel();
+    _locationService.dispose();
     _compassSubscription?.cancel();
     _compassService.dispose();
     super.dispose();
@@ -124,6 +145,16 @@ class _ARViewScreenState extends State<ARViewScreen> {
 
       // Update wind data for current altitude level
       _windData = _windService.getWindForAltitude(_altitudeLevel);
+    });
+  }
+
+  /// Handles location data updates from the GPS service.
+  ///
+  /// Updates latitude and longitude state for display in the debug panel.
+  void _onLocationUpdate(LocationData data) {
+    setState(() {
+      _latitude = data.latitude;
+      _longitude = data.longitude;
     });
   }
 
@@ -232,6 +263,8 @@ class _ARViewScreenState extends State<ARViewScreen> {
                 onTogglePanel: _toggleDebugPanel,
                 onToggleViewMode: _toggleViewMode,
                 onRecalibrate: _skyDetector.forceRecalibrate,
+                latitude: _latitude,
+                longitude: _longitude,
               ),
             ),
 

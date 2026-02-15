@@ -7,11 +7,34 @@
 
 ## Current State
 
-**Current Feature:** None (idle - ready for next feature)
-**Current Phase:** finalized/idle
-**Next Command:** Select next feature from ROADMAP_PHASE2.md
+**Current Feature:** P2B-002 heywhatsthat-client
+**Current Phase:** ready-to-start
+**Branch:** `feature/terrain-sky-detection`
+**Next Command:** `/research heywhatsthat-client`
+**Master:** Clean, 391 tests passing — safe to revert to if anything breaks
 
-### Last Completed Pipeline: compass-native - **FINALIZED** (2026-02-13)
+### Last Completed Pipeline: location-service (P2B-001) - **FINALIZED** (2026-02-15)
+
+- [x] /research - Complete (2026-02-15) - Package analysis, permission audit, service pattern design
+- [x] /plan - Complete (2026-02-15) - Architecture, file structure, 7 tasks in 6 phases, ~14 new tests
+- [x] /implement - Complete (2026-02-15) - 4 new files, 3 modified, 14 new tests, 405 total passing
+- [x] /test - Complete (2026-02-15) - All 405 tests passing, 0 analyzer issues, all acceptance criteria met
+- [x] /finalize - Complete (2026-02-15) - Committed locally
+
+**Research Document:** `.claude/features/location-service/2026-02-15T20:00_research.md`
+**Plan Document:** `.claude/features/location-service/2026-02-15T20:30_plan.md`
+**Tasks:** `.claude/features/location-service/tasks.md`
+**Implementation:** `.claude/active-work/location-service/implementation.md`
+**Test Report:** `.claude/active-work/location-service/test-success.md`
+**Summary:** `.claude/features/location-service/SUMMARY.md`
+**Finalization:** `.claude/features/location-service/FINALIZATION_REPORT.md`
+**Commit:** 60dbe61 - feat(location): add GPS location service for terrain sky detection
+
+**Research Document:** `.claude/features/location-service/2026-02-15T20:00_research.md`
+**Plan Document:** `.claude/features/location-service/2026-02-15T20:30_plan.md`
+**Tasks:** `.claude/features/location-service/tasks.md`
+
+### Previous Completed Pipeline: compass-native - **FINALIZED** (2026-02-13)
 
 - [x] /research - Complete (2026-02-13) - Package analysis, API preservation plan
 - [x] /plan - Complete (2026-02-13) - Minimal swap: flutter_compass for heading, keep everything else
@@ -292,31 +315,30 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 | BUG-008 | Compass widget bugs (position overlap + rotation check) | DONE (2026-02-03) |
 | BUG-009 | Compass widget freeze (stops updating after ~1s) | DONE v2 (2026-02-06) |
 | compass-native | Native OS compass integration (flutter_compass) | DONE (2026-02-13) |
+| P2B-001 | location-service | DONE (2026-02-15) |
 
 ---
 
 ## What To Do
 
-**Next: Select next feature from Phase 2 roadmap**
+**Next: Start Phase 2b pipeline — Terrain Sky Detection & Location**
 
-### Phase 2 Features (in priority order)
+### Phase 2b Steps (incremental, one at a time)
 
-See `.claude/pipeline/ROADMAP_PHASE2.md` for full details.
+See `ROADMAP_PHASE2.md` for full details. All work on branch `feature/terrain-sky-detection`.
 
-**Phase 2a: Foundation & Visuals**
-1. ~~`performance-optimization`~~ - Fix FPS (5 to 45+) **DONE**
-2. ~~`wind-streamlines`~~ - Windy.com style flowing trails **DONE**
-3. `particle-colors` - Can merge with wind-streamlines (included in wind-streamlines)
-4. ~~`compass-widget`~~ - Small compass in corner **DONE**
+| Step | Feature | Status | Description |
+|------|---------|--------|-------------|
+| 1 | P2B-001 location-service | **FINALIZED** | GPS coordinates + permissions |
+| 2 | P2B-002 heywhatsthat-client | **Next** | API client for horizon data |
+| 3 | P2B-003 horizon-cache | Waiting | Cache horizon profiles locally |
+| 4 | P2B-004 terrain-sky-mask | Waiting | Map horizon onto camera view |
+| 5 | P2B-005 detection-mode-toggle | Waiting | HSV / Terrain / Combined toggle |
+| 6 | P2B-006 real-wind-data | Waiting | OGC EDR real wind data |
 
-**Phase 2b: Location & Data**
-5. `location-awareness` - GPS + heading for real data
-6. `sky-viewport` - Calculate visible sky cone
-7. `real-wind-data` - Integrate EDR API
-
-**Phase 2c: Advanced**
-8. `map-view` - Toggle AR <-> top-down weather map
-9. `altitude-input` - Input specific altitude in feet
+**Reference docs:**
+- `/workspace/heywhatsthat-api-reference (1).md` — HeyWhatsThat API endpoints
+- `/workspace/sky-claculation.md` — FOV/frustum math, EDR radius calculations
 
 ### User Testing Notes (2026-02-03)
 

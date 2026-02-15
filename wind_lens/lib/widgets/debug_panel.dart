@@ -76,10 +76,18 @@ class DebugPanel extends StatelessWidget {
   /// Callback when the recalibrate button is tapped.
   final VoidCallback onRecalibrate;
 
+  /// Current GPS latitude in degrees, or null if GPS not available.
+  final double? latitude;
+
+  /// Current GPS longitude in degrees, or null if GPS not available.
+  final double? longitude;
+
   /// Creates a DebugPanel widget.
   ///
-  /// All parameters are required. Data parameters provide values to display,
-  /// and callback parameters handle user interactions.
+  /// All parameters except [latitude] and [longitude] are required.
+  /// Data parameters provide values to display, and callback parameters
+  /// handle user interactions. GPS fields are nullable -- when null,
+  /// the GPS row is hidden.
   const DebugPanel({
     super.key,
     required this.heading,
@@ -95,6 +103,8 @@ class DebugPanel extends StatelessWidget {
     required this.onTogglePanel,
     required this.onToggleViewMode,
     required this.onRecalibrate,
+    this.latitude,
+    this.longitude,
   });
 
   @override
@@ -164,6 +174,11 @@ class DebugPanel extends StatelessWidget {
           _buildDebugText('Particles: $currentParticleCount'),
           const SizedBox(height: 4),
           _buildDebugText('Mode: ${viewMode.displayName}'),
+          if (latitude != null && longitude != null) ...[
+            const SizedBox(height: 4),
+            _buildDebugText(
+                'GPS: ${latitude!.toStringAsFixed(4)}, ${longitude!.toStringAsFixed(4)}'),
+          ],
           const SizedBox(height: 8),
           // View mode toggle button
           GestureDetector(
