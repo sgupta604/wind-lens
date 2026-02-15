@@ -35,7 +35,8 @@ class HSVHistogram {
 
     // Very low saturation = gray (overcast sky, clouds, haze)
     // Any hue is acceptable when saturation is very low
-    if (hsv.s < 0.15) {
+    // BUG-011: Widened from 0.15 to 0.20 to include clouds with slight color tint
+    if (hsv.s < 0.20) {
       return true; // Already checked V >= 0.35 above
     }
 

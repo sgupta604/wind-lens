@@ -461,8 +461,10 @@ class AutoCalibratingSkyDetector implements SkyMask {
           continue;
         }
 
-        // Calculate combined score
-        final colorScore = _skyHistogram!.matchScore(hsv);
+        // Dual-path sky scoring (BUG-011): blue sky via histogram, clouds via bypass
+        final blueScore = _skyHistogram!.matchScore(hsv);
+        final cloudScore = _isCloudLike(hsv) ? _cloudSkyScore(hsv) : 0.0;
+        final colorScore = blueScore > cloudScore ? blueScore : cloudScore;
         final combinedScore = colorScore * positionWeight;
 
         // Apply threshold
@@ -505,6 +507,55 @@ class AutoCalibratingSkyDetector implements SkyMask {
   /// Returns the position weight for a given normalized Y coordinate.
   /// This is primarily for testing purposes.
   double getPositionWeight(double normalizedY) => _calculatePositionWeight(normalizedY);
+
+  // ============= Cloud/Bright Sky Detection (BUG-011) =============
+
+  /// Returns true if the pixel looks like a cloud or bright sky region.
+  ///
+  /// Clouds and bright sky have very low saturation (achromatic) and high
+  /// brightness. These pixels cannot match a blue-sky histogram profile,
+  /// so they need separate handling via the cloud bypass path.
+  ///
+  /// Criteria:
+  /// - Saturation < 0.15 (achromatic / very desaturated)
+  /// - Value >= 0.45 (not a dark shadow)
+  ///
+  /// This is intentionally generous -- the position weight provides
+  /// additional filtering to prevent false positives lower in the frame.
+  ///
+  /// See also: [_cloudSkyScore] for the scoring function.
+  /// BUG-011: Sky detection rejects white clouds due to histogram hard boundary.
+  bool _isCloudLike(HSV hsv) {
+    return hsv.s < 0.15 && hsv.v >= 0.45;
+  }
+
+  /// Calculates a sky score for cloud/bright sky pixels.
+  ///
+  /// Returns a score from 0.0 to 1.0 based on how "cloud-like" the pixel is.
+  /// Brighter and less saturated pixels score higher.
+  ///
+  /// Scoring formula:
+  /// - brightnessScore = ((V - 0.45) / 0.55).clamp(0, 1) -- weighted 60%
+  /// - desaturationScore = (1.0 - S / 0.15).clamp(0, 1) -- weighted 40%
+  ///
+  /// BUG-011: Sky detection rejects white clouds due to histogram hard boundary.
+  double _cloudSkyScore(HSV hsv) {
+    final brightnessScore = ((hsv.v - 0.45) / 0.55).clamp(0.0, 1.0);
+    final desaturationScore = (1.0 - hsv.s / 0.15).clamp(0.0, 1.0);
+    return (brightnessScore * 0.6 + desaturationScore * 0.4).clamp(0.0, 1.0);
+  }
+
+  /// Public getter for cloud-like check - exposed for testing.
+  ///
+  /// Returns whether the given HSV color matches cloud/bright sky criteria.
+  @visibleForTesting
+  bool isCloudLike(HSV hsv) => _isCloudLike(hsv);
+
+  /// Public getter for cloud sky score - exposed for testing.
+  ///
+  /// Returns the cloud sky score for the given HSV color.
+  @visibleForTesting
+  double cloudSkyScore(HSV hsv) => _cloudSkyScore(hsv);
 
   /// Gets pixel HSV from BGRA image.
   HSV? _getPixelHsvBGRA(CameraImage image, int x, int y) {

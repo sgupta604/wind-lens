@@ -18,6 +18,9 @@
 | BUG-006 | Sky detection regression (particles on porch ceiling) | **Critical** | **DONE** | Section 3 |
 | BUG-007 | Streamline ghosting (ghost trails on respawn) | **Critical** | **DONE** | Section 4 |
 | BUG-008 | Compass widget bugs (position overlap + rotation) | Low | **DONE** | N/A |
+| BUG-009 | Compass freeze (dead zone convergence trap) | High | **DONE** | N/A |
+| BUG-010 | Altitude indicator colors don't match streamline colors | Low | **OPEN** | Section 6, 9 |
+| BUG-011 | Sky detection low coverage on clear day with clouds | Medium | **DONE** | Section 3 |
 
 ---
 
@@ -413,6 +416,101 @@ Screenshot `/workspace/images/IMG_4361.PNG` showed compass widget touching/overl
 **Commit:** 4483af9 - fix(ui): adjust compass widget position above InfoBar
 
 **Pipeline:** `/diagnose compass-widget-bugs` → `/plan` → `/implement` → `/test` → `/finalize` ✓
+
+---
+
+### BUG-009: Compass Freeze (Dead Zone Convergence Trap)
+
+**Severity:** High
+**Status:** DONE (2026-02-06)
+**Spec Reference:** N/A
+
+**Root Cause:** CompassService used raw magnetometer data with atan2 + manual smoothing. The dead zone check caused a convergence trap that froze the compass after ~1 second. Two fix attempts (reorder dead zone, timer-based architecture) failed because the underlying approach was fragile.
+
+**Fix Implemented:** Replaced manual magnetometer computation with `flutter_compass` package that wraps the native OS compass (iOS CLLocationManager, Android rotation vector sensor). OS handles sensor fusion, calibration, and smoothing. Timer-based architecture retained for consistent 20Hz emission.
+
+**Commits:** 8620105 (v1 timer rewrite), 88b1407 (v2 flutter_compass)
+**Pipeline:** `/diagnose` → `/plan` → `/implement` → `/test` → `/finalize` ✓
+
+---
+
+### BUG-010: Altitude Indicator Colors Don't Match Streamline Colors
+
+**Severity:** Low
+**Status:** OPEN
+**Spec Reference:** Section 6 (Altitude Levels), Section 9 (Wind Streamlines)
+
+**Expected Behavior:**
+- The colored dots on the altitude slider (JET, MID, SFC) should match the streamline particle colors for that altitude level
+- User should be able to look at the slider and know which colored trails correspond to which altitude
+
+**Actual Behavior:**
+- Altitude slider shows: pink/magenta (Jet), cyan (Mid), white (Surface)
+- Streamlines use speed-based color gradient: blue→cyan→green→yellow→orange→red→purple
+- At Jet Stream (14.4 m/s), particles render as blue/green but the slider dot is pink/magenta
+- Colors are completely disconnected
+
+**Screenshots:** `/workspace/images/IMG_4378.PNG` - JET selected, slider dot is pink but particles are blue/green
+
+**Suggested Fix:** Either:
+- Make altitude slider dots match the dominant streamline color for that altitude's typical wind speed
+- Or add a subtle altitude tint/halo to streamlines so they're distinguishable beyond just speed color
+
+---
+
+### BUG-011: Sky Detection Low Coverage on Clear Day With Clouds
+
+**Severity:** Medium
+**Status:** DONE (2026-02-15)
+**Spec Reference:** Section 3 - Sky Detection
+
+**Expected Behavior:**
+- On a clear blue sky day, sky detection should identify 60-80%+ of the visible sky area
+- White clouds should still be detected as "sky" (they're in the sky, not ground objects)
+- Sun glare regions should be handled gracefully
+
+**Actual Behavior (BEFORE FIX):**
+- Sky detection reads only 29-35% on a mostly clear blue sky with some white clouds
+- White cloud areas appear to be rejected by the HSV sky profile (calibrated for blue, rejects white)
+- Bright sun/glare areas also rejected
+- Particles only render in patches of blue, creating a spotty/incomplete look
+- Large portions of obvious sky have no particles
+
+**Screenshots:**
+- `/workspace/images/IMG_4378.PNG` - Sky: 29.2%, clear blue sky with clouds, particles only in upper portion
+- `/workspace/images/IMG_4379.PNG` - Sky: 35.0%, similar scene, most sky undetected
+
+**Root Cause (confirmed):**
+- HSV histogram is built from blue sky samples
+- White clouds have very different HSV values (low saturation, high value) vs blue sky (high saturation, moderate value)
+- Sun glare has extreme brightness values
+- The sky profile was too narrow - it matched "blue" but not "cloud white" or "sun bright"
+- `matchScore()` hard-rejected cloud pixels due to saturation and hue hard boundaries
+
+**Fix Implemented:**
+- Added dual-path sky scoring in `AutoCalibratingSkyDetector`
+- Cloud bypass scores low-saturation bright pixels (S<0.15, V>=0.45) using brightness and desaturation weights
+- Takes MAX of blue-sky histogram score and cloud bypass score
+- Widened `isSkyLikeColor()` saturation threshold from 0.15 to 0.20 to include clouds with slight color tint
+- All 400 tests passing (391 existing + 9 new), zero regressions
+
+**Components Modified:**
+- `lib/services/sky_detection/auto_calibrating_sky_detector.dart` (+48 lines)
+- `lib/services/sky_detection/hsv_histogram.dart` (1 line modified)
+- `test/services/sky_detection/auto_calibrating_sky_detector_test.dart` (+80 lines, 8 tests)
+- `test/services/sky_detection/hsv_histogram_test.dart` (+10 lines, 1 test)
+
+**Documentation:**
+- `.claude/features/sky-detection-clouds/SUMMARY.md`
+- `.claude/features/sky-detection-clouds/FINALIZATION_REPORT.md`
+- `.claude/features/sky-detection-clouds/2026-02-15_plan.md`
+- `.claude/features/sky-detection-clouds/tasks.md`
+
+**Commit:** (local, not pushed) - fix(sky): detect white clouds and bright sky alongside blue sky
+
+**Pipeline:** `/diagnose sky-detection-clouds` → `/plan` → `/implement` → `/test` → `/finalize` ✓
+
+**Device Testing Required:** Verify sky fraction increases from 29-35% to 60-80% on cloudy days, no false positives on white buildings
 
 ---
 
