@@ -7,45 +7,11 @@
 
 ## Current State
 
-**Current Feature:** IDLE - awaiting next feature selection or device testing feedback
-**Current Phase:** finalized
-**Next Command:** Select next feature from ROADMAP_PHASE2.md or wait for device testing results
+**Current Feature:** None (idle - ready for next feature)
+**Current Phase:** finalized/idle
+**Next Command:** Select next feature from ROADMAP_PHASE2.md
 
-### Last Completed Pipeline: sky-detection-clouds (BUG-011) - **FINALIZED** (2026-02-15)
-
-- [x] /diagnose - Complete (2026-02-15) - Root cause: matchScore() hard boundary rejects cloud pixels on saturation + hue
-- [x] /plan - Complete (2026-02-15) - Dual-path cloud scoring bypass in _generateMask(), 9 new tests planned
-- [x] /implement - Complete (2026-02-15) - Dual-path cloud scoring, 9 new tests, 400 total tests passing, zero regressions
-- [x] /test - Complete (2026-02-15) - All 400 tests passing, static analysis clean, zero regressions
-- [x] /finalize - Complete (2026-02-15) - Committed locally
-
-**Diagnosis Document:** `.claude/active-work/sky-detection-clouds/diagnosis.md`
-**Plan Document:** `.claude/features/sky-detection-clouds/2026-02-15_plan.md`
-**Tasks:** `.claude/features/sky-detection-clouds/tasks.md`
-**Implementation:** `.claude/active-work/sky-detection-clouds/implementation.md`
-**Test Report:** `.claude/active-work/sky-detection-clouds/test-success.md`
-**Summary:** `.claude/features/sky-detection-clouds/SUMMARY.md`
-**Finalization:** `.claude/features/sky-detection-clouds/FINALIZATION_REPORT.md`
-**Commit:** (local, not pushed) - fix(sky): detect white clouds and bright sky alongside blue sky
-
-### Previously Completed: code-cleanup - **FINALIZED** (2026-02-15)
-
-- [x] /research - Complete (2026-02-15) - Analyzed 7 cleanup items across codebase
-- [x] /plan - Complete (2026-02-15) - Designed widget extraction, dead code removal, consolidation
-- [x] /implement - Complete (2026-02-15) - Extracted DebugPanel, removed debugPrint, consolidated duplicates
-- [x] /test - Complete (2026-02-15) - All 391 tests passing, static analysis clean
-- [x] /finalize - Complete (2026-02-15) - Committed locally
-
-**Research Document:** `.claude/features/code-cleanup/2026-02-15T*_research.md`
-**Plan Document:** `.claude/features/code-cleanup/2026-02-15T*_plan.md`
-**Tasks:** `.claude/features/code-cleanup/tasks.md`
-**Implementation:** `.claude/active-work/code-cleanup/implementation.md`
-**Test Report:** `.claude/active-work/code-cleanup/test-success.md`
-**Summary:** `.claude/features/code-cleanup/SUMMARY.md`
-**Finalization:** `.claude/features/code-cleanup/FINALIZATION_REPORT.md`
-**Commit:** 697a772 (local, not pushed) - refactor: extract debug panel widget and remove dead code
-
-### Previously Completed: compass-native - **FINALIZED** (2026-02-13)
+### Last Completed Pipeline: compass-native - **FINALIZED** (2026-02-13)
 
 - [x] /research - Complete (2026-02-13) - Package analysis, API preservation plan
 - [x] /plan - Complete (2026-02-13) - Minimal swap: flutter_compass for heading, keep everything else
@@ -326,8 +292,6 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 | BUG-008 | Compass widget bugs (position overlap + rotation check) | DONE (2026-02-03) |
 | BUG-009 | Compass widget freeze (stops updating after ~1s) | DONE v2 (2026-02-06) |
 | compass-native | Native OS compass integration (flutter_compass) | DONE (2026-02-13) |
-| code-cleanup | Codebase cleanup (extract widget, remove dead code) | DONE (2026-02-15) |
-| BUG-011 | Sky detection cloud coverage (29-35% on clear days) | DONE (2026-02-15) |
 
 ---
 

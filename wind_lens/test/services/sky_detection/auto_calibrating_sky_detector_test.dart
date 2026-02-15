@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wind_lens/models/hsv.dart';
 import 'package:wind_lens/services/sky_detection/auto_calibrating_sky_detector.dart';
 import 'package:wind_lens/services/sky_detection/sky_mask.dart';
 
@@ -525,67 +524,6 @@ void main() {
           AutoCalibratingSkyDetector.samplingRegions.length,
           greaterThanOrEqualTo(4),
         );
-      });
-    });
-
-    group('cloud bypass scoring (BUG-011)', () {
-      // Tests for dual-path cloud detection.
-      // BUG-011: White clouds rejected by blue-sky histogram hard boundaries.
-      // These tests verify the cloud bypass scoring methods.
-
-      test('isCloudLike returns true for white cloud (S=0.02, V=0.96)', () {
-        // White cloud: achromatic, very bright
-        final result = detector.isCloudLike(const HSV(0.0, 0.02, 0.96));
-        expect(result, isTrue);
-      });
-
-      test('isCloudLike returns true for gray cloud (S=0.08, V=0.75)', () {
-        // Gray cloud: low saturation, moderate brightness
-        final result = detector.isCloudLike(const HSV(200.0, 0.08, 0.75));
-        expect(result, isTrue);
-      });
-
-      test('isCloudLike returns false for dark shadow (S=0.05, V=0.25)', () {
-        // Dark shadow: low saturation but too dark (V < 0.45)
-        final result = detector.isCloudLike(const HSV(0.0, 0.05, 0.25));
-        expect(result, isFalse);
-      });
-
-      test('isCloudLike returns false for saturated object (S=0.50, V=0.60)', () {
-        // Saturated colored object: S >= 0.15, not cloud-like
-        final result = detector.isCloudLike(const HSV(30.0, 0.50, 0.60));
-        expect(result, isFalse);
-      });
-
-      test('isCloudLike returns false for blue sky (S=0.40, V=0.85)', () {
-        // Blue sky: goes through histogram path, not cloud bypass
-        final result = detector.isCloudLike(const HSV(210.0, 0.40, 0.85));
-        expect(result, isFalse);
-      });
-
-      test('cloudSkyScore returns high score for white cloud (S=0.02, V=0.96)', () {
-        // White cloud should get a high score
-        // brightnessScore = (0.96 - 0.45) / 0.55 = 0.927
-        // desaturationScore = 1.0 - 0.02/0.15 = 0.867
-        // combined = 0.927 * 0.6 + 0.867 * 0.4 = 0.903
-        final score = detector.cloudSkyScore(const HSV(0.0, 0.02, 0.96));
-        expect(score, greaterThanOrEqualTo(0.85));
-      });
-
-      test('cloudSkyScore returns moderate score for gray cloud (S=0.08, V=0.75)', () {
-        // Gray cloud should get a moderate score
-        // brightnessScore = (0.75 - 0.45) / 0.55 = 0.545
-        // desaturationScore = 1.0 - 0.08/0.15 = 0.467
-        // combined = 0.545 * 0.6 + 0.467 * 0.4 = 0.514
-        final score = detector.cloudSkyScore(const HSV(200.0, 0.08, 0.75));
-        expect(score, greaterThanOrEqualTo(0.45));
-      });
-
-      test('cloudSkyScore returns higher score for brighter cloud', () {
-        // Brighter cloud should score higher than dimmer cloud
-        final brightScore = detector.cloudSkyScore(const HSV(0.0, 0.02, 0.96));
-        final dimScore = detector.cloudSkyScore(const HSV(0.0, 0.08, 0.75));
-        expect(brightScore, greaterThan(dimScore));
       });
     });
   });

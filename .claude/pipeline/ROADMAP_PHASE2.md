@@ -15,18 +15,6 @@
 
 ---
 
-## Immediate: Bug Fixes (from 2026-02-06 device testing)
-
-| # | Issue | Priority | Complexity | Description |
-|---|-------|----------|------------|-------------|
-| 0a | ~~code-cleanup~~ | ~~High~~ | ~~Low~~ | ~~Dead code, extract debug panel~~ **DONE** (2026-02-15) |
-| 0b | **BUG-010: altitude-color-mismatch** | Low | Low | Altitude slider dots don't match streamline colors |
-| 0c | ~~**BUG-011: sky-detection-clouds**~~ | ~~Medium~~ | ~~Medium~~ | ~~Sky detection only 29-35% on clear day with white clouds~~ **DONE** (2026-02-15) |
-
-**Screenshots:** `images/IMG_4378.PNG`, `images/IMG_4379.PNG`, `images/ai_generated_goal_kinda.PNG`
-
----
-
 ## Phase 2 Feature Summary
 
 | # | Feature | Priority | Complexity | Description |

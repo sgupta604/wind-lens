@@ -155,16 +155,6 @@ void main() {
         final cyanGreen = const HSV(170.0, 0.50, 0.80);
         expect(HSVHistogram.isSkyLikeColor(cyanGreen), isFalse);
       });
-
-      test('returns true for cloud with slight warm tint at S=0.18 (BUG-011)', () {
-        // Cloud with slight warm tint (not blue hue): S=0.18 is between
-        // old gray threshold (0.15) and new threshold (0.20).
-        // With hue=50 (warm/yellowish), this only passes via the gray/overcast
-        // path -- it would fail the blue hue check (180-250).
-        // BUG-011: Widened gray/overcast saturation threshold from 0.15 to 0.20
-        final slightTintCloud = const HSV(50.0, 0.18, 0.70);
-        expect(HSVHistogram.isSkyLikeColor(slightTintCloud), isTrue);
-      });
     });
 
     group('fromSamples', () {
