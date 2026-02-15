@@ -14,6 +14,7 @@ import '../services/sky_detection/auto_calibrating_sky_detector.dart';
 import '../widgets/altitude_slider.dart';
 import '../widgets/camera_view.dart';
 import '../widgets/compass_widget.dart';
+import '../widgets/debug_panel.dart';
 import '../widgets/info_bar.dart';
 import '../widgets/particle_overlay.dart';
 
@@ -213,17 +214,26 @@ class _ARViewScreenState extends State<ARViewScreen> {
               particleCount: _viewMode == ViewMode.streamlines ? 1000 : 2000,
             ),
 
-            // Layer 3: Debug toggle button (always visible)
-            _buildDebugToggleButton(),
-
-            // Layer 4: Debug panel (conditionally visible)
-            // Positioned below the toggle button (8 + 40 + 8 = 56)
-            if (_showDebugPanel)
-              Positioned(
-                top: MediaQuery.of(context).padding.top + 56,
-                left: 8,
-                child: _buildDebugPanel(),
+            // Layer 3: Debug panel (toggle button + conditionally visible panel)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 8,
+              left: 8,
+              child: DebugPanel(
+                heading: _heading,
+                pitch: _pitch,
+                skyFraction: _skyFraction,
+                isCalibrated: _isCalibrated,
+                altitudeLevel: _altitudeLevel,
+                windData: _windData,
+                currentFps: _currentFps,
+                currentParticleCount: _currentParticleCount,
+                viewMode: _viewMode,
+                showPanel: _showDebugPanel,
+                onTogglePanel: _toggleDebugPanel,
+                onToggleViewMode: _toggleViewMode,
+                onRecalibrate: _skyDetector.forceRecalibrate,
               ),
+            ),
 
             // Layer 5: Altitude slider positioned at right edge, vertically centered
             // Long-press toggles view mode (dots/streamlines)
@@ -262,141 +272,6 @@ class _ARViewScreenState extends State<ARViewScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  /// Builds the debug toggle button positioned in the top-left corner.
-  ///
-  /// This button provides a reliable way to toggle the debug panel on real
-  /// devices, as the 3-finger gesture may not work reliably due to system
-  /// gesture interference.
-  Widget _buildDebugToggleButton() {
-    return Positioned(
-      top: MediaQuery.of(context).padding.top + 8,
-      left: 8,
-      child: GestureDetector(
-        onTap: _toggleDebugPanel,
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.4),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          alignment: Alignment.center,
-          child: const Text(
-            'DBG',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              fontFamily: 'monospace',
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Builds the debug panel widget showing detailed metrics.
-  ///
-  /// Shows: Heading, Pitch, Sky%, Altitude, Wind, FPS, Particles, Recal button
-  Widget _buildDebugPanel() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildDebugText('Heading: ${_heading.toStringAsFixed(1)}'),
-          const SizedBox(height: 4),
-          _buildDebugText('Pitch: ${_pitch.toStringAsFixed(1)}'),
-          const SizedBox(height: 4),
-          _buildDebugText('Sky: ${(_skyFraction * 100).toStringAsFixed(1)}%'),
-          const SizedBox(height: 4),
-          _buildDebugText('Sky Cal: ${_isCalibrated ? "Yes" : "No"}'),
-          const SizedBox(height: 4),
-          _buildDebugText('Altitude: ${_altitudeLevel.displayName}'),
-          const SizedBox(height: 4),
-          _buildDebugText(
-              'Wind: ${_windData.speed.toStringAsFixed(1)}m/s @ ${_windData.directionDegrees.toStringAsFixed(0)}'),
-          const SizedBox(height: 4),
-          _buildDebugText('FPS: ${_currentFps.toStringAsFixed(0)}'),
-          const SizedBox(height: 4),
-          _buildDebugText('Particles: $_currentParticleCount'),
-          const SizedBox(height: 4),
-          _buildDebugText('Mode: ${_viewMode.displayName}'),
-          const SizedBox(height: 8),
-          // View mode toggle button
-          GestureDetector(
-            onTap: _toggleViewMode,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: _viewMode == ViewMode.streamlines
-                    ? Colors.purple.withValues(alpha: 0.7)
-                    : Colors.grey.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                _viewMode == ViewMode.dots ? 'Streamlines' : 'Dots',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          // Recalibrate sky button - allows user to force recalibration
-          // when under overhang or if automatic calibration failed
-          GestureDetector(
-            onTap: _onRecalibratePressed,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.blue.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Text(
-                'Recal Sky',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Handles the recalibrate button press.
-  ///
-  /// Forces the sky detector to recalibrate on the next frame.
-  /// Provides haptic feedback to confirm the action.
-  void _onRecalibratePressed() {
-    HapticFeedback.mediumImpact();
-    _skyDetector.forceRecalibrate();
-  }
-
-  /// Builds a single line of debug text.
-  Widget _buildDebugText(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-        fontFamily: 'monospace',
       ),
     );
   }

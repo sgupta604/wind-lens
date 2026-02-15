@@ -122,13 +122,6 @@ void main() {
         expect(AutoCalibratingSkyDetector.sampleRegionTop, 0.05);
       });
 
-      test('sample region bottom base is 40% (but now dynamic)', () {
-        // sampleRegionBottom is deprecated/reference - actual bottom is calculated
-        // by _getSampleRegionBottom() based on pitch
-        // ignore: deprecated_member_use_from_same_package
-        expect(AutoCalibratingSkyDetector.sampleRegionBottom, 0.4);
-      });
-
       test('detection threshold is reasonable', () {
         expect(AutoCalibratingSkyDetector.detectionThreshold, greaterThan(0.0));
         expect(AutoCalibratingSkyDetector.detectionThreshold, lessThan(1.0));

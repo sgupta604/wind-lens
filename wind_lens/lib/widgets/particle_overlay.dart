@@ -287,10 +287,6 @@ class _ParticleOverlayState extends State<ParticleOverlay>
     if (headingDelta < -180) headingDelta += 360;
 
     // Get altitude-specific properties
-    // NOTE: parallaxFactor is intentionally unused after BUG-004 fix
-    // Kept for potential future subtle depth effects
-    // ignore: unused_local_variable
-    final parallaxFactor = widget.altitudeLevel.parallaxFactor;
     final trailScale = widget.altitudeLevel.trailScale;
 
     // Check if we're in streamlines mode
@@ -467,6 +463,14 @@ class ParticleOverlayPainter extends CustomPainter {
     });
   }
 
+  /// Calculates particle opacity from age using a sine curve.
+  ///
+  /// Returns 0.0 at birth (age=0), peaks near 1.0 at mid-life,
+  /// and fades back to 0.0 at expiration (age=1.0).
+  static double _particleOpacity(double age) {
+    return sin(age * 3.14159).clamp(0.0, 1.0);
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     if (viewMode == ViewMode.streamlines) {
@@ -485,8 +489,7 @@ class ParticleOverlayPainter extends CustomPainter {
       }
 
       // Calculate opacity from age (fade in, peak, fade out)
-      // sin(age * pi) creates a smooth curve: 0 -> 1 -> 0
-      final baseOpacity = sin(p.age * 3.14159).clamp(0.0, 1.0);
+      final baseOpacity = _particleOpacity(p.age);
 
       // Skip nearly invisible particles
       if (baseOpacity < 0.01) continue;
@@ -527,7 +530,7 @@ class ParticleOverlayPainter extends CustomPainter {
       if (p.trailCount < 2) continue;
 
       // Calculate base opacity from age
-      final baseOpacity = sin(p.age * 3.14159).clamp(0.0, 1.0);
+      final baseOpacity = _particleOpacity(p.age);
       if (baseOpacity < 0.01) continue;
 
       // Get speed-based color

@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 import 'sky_mask.dart';
 
 /// Level 1 sky detection using device pitch angle.
@@ -29,7 +27,6 @@ class PitchBasedSkyMask implements SkyMask {
   /// Call this method when receiving new pitch data from the compass service.
   void updatePitch(double pitchDegrees) {
     _pitch = pitchDegrees;
-    debugPrint('Sky fraction: ${(skyFraction * 100).toStringAsFixed(1)}%');
   }
 
   @override

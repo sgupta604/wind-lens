@@ -89,15 +89,6 @@ class AutoCalibratingSkyDetector implements SkyMask {
   /// edge artifacts.
   static const double sampleRegionTop = 0.05;
 
-  /// Bottom of the sampling region (as fraction of frame height).
-  ///
-  /// NOTE: This constant is kept for backwards compatibility and as a
-  /// reference value. The actual sample region bottom is now calculated
-  /// dynamically by [_getSampleRegionBottom] based on the current pitch angle.
-  /// See BUG-002.5 fix for details.
-  @Deprecated('Use _getSampleRegionBottom() which calculates dynamically based on pitch')
-  static const double sampleRegionBottom = 0.4;
-
   /// Threshold for classifying a pixel as sky (0.0-1.0).
   static const double detectionThreshold = 0.4;
 

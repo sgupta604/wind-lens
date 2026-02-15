@@ -44,10 +44,6 @@ class FakeWindService {
       timestamp: DateTime.now(),
     );
 
-    // Debug logging for verification
-    debugPrint(
-        'Wind: ${wind.speed.toStringAsFixed(1)}m/s @ ${wind.directionDegrees.toStringAsFixed(0)}deg');
-
     return wind;
   }
 
@@ -90,19 +86,6 @@ class FakeWindService {
       timestamp: DateTime.now(),
     );
 
-    // Debug logging for verification
-    debugPrint(
-        'Wind (${level.displayName}): ${wind.speed.toStringAsFixed(1)}m/s @ ${wind.directionDegrees.toStringAsFixed(0)}deg at ${wind.altitude}m');
-
     return wind;
   }
-}
-
-/// Debug print function (only prints in debug mode).
-void debugPrint(String message) {
-  assert(() {
-    // ignore: avoid_print
-    print(message);
-    return true;
-  }());
 }
