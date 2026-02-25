@@ -116,16 +116,16 @@ Wind Lens is a Flutter mobile app that visualizes wind patterns in augmented rea
 
 - **Framework:** Flutter 3.x with Dart
 - **Platforms:** iOS 14.0+, Android API 24+
-- **Key packages:** camera (^0.11.3), sensors_plus (^7.0.0), vector_math (^2.2.0), http (^1.6.0)
+- **Key packages:** camera (^0.11.3), sensors_plus (^7.0.0), vector_math (^2.2.0), http (^1.6.0), flutter_riverpod (^2.4.9), freezed_annotation (^2.4.1), flutter_compass, geolocator
 
 ## Build & Run Commands
 
 ```bash
-# Create project (if starting fresh)
-flutter create wind_lens
-
 # Install dependencies
 flutter pub get
+
+# Run codegen (after modifying Freezed models or Riverpod providers)
+dart run build_runner build --delete-conflicting-outputs
 
 # iOS-specific setup
 cd ios && pod install && cd ..
@@ -142,52 +142,96 @@ flutter pub get
 cd ios && rm -rf Pods Podfile.lock && pod install --repo-update && cd .. && flutter clean && flutter build ios
 ```
 
-## Architecture
+## Architecture (Post SPEC-001)
+
+SPEC-001 introduced Riverpod + Freezed. The canonical layout is `lib/core/` and `lib/features/`. Old paths (`lib/models/`, `lib/widgets/`, `lib/screens/`, `lib/utils/`) are re-export shims pointing to canonical locations — do not add new code there.
 
 ```
 lib/
 ├── main.dart                    # App entry point
-├── models/
-│   ├── wind_data.dart          # WindData with u/v components
-│   ├── altitude_level.dart     # Surface/MidLevel/JetStream enum
-│   ├── particle.dart           # x, y, age, trailLength
-│   └── sky_mask.dart           # SkyMask interface
-├── services/
-│   ├── wind_service.dart       # Facade: real vs fake data
-│   ├── fake_wind_service.dart  # Simulated wind data
-│   ├── compass_service.dart    # Magnetometer + accelerometer
+├── app.dart                     # WindLensApp: ProviderScope + MaterialApp
+├── core/
+│   ├── models/                  # Freezed data models (canonical)
+│   │   ├── wind_data.dart       # WindData: u/v primary, speed/direction computed, AltitudeLevel
+│   │   ├── position_data.dart   # GPS fix (lat, lng, altitude, accuracy, timestamp)
+│   │   ├── sensor_state.dart    # compassHeading + pitch snapshot
+│   │   ├── horizon_profile.dart # Terrain elevation by bearing, getElevationAtBearing()
+│   │   ├── sky_mask_data.dart   # Plain class (NOT Freezed): per-pixel sky mask + skyFraction
+│   │   ├── scene_state.dart     # Composed snapshot of all app state
+│   │   ├── altitude_level.dart  # Surface/MidLevel/JetStream enum
+│   │   ├── particle.dart        # Mutable particle (NOT Freezed - hot path)
+│   │   ├── hsv.dart             # Mutable HSV (NOT Freezed - hot path)
+│   │   └── view_mode.dart       # Dots/Streamlines enum
+│   ├── services/                # Abstract interfaces (pure Dart, no Flutter imports)
+│   │   ├── sky_detector.dart    # SkyDetector: detect(frame, sensors, horizon?) -> SkyMaskData
+│   │   ├── wind_data_source.dart # WindDataSource: getWind(position, altitude) -> WindData
+│   │   ├── horizon_provider.dart # HorizonProvider: getHorizon(lat, lng) -> HorizonProfile
+│   │   └── sensor_service.dart  # SensorService: sensorStream, positionStream, pause, resume
+│   ├── providers/               # Riverpod provider graph (6 layers + sidecar)
+│   │   ├── service_providers.dart  # Layer 1 DI: swap-points for each service impl
+│   │   ├── sensor_providers.dart   # Layer 2/3: GPS, raw sensor, stablePosition (>100m), SensorNotifiers
+│   │   ├── data_providers.dart     # Layer 4/5: horizon, wind, selectedAltitude, detectionMode
+│   │   ├── scene_provider.dart     # Layer 6: sceneStateProvider (composed SceneState)
+│   │   └── lifecycle_provider.dart # AppLifecycleObserver: pauses/resumes SensorService
+│   └── utils/                   # Shared utilities (canonical)
+│       ├── color_utils.dart     # Color helper functions
+│       └── wind_colors.dart     # Speed-to-color gradient
+├── features/
+│   └── ar_view/                 # Main AR experience
+│       ├── ar_view_screen.dart  # ConsumerStatefulWidget: reads sceneStateProvider
+│       └── widgets/
+│           ├── particle_overlay.dart  # CustomPainter: SkyMaskData + ValueNotifier heading/pitch
+│           ├── camera_view.dart       # Camera preview
+│           ├── altitude_slider.dart   # Vertical altitude selector
+│           ├── compass_widget.dart    # Heading display
+│           ├── info_bar.dart          # Wind speed/altitude display
+│           ├── debug_panel.dart       # Debug overlay (3-finger tap)
+│           └── data_status_bar.dart   # GPS/wind loading progress indicator
+├── services/                    # Concrete implementations
+│   ├── compass_service.dart     # Native heading via flutter_compass
+│   ├── location_service.dart    # GPS via geolocator
+│   ├── fake_wind_service.dart   # Simulated wind data
+│   ├── performance_manager.dart # FPS-based particle count adjustment
+│   ├── sensors/
+│   │   └── device_sensor_service.dart  # DeviceSensorService implements SensorService
+│   ├── wind/
+│   │   ├── mock_wind_source.dart       # MockWindDataSource (wraps FakeWindService)
+│   │   └── cached_wind_source.dart     # CachedWindDataSource (TTL=10min memory cache)
+│   ├── horizon/
+│   │   ├── mock_horizon_provider.dart  # Returns flat horizon
+│   │   └── cached_horizon_provider.dart # Memory+disk cache (3 decimal key, no expiry)
 │   └── sky_detection/
-│       ├── sky_detector.dart          # Abstract interface
-│       ├── pitch_based_detector.dart  # Level 1: simple pitch check
-│       └── color_based_detector.dart  # Level 2: auto-calibrating HSV
-├── providers/
-│   └── wind_state.dart         # ChangeNotifier state
-├── widgets/
-│   ├── particle_overlay.dart   # CustomPainter for particles
-│   ├── altitude_slider.dart    # Vertical altitude selector
-│   └── camera_view.dart        # Camera preview
-└── screens/
-    └── ar_view_screen.dart     # Main composing screen
+│       ├── auto_calibrating_sky_detector.dart  # HSV histogram sky detector
+│       ├── hsv_sky_detector.dart               # HsvSkyDetector implements SkyDetector
+│       ├── pitch_based_sky_mask.dart           # Fallback: assume sky = top of screen
+│       ├── sky_mask.dart                       # Old interface (kept for compat)
+│       └── hsv_histogram.dart
+├── models/    # Re-export shims → core/models/ (do not add new code here)
+├── widgets/   # Re-export shims → features/ar_view/widgets/ (do not add new code here)
+├── screens/   # Re-export shim → features/ar_view/ (do not add new code here)
+└── utils/     # Re-export shims → core/utils/ (do not add new code here)
 ```
 
-## Critical Implementation Order
+## Provider Graph
 
-**MUST follow this order - each step must work before proceeding:**
+The 6-layer Riverpod graph with a ValueNotifier sidecar:
 
-1. Camera feed working
-2. Compass + Pitch detection working
-3. **Sky detection working** ← DON'T SKIP
-4. Particles rendered ONLY in sky regions
-5. Animated particles with wind direction
-6. Altitude levels and spatial depth
-7. Polish (UI, haptics, debug panel)
+```
+Layer 1 DI:    sensorServiceProvider, windDataSourceProvider,
+               horizonProviderServiceProvider, skyDetectorInstanceProvider
+Layer 2 Raw:   gpsPositionProvider (Stream<PositionData>), rawSensorProvider (Stream<SensorState>)
+Layer 3:       stablePositionProvider (debounces GPS, >100m Haversine threshold)
+Layer 4 Data:  horizonProfileProvider (async), windDataProvider (async, depends on stablePosition + selectedAltitude)
+Layer 5 User:  selectedAltitudeProvider (Notifier), detectionModeProvider (Notifier)
+Layer 6:       sceneStateProvider (composes all data into SceneState; null while loading)
+Sidecar:       sensorNotifiersProvider (ValueNotifier<double> heading + pitch at 20-50Hz)
+```
 
-## Sky Detection Levels
-
-- **Level 1 (Pitch-based):** Simple - assume top of screen is sky when phone tilted up
-- **Level 2a (Auto-calibrating):** RECOMMENDED - app samples sky colors and builds HSV profile
-- **Level 2b (+Integral images):** O(1) uniformity check for excluding buildings
-- **Level 3 (ML/TFLite):** Optional, complex - only if simpler levels insufficient
+**Key patterns:**
+- **Swap-points:** To add a real wind API, implement `WindDataSource` and change one line in `service_providers.dart`.
+- **SensorNotifiers sidecar:** Heading/pitch bypass Riverpod rebuilds. `ParticleOverlay` reads `headingNotifier.value` directly in its tick loop — zero widget rebuilds for sensor data.
+- **SceneState null while loading:** Camera feed appears immediately. Particles appear once wind data resolves.
+- **StablePosition debounce:** GPS jitter does not thrash horizon/wind providers.
 
 ## Key Technical Details
 
@@ -198,14 +242,22 @@ direction = atan2(-u, -v)  // meteorological convention
 screenAngle = windDirection - compassHeading
 ```
 
+### WindData Model
+- Primary fields: `uComponent`, `vComponent` (doubles, from OGC EDR)
+- Computed getters: `speed`, `directionRadians`, `directionDegrees`
+- `altitude` field is `AltitudeLevel` enum (not a raw double)
+- `WindData.zero()` factory for surface-level zero wind
+- `WindData.fromSpeedDirection()` convenience factory
+
+### SkyMaskData (Plain Class, NOT Freezed)
+- Hot-path object recreated every camera frame. Freezed overhead would hurt FPS.
+- `skyFraction` is a pre-computed `final double` (computed once at construction), NOT a getter that iterates pixels.
+- `SkyMaskData.noSky()` is the initial state in ARViewScreen (prevents particles on black screen at startup).
+- `SkyMaskData.fullSky()` is the fallback when no camera frame has been processed yet.
+
 ### Particle Rendering (2-pass glow)
 1. Glow pass: width=4.0, opacity=0.3, MaskFilter.blur
 2. Core pass: width=1.5, opacity=0.9
-
-### Compass Tuning
-- Smoothing factor: 0.1
-- Heading dead zone: 1.0° (prevents jitter)
-- Pitch dead zone: 2.0°
 
 ### Altitude Levels
 | Level | Altitude | Color | Wind Speed | Pressure | Parallax |
@@ -218,22 +270,44 @@ screenAngle = windDirection - compassHeading
 - Particle count: 2000 (auto-reduce to 1000 if <45 FPS)
 - Frame rate: 60 FPS target
 - Sky detection: processFrame() < 16ms
+- **NO object allocation in render loop** (Freezed copyWith is forbidden in hot paths)
 
-## Performance Warning
+## Adding New Features (Post SPEC-001)
 
-**NO object allocation in render loop!** Bilinear interpolation for 2000 particles at 60 FPS = 120,000 calculations/second. Pre-allocate grid data arrays, interpolate directly into reusable fields.
+Each downstream feature is a plug-in that implements an existing interface:
+
+| Feature | What to implement | Where to wire |
+|---------|-------------------|---------------|
+| HeyWhatsThat client (P2B-002) | `HwtHorizonProvider implements HorizonProvider` | `horizonProviderServiceProvider` in service_providers.dart |
+| Terrain sky mask (P2B-003/004) | `TerrainSkyDetector implements SkyDetector` | `skyDetectorInstanceProvider` in service_providers.dart |
+| Real wind data (P2B-006) | `OgcEdrWindDataSource implements WindDataSource` | `windDataSourceProvider` in service_providers.dart |
+
+**Before P2B-004:** Fix the `as HsvSkyDetector` cast in `ar_view_screen.dart` and `debug_panel.dart`. Add `skyFraction` and `forceRecalibrate()` to the `SkyDetector` interface, or use a separate debug info provider.
+
+## Tech Debt (Known, Non-Blocking)
+
+1. **Re-export shims:** 16 old-path files are single-line re-exports. Remove incrementally when imports are updated.
+2. **Old model classes:** `CompassData` and `LocationData` still exist alongside `SensorState`/`PositionData`.
+3. **Riverpod Ref deprecations:** 10 info-level warnings from generated code. Resolves with Riverpod 3.0 upgrade.
+4. **HsvSkyDetector hard cast:** `as HsvSkyDetector` in ARViewScreen/DebugPanel. Must fix before adding other detector types.
+5. **CachedWindDataSource not wired:** Exists + tested but `windDataSourceProvider` still returns bare `MockWindDataSource`. Wire alongside OGC EDR.
 
 ## Testing Requirements
 
-**MUST test on real device** - iOS simulator has no camera, compass, or accelerometer. Build UI in simulator, but all sensor/camera work requires physical device.
+**MUST test on real device** - iOS simulator has no camera, compass, or accelerometer.
 
-## Verification Checkpoints
+**Test suite:** 559 tests auto-discovered by `flutter test`. Five additional test files require explicit paths:
+```bash
+flutter test test/utils/ test/services/sensors/ test/services/sky_detection/sky_mask_test.dart test/core/providers/data_providers_test.dart
+```
+Total: 606 tests, all passing.
 
-Add logging to verify each component works:
-- Camera: "Camera initialized, resolution: 1920x1080"
-- Compass: "Heading: 127.3°, Pitch: 12.5°"
-- Sky Detection: "Sky fraction: 65.2%"
-- Particles: "Rendering 2000 particles at 58 FPS"
+## Sky Detection
+
+- **Current:** HSV auto-calibrating (`HsvSkyDetector` wrapping `AutoCalibratingSkyDetector`)
+- **Level 1 (Pitch-based):** Assume top of screen is sky when phone tilted up
+- **Level 2a (Auto-calibrating):** App samples sky colors and builds HSV profile
+- **Level 3 (Terrain):** Use HeyWhatsThat horizon data to pre-compute sky boundary (Phase 2b)
 
 ## Platform Permissions
 

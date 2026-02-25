@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:wind_lens/main.dart';
+import 'package:wind_lens/app.dart';
 import 'package:wind_lens/screens/ar_view_screen.dart';
 
 void main() {

@@ -144,6 +144,7 @@ class LocationService {
       _controller.add(LocationData(
         latitude: position.latitude,
         longitude: position.longitude,
+        altitude: position.altitude,
         accuracy: position.accuracy,
         timestamp: position.timestamp,
       ));
@@ -158,7 +159,7 @@ class LocationService {
   /// a [LocationData] event to the stream. Use this to test downstream
   /// consumers without requiring real GPS hardware.
   @visibleForTesting
-  void setPosition(double lat, double lon) {
+  void setPosition(double lat, double lon, {double altitude = 0.0}) {
     _latitude = lat;
     _longitude = lon;
     _hasPermission = true;
@@ -167,6 +168,7 @@ class LocationService {
       _controller.add(LocationData(
         latitude: lat,
         longitude: lon,
+        altitude: altitude,
         accuracy: 0,
         timestamp: DateTime.now(),
       ));

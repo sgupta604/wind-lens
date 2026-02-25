@@ -42,6 +42,9 @@ dependencies:
   vector_math: ^2.2.0          # Vector calculations
   http: ^1.6.0                 # API calls for real wind data
   geolocator: ^14.0.2           # GPS location access
+  freezed_annotation: ^2.4.1    # Freezed model annotations
+  flutter_riverpod: ^2.4.9       # Riverpod state management
+  riverpod_annotation: ^2.3.3    # Riverpod annotations for codegen
 
 dev_dependencies:
   flutter_test:
@@ -53,6 +56,10 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  freezed: ^2.4.5               # Freezed code generator
+  build_runner: ^2.4.6          # Code generation runner
+  json_serializable: ^6.7.1     # JSON serialization code generator
+  riverpod_generator: ^2.3.9    # Riverpod code generator
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

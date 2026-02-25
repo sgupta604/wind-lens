@@ -18,7 +18,7 @@ void main() {
         expect(wind, isA<WindData>());
         expect(wind.uComponent, isA<double>());
         expect(wind.vComponent, isA<double>());
-        expect(wind.altitude, isA<double>());
+        expect(wind.altitude, isA<AltitudeLevel>());
         expect(wind.timestamp, isA<DateTime>());
       });
 
@@ -59,10 +59,10 @@ void main() {
             reason: 'Wind should vary over time');
       });
 
-      test('returns surface altitude (10m)', () {
+      test('returns surface altitude level', () {
         final wind = service.getWind();
 
-        expect(wind.altitude, 10.0);
+        expect(wind.altitude, AltitudeLevel.surface);
       });
 
       test('returns current timestamp', () {
@@ -93,21 +93,21 @@ void main() {
       final wind = service.getWindForAltitude(AltitudeLevel.surface);
 
       expect(wind, isA<WindData>());
-      expect(wind.altitude, 10.0);
+      expect(wind.altitude, AltitudeLevel.surface);
     });
 
     test('returns WindData for midLevel altitude', () {
       final wind = service.getWindForAltitude(AltitudeLevel.midLevel);
 
       expect(wind, isA<WindData>());
-      expect(wind.altitude, 1500.0);
+      expect(wind.altitude, AltitudeLevel.midLevel);
     });
 
     test('returns WindData for jetStream altitude', () {
       final wind = service.getWindForAltitude(AltitudeLevel.jetStream);
 
       expect(wind, isA<WindData>());
-      expect(wind.altitude, 10500.0);
+      expect(wind.altitude, AltitudeLevel.jetStream);
     });
 
     test('wind speed increases with altitude level', () {
@@ -122,14 +122,14 @@ void main() {
       expect(jetWind.speed, greaterThan(midWind.speed));
     });
 
-    test('returns correct altitude value in WindData', () {
+    test('returns correct altitude level in WindData', () {
       final surfaceWind = service.getWindForAltitude(AltitudeLevel.surface);
       final midWind = service.getWindForAltitude(AltitudeLevel.midLevel);
       final jetWind = service.getWindForAltitude(AltitudeLevel.jetStream);
 
-      expect(surfaceWind.altitude, AltitudeLevel.surface.metersAGL);
-      expect(midWind.altitude, AltitudeLevel.midLevel.metersAGL);
-      expect(jetWind.altitude, AltitudeLevel.jetStream.metersAGL);
+      expect(surfaceWind.altitude, AltitudeLevel.surface);
+      expect(midWind.altitude, AltitudeLevel.midLevel);
+      expect(jetWind.altitude, AltitudeLevel.jetStream);
     });
   });
 }

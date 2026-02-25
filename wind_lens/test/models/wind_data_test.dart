@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wind_lens/models/altitude_level.dart';
 import 'package:wind_lens/models/wind_data.dart';
 
 void main() {
@@ -11,13 +12,13 @@ void main() {
         final windData = WindData(
           uComponent: 3.0,
           vComponent: 4.0,
-          altitude: 10.0,
+          altitude: AltitudeLevel.surface,
           timestamp: timestamp,
         );
 
         expect(windData.uComponent, 3.0);
         expect(windData.vComponent, 4.0);
-        expect(windData.altitude, 10.0);
+        expect(windData.altitude, AltitudeLevel.surface);
         expect(windData.timestamp, timestamp);
       });
     });
@@ -28,7 +29,7 @@ void main() {
         final windData = WindData(
           uComponent: 3.0,
           vComponent: 4.0,
-          altitude: 10.0,
+          altitude: AltitudeLevel.surface,
           timestamp: DateTime.now(),
         );
 
@@ -39,7 +40,7 @@ void main() {
         final windData = WindData(
           uComponent: 0.0,
           vComponent: 0.0,
-          altitude: 10.0,
+          altitude: AltitudeLevel.surface,
           timestamp: DateTime.now(),
         );
 
@@ -50,7 +51,7 @@ void main() {
         final windData = WindData(
           uComponent: -3.0,
           vComponent: -4.0,
-          altitude: 10.0,
+          altitude: AltitudeLevel.surface,
           timestamp: DateTime.now(),
         );
 
@@ -62,17 +63,12 @@ void main() {
     group('directionRadians', () {
       test('computed correctly using atan2(-u, -v) meteorological convention',
           () {
-        // Wind blowing southward (v positive means moving toward north,
-        // but in wind convention: u,v components show where wind GOES TO)
-        // For wind coming FROM north (blowing southward), v < 0
-        // Let's use clear cases:
-
         // Wind from south (blowing northward): u=0, v=1
         // direction = atan2(0, -1) = pi (or -pi, equivalent for 180 degrees)
         final southWind = WindData(
           uComponent: 0.0,
           vComponent: 1.0,
-          altitude: 10.0,
+          altitude: AltitudeLevel.surface,
           timestamp: DateTime.now(),
         );
         // The absolute value should be pi (representing 180 degrees)
@@ -83,7 +79,7 @@ void main() {
         final eastWind = WindData(
           uComponent: 1.0,
           vComponent: 0.0,
-          altitude: 10.0,
+          altitude: AltitudeLevel.surface,
           timestamp: DateTime.now(),
         );
         expect(eastWind.directionRadians, closeTo(-pi / 2, 0.001));
@@ -93,7 +89,7 @@ void main() {
         final westWind = WindData(
           uComponent: -1.0,
           vComponent: 0.0,
-          altitude: 10.0,
+          altitude: AltitudeLevel.surface,
           timestamp: DateTime.now(),
         );
         expect(westWind.directionRadians, closeTo(pi / 2, 0.001));
@@ -103,7 +99,7 @@ void main() {
         final windData = WindData(
           uComponent: 0.0,
           vComponent: 0.0,
-          altitude: 10.0,
+          altitude: AltitudeLevel.surface,
           timestamp: DateTime.now(),
         );
 
@@ -119,7 +115,7 @@ void main() {
         final southWind = WindData(
           uComponent: 0.0,
           vComponent: -1.0,
-          altitude: 10.0,
+          altitude: AltitudeLevel.surface,
           timestamp: DateTime.now(),
         );
         // atan2(0, 1) = 0 radians = 0 degrees
@@ -129,7 +125,7 @@ void main() {
         final northWind = WindData(
           uComponent: 0.0,
           vComponent: 1.0,
-          altitude: 10.0,
+          altitude: AltitudeLevel.surface,
           timestamp: DateTime.now(),
         );
         // atan2(0, -1) = pi radians = 180 degrees
@@ -141,7 +137,7 @@ void main() {
         final westWind = WindData(
           uComponent: -1.0,
           vComponent: 0.0,
-          altitude: 10.0,
+          altitude: AltitudeLevel.surface,
           timestamp: DateTime.now(),
         );
         // atan2(1, 0) = pi/2 = 90 degrees
@@ -151,7 +147,7 @@ void main() {
         final eastWind = WindData(
           uComponent: 1.0,
           vComponent: 0.0,
-          altitude: 10.0,
+          altitude: AltitudeLevel.surface,
           timestamp: DateTime.now(),
         );
         // atan2(-1, 0) = -pi/2 -> (-90 + 360) % 360 = 270
@@ -165,7 +161,7 @@ void main() {
 
         expect(windData.uComponent, 0.0);
         expect(windData.vComponent, 0.0);
-        expect(windData.altitude, 0.0);
+        expect(windData.altitude, AltitudeLevel.surface);
         expect(windData.speed, 0.0);
       });
 
@@ -181,31 +177,11 @@ void main() {
 
     group('meteorological convention verification', () {
       test('north wind (coming from north) has direction 180 degrees', () {
-        // North wind: blowing from N to S, so air moves southward
-        // In meteorological convention: wind coming FROM north
-        // u=0 (no east-west component), v>0 (air moves toward north in u/v convention... wait)
-        // Actually in meteorological:
-        // u = eastward component of where wind is GOING
-        // v = northward component of where wind is GOING
-        // So north wind (coming FROM north) goes TO south: v < 0
-        // Let me verify with the formula: direction = atan2(-u, -v)
-        // For south wind (coming from south, going north): u=0, v=1
-        //   direction = atan2(0, -1) = pi = 180 degrees
-        // That's wrong - should be 0 degrees for north wind
-        //
-        // Actually the convention is confusing. Let me just verify the math:
-        // direction = atan2(-u, -v) gives the direction wind is COMING FROM
-        // If wind is blowing TO the north (v=1), then atan2(-0, -1) = pi = 180 deg
-        // So a wind with v=1 is coming FROM the south (180 deg)
-        // Which means for north wind (coming FROM north = 0 degrees):
-        // We want wind blowing TO the south, so v=-1
-        // atan2(-0, -(-1)) = atan2(0, 1) = 0 degrees. Correct!
-
         // North wind: coming FROM north, so blowing southward (v < 0)
         final northWind = WindData(
           uComponent: 0.0,
           vComponent: -1.0, // blowing southward
-          altitude: 10.0,
+          altitude: AltitudeLevel.surface,
           timestamp: DateTime.now(),
         );
         // direction = atan2(-0, -(-1)) = atan2(0, 1) = 0
@@ -217,7 +193,7 @@ void main() {
         final eastWind = WindData(
           uComponent: -1.0, // blowing westward
           vComponent: 0.0,
-          altitude: 10.0,
+          altitude: AltitudeLevel.surface,
           timestamp: DateTime.now(),
         );
         // direction = atan2(-(-1), -0) = atan2(1, 0) = pi/2 = 90 degrees

@@ -5,6 +5,7 @@
 ///
 /// - [latitude]: Degrees north/south of the equator (-90 to 90)
 /// - [longitude]: Degrees east/west of the prime meridian (-180 to 180)
+/// - [altitude]: Altitude in meters above sea level (from geolocator)
 /// - [accuracy]: Horizontal accuracy in meters
 /// - [timestamp]: When the reading was taken
 class LocationData {
@@ -15,6 +16,10 @@ class LocationData {
   /// Longitude in degrees (-180 to 180).
   /// Positive values are east of the prime meridian.
   final double longitude;
+
+  /// Altitude in meters above sea level.
+  /// From geolocator's Position.altitude. Defaults to 0.0 if unavailable.
+  final double altitude;
 
   /// Horizontal accuracy in meters.
   /// Lower values indicate more precise readings.
@@ -27,6 +32,7 @@ class LocationData {
   const LocationData({
     required this.latitude,
     required this.longitude,
+    this.altitude = 0.0,
     required this.accuracy,
     required this.timestamp,
   });

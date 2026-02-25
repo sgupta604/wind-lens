@@ -11,9 +11,9 @@
 **Post-MVP Bugs:** Complete (9/9 fixed - BUG-001 through BUG-009)
 **Phase 2a Features:** 4/4 complete (performance-optimization, wind-streamlines, particle-colors, compass-widget DONE)
 **Additional fixes:** compass-native (flutter_compass), code-cleanup (debug panel extraction)
-**Tests:** 391 passing
-**Branch:** `feature/terrain-sky-detection` (Phase 2b work)
-**Ready for:** Phase 2b - Terrain Sky Detection & Location
+**Tests:** 606 passing (559 auto-discovered + 47 explicit)
+**Current Branch:** `feature/terrain-sky-detection`
+**Ready for:** P2B-002 HeyWhatsThat client (SPEC-001 complete, interfaces in place)
 
 ---
 
@@ -25,14 +25,14 @@
 | P2A-002 | wind-streamlines | ~~High~~ | ~~High~~ | **DONE** | Windy.com style flowing trails |
 | P2A-003 | compass-widget | ~~Medium~~ | ~~Low~~ | **DONE** | Compass showing heading |
 | P2A-004 | particle-colors | ~~Medium~~ | ~~Low~~ | **DONE** | Included in wind-streamlines |
-| P2B-001 | location-service | **High** | Low | TODO | GPS coordinates + permission handling |
-| P2B-002 | heywhatsthat-client | **High** | Medium | TODO | API client: submit, poll, fetch horizon data |
-| P2B-003 | horizon-cache | **High** | Low | TODO | Local storage + cache-by-location for horizon profiles |
-| P2B-004 | terrain-sky-mask | **High** | Medium | TODO | Map horizon profile onto camera view via compass + pitch + FOV |
-| P2B-005 | detection-mode-toggle | **High** | Low | TODO | UI toggle: HSV / Terrain / Combined detection modes |
-| P2B-006 | real-wind-data | High | High | TODO | Integrate OGC EDR API for real wind data |
-| P2C-001 | map-view | Medium | High | TODO | Toggle AR ↔ top-down weather map view |
-| P2C-002 | altitude-input | Low | Medium | TODO | Input specific altitude in feet |
+| SPEC-001 | architectural-foundation | ~~Critical~~ | ~~High~~ | **DONE** | Freezed models, Riverpod, service interfaces, directory restructure. 606 tests. **Summary:** `.claude/features/architectural-foundation/SUMMARY.md` |
+| SPEC-002 | photo-capture-overlay | **High** | High | Waiting (needs SPEC-001) | Capture photo + frozen wind overlay. **Spec:** `.claude/features/SPEC-002-photo-capture-overlay.md` |
+| P2B-001 | location-service | ~~High~~ | ~~Low~~ | **DONE** | GPS coordinates + permission handling |
+| P2B-002+003 | heywhatsthat-client | **High** | Medium | Waiting (needs SPEC-001) | API client + local horizon caching (merged) |
+| P2B-004+005 | terrain-sky-mask | **High** | Medium | Waiting | Terrain sky detection + mode toggle (merged) |
+| P2B-006 | real-wind-data | High | High | Waiting | Integrate OGC EDR API for real wind data |
+| P2C-001 | map-view | Medium | High | Future | Toggle AR to top-down weather map view |
+| P2C-002 | altitude-input | Low | Medium | Future | Input specific altitude in feet |
 
 ---
 
@@ -151,6 +151,8 @@ class HorizonProfile {
 **Priority:** High
 **Complexity:** Medium
 **Depends on:** P2B-003 (needs cached HorizonProfile), existing CompassService
+
+> **⚠️ PREREQUISITE from SPEC-001:** ARViewScreen currently hard-casts `ref.read(skyDetectorInstanceProvider) as HsvSkyDetector` to access `skyFraction` and `forceRecalibrate()`. These methods are on the concrete class, NOT the `SkyDetector` interface. **Before implementing P2B-004**, either add `skyFraction`/`forceRecalibrate()` to the `SkyDetector` interface, or create a separate `SkyDetectorDebugInfo` provider. Otherwise the cast will break when TerrainSkyDetector is wired in. See `.claude/features/architectural-foundation/DECISIONS.md` Phase 3a section for full context.
 
 **What to Build:**
 - TerrainSkyDetector that implements the existing SkyDetector interface
@@ -523,13 +525,20 @@ Phase 2a: Foundation & Visuals (COMPLETE)
   ✅ P2A-004 particle-colors (included in wind-streamlines)
   ✅ Additional: compass-native, code-cleanup, BUG-001 through BUG-009
 
-Phase 2b: Terrain Sky Detection & Location  <-- CURRENT (branch: feature/terrain-sky-detection)
-  Step 1: P2B-001 location-service         ← START HERE (GPS foundation)
-  Step 2: P2B-002 heywhatsthat-client      ← API integration
-  Step 3: P2B-003 horizon-cache            ← Local persistence
-  Step 4: P2B-004 terrain-sky-mask         ← The core feature
-  Step 5: P2B-005 detection-mode-toggle    ← User-facing control
-  Step 6: P2B-006 real-wind-data           ← Real weather data (can start after Step 1)
+SPEC-001: Architectural Foundation  <-- CURRENT (branch: feature/architectural-foundation)
+  Phase 1: Freezed models + service interfaces + wrap existing code  ✅ DONE (489 tests)
+  Phase 2: Riverpod provider graph + directory restructure + wire AR view  ✅ DONE (505 tests)
+  Phase 3a: Complete wiring — SceneState, SkyMaskData, lifecycle  ✅ DONE (514 tests)
+  Phase 3b: Polish — DataStatusBar, caching, integration tests  ← CURRENT
+
+Phase 2b: Terrain Sky Detection & Location  (after SPEC-001)
+  Step 1: P2B-001 location-service         ✅ DONE
+  Step 2: P2B-002+003 heywhatsthat-client  ← API client + horizon caching (merged)
+  Step 3: P2B-004+005 terrain-sky-mask     ← Terrain detection + mode toggle (merged)
+  Step 4: P2B-006 real-wind-data           ← Real weather data
+
+SPEC-002: Photo Capture & Wind Overlay  (after SPEC-001 + terrain features)
+  Single photo capture with frozen scene state overlay
 
 Phase 2c: Advanced Features (future)
   P2C-001 map-view (depends on location + data)

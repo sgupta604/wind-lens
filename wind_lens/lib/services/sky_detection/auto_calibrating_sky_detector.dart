@@ -120,6 +120,13 @@ class AutoCalibratingSkyDetector implements SkyMask {
   /// Each byte is 0 (not sky) or 255 (sky).
   Uint8List? _cachedMask;
 
+  /// Public read-only access to the cached mask for direct extraction.
+  ///
+  /// Returns null if no frame has been processed yet.
+  /// Each byte is 0 (not sky) or 255 (sky), row-major order,
+  /// dimensions [maskWidth] x [maskHeight].
+  Uint8List? get cachedMask => _cachedMask;
+
   /// Cached sky fraction (0.0-1.0).
   double _cachedSkyFraction = 0.0;
 

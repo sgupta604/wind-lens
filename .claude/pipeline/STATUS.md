@@ -7,11 +7,40 @@
 
 ## Current State
 
-**Current Feature:** P2B-002 heywhatsthat-client
-**Current Phase:** ready-to-start
+**Current Feature:** SPEC-001 architectural-foundation
+**Current Phase:** finalized
 **Branch:** `feature/terrain-sky-detection`
-**Next Command:** `/research heywhatsthat-client`
-**Master:** Clean, 391 tests passing — safe to revert to if anything breaks
+**Next Command:** `/research heywhatsthat-client` (P2B-002: HeyWhatsThat API client)
+**Master:** Clean, 405 tests passing -- safe to revert to if anything breaks
+
+### Current Pipeline: architectural-foundation (SPEC-001) - **FINALIZED** (2026-02-25)
+
+- [x] /research - Complete (2026-02-25) - Full codebase audit (25 source files, 405 tests), SPEC-001/002 analysis, 8 gaps identified, 3-phase plan confirmed
+- [x] /plan - Complete (2026-02-25) - 3-phase architecture, 14 Phase 1 tasks (granular), Phase 2/3 high-level
+- [x] /implement Phase 1 - COMPLETE (2026-02-25) - All 14 tasks done, 489 tests passing (84 new), zero analyzer issues
+- [x] /implement Phase 2 - COMPLETE (2026-02-25) - All 10 tasks done (2 deferred by design), 505 tests passing (16 new), zero analyzer errors
+- [x] /implement Phase 3a - COMPLETE (2026-02-25) - All 6 tasks done, 514 tests passing (9 new), zero analyzer errors
+- [x] /implement Phase 3b - COMPLETE (2026-02-25) - DataStatusBar, CachedHorizonProvider, CachedWindDataSource, 16 integration tests, 606 tests total
+- [x] /test - COMPLETE (2026-02-25) - 606 tests passing, dart analyze 0 errors/0 warnings
+- [x] /finalize - COMPLETE (2026-02-25) - CLAUDE.md updated, SUMMARY.md created, committed locally
+
+**Research Document:** `.claude/features/architectural-foundation/2026-02-25T14:00_research.md`
+**Spec Document:** `.claude/features/SPEC-001-architectural-foundation.md`
+**Plan Document:** `.claude/features/architectural-foundation/2026-02-25T17:00_plan.md`
+**Tasks:** `.claude/features/architectural-foundation/tasks.md`
+**DECISIONS.md:** `.claude/features/architectural-foundation/DECISIONS.md`
+
+**Implementation phases (split into 4 runs for context management):**
+- Phase 1: Freezed deps + models + service interfaces + wrap existing code (14 tasks) ✅
+- Phase 2: Riverpod provider graph + directory restructure + wire AR view (10 tasks) ✅
+- Phase 3a: Complete the wiring — SceneState consumption, SkyMask→SkyMaskData, camera→detector, altitude, lifecycle (6 tasks)
+- Phase 3b: Polish and validate — DataStatusBar, caching, integration tests, finalize (5 tasks)
+
+### Upcoming (after SPEC-001)
+- **SPEC-002** photo-capture-overlay (depends on SPEC-001) — **Spec:** `.claude/features/SPEC-002-photo-capture-overlay.md`
+- **P2B-002+003** heywhatsthat-client + horizon-cache (merged into one feature)
+- **P2B-004+005** terrain-sky-mask + detection-mode-toggle
+- **P2B-006** real-wind-data (OGC EDR)
 
 ### Last Completed Pipeline: location-service (P2B-001) - **FINALIZED** (2026-02-15)
 

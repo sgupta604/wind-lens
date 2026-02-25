@@ -40,7 +40,7 @@ class FakeWindService {
     final wind = WindData(
       uComponent: u,
       vComponent: v,
-      altitude: 10,
+      altitude: AltitudeLevel.surface,
       timestamp: DateTime.now(),
     );
 
@@ -82,7 +82,7 @@ class FakeWindService {
     final wind = WindData(
       uComponent: u,
       vComponent: v,
-      altitude: level.metersAGL,
+      altitude: level,
       timestamp: DateTime.now(),
     );
 

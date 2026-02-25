@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wind_lens/screens/ar_view_screen.dart';
 import 'package:wind_lens/widgets/altitude_slider.dart';
@@ -6,10 +7,17 @@ import 'package:wind_lens/widgets/camera_view.dart';
 import 'package:wind_lens/widgets/info_bar.dart';
 
 void main() {
+  /// Helper to wrap ARViewScreen in ProviderScope + MaterialApp for testing.
+  Widget buildTestWidget() {
+    return const ProviderScope(
+      child: MaterialApp(home: ARViewScreen()),
+    );
+  }
+
   group('ARViewScreen', () {
     testWidgets('renders without crashing', (tester) async {
       // Arrange & Act
-      await tester.pumpWidget(const MaterialApp(home: ARViewScreen()));
+      await tester.pumpWidget(buildTestWidget());
 
       // Assert
       expect(find.byType(ARViewScreen), findsOneWidget);
@@ -18,7 +26,7 @@ void main() {
 
     testWidgets('has black background', (tester) async {
       // Arrange & Act
-      await tester.pumpWidget(const MaterialApp(home: ARViewScreen()));
+      await tester.pumpWidget(buildTestWidget());
 
       // Assert - Find Scaffold and verify background color
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
@@ -27,7 +35,7 @@ void main() {
 
     testWidgets('contains CameraView widget', (tester) async {
       // Arrange & Act
-      await tester.pumpWidget(const MaterialApp(home: ARViewScreen()));
+      await tester.pumpWidget(buildTestWidget());
 
       // Assert
       expect(find.byType(CameraView), findsOneWidget);
@@ -35,7 +43,7 @@ void main() {
 
     testWidgets('contains AltitudeSlider widget', (tester) async {
       // Arrange & Act
-      await tester.pumpWidget(const MaterialApp(home: ARViewScreen()));
+      await tester.pumpWidget(buildTestWidget());
 
       // Assert
       expect(find.byType(AltitudeSlider), findsOneWidget);
@@ -45,7 +53,7 @@ void main() {
   group('ARViewScreen Debug Panel', () {
     testWidgets('debug panel hidden by default', (tester) async {
       // Arrange & Act
-      await tester.pumpWidget(const MaterialApp(home: ARViewScreen()));
+      await tester.pumpWidget(buildTestWidget());
 
       // Assert - Debug panel content should NOT be visible initially
       expect(find.textContaining('Heading:'), findsNothing);
@@ -55,21 +63,16 @@ void main() {
 
     testWidgets('debug panel shows FPS when visible', (tester) async {
       // Arrange
-      await tester.pumpWidget(const MaterialApp(home: ARViewScreen()));
+      await tester.pumpWidget(buildTestWidget());
 
-      // Act - Simulate 3-finger tap using ScaleGesture with 3 pointers
-      // Since we can't easily simulate 3-finger tap in tests,
-      // we'll test that when shown, the debug panel contains FPS
-      // This requires the debug panel to be visible
-
-      // For now, we can verify the screen renders and InfoBar is present
+      // Act - For now, we can verify the screen renders
       // The 3-finger gesture test is better suited for integration testing
       expect(find.byType(ARViewScreen), findsOneWidget);
     });
 
     testWidgets('debug panel shows particle count when visible', (tester) async {
       // Arrange
-      await tester.pumpWidget(const MaterialApp(home: ARViewScreen()));
+      await tester.pumpWidget(buildTestWidget());
 
       // Assert - Screen renders correctly
       expect(find.byType(ARViewScreen), findsOneWidget);
@@ -79,7 +82,7 @@ void main() {
   group('ARViewScreen Debug Toggle Button', () {
     testWidgets('debug toggle button is visible on screen', (tester) async {
       // Arrange & Act
-      await tester.pumpWidget(const MaterialApp(home: ARViewScreen()));
+      await tester.pumpWidget(buildTestWidget());
 
       // Assert - DBG button should always be visible
       expect(find.text('DBG'), findsOneWidget);
@@ -87,7 +90,7 @@ void main() {
 
     testWidgets('debug toggle button shows debug panel on tap', (tester) async {
       // Arrange
-      await tester.pumpWidget(const MaterialApp(home: ARViewScreen()));
+      await tester.pumpWidget(buildTestWidget());
 
       // Assert - Debug panel content should NOT be visible initially
       expect(find.textContaining('Heading:'), findsNothing);
@@ -106,7 +109,7 @@ void main() {
     testWidgets('debug toggle button hides debug panel on second tap',
         (tester) async {
       // Arrange
-      await tester.pumpWidget(const MaterialApp(home: ARViewScreen()));
+      await tester.pumpWidget(buildTestWidget());
 
       // Act - First tap to show debug panel
       await tester.tap(find.text('DBG'));
@@ -128,7 +131,7 @@ void main() {
   group('ARViewScreen InfoBar', () {
     testWidgets('info bar is visible', (tester) async {
       // Arrange & Act
-      await tester.pumpWidget(const MaterialApp(home: ARViewScreen()));
+      await tester.pumpWidget(buildTestWidget());
 
       // Assert - InfoBar should always be visible
       expect(find.byType(InfoBar), findsOneWidget);
@@ -136,7 +139,7 @@ void main() {
 
     testWidgets('info bar displays wind speed', (tester) async {
       // Arrange & Act
-      await tester.pumpWidget(const MaterialApp(home: ARViewScreen()));
+      await tester.pumpWidget(buildTestWidget());
 
       // Assert - InfoBar should show wind speed with m/s unit
       expect(find.textContaining('m/s'), findsOneWidget);
@@ -144,7 +147,7 @@ void main() {
 
     testWidgets('info bar displays altitude level', (tester) async {
       // Arrange & Act
-      await tester.pumpWidget(const MaterialApp(home: ARViewScreen()));
+      await tester.pumpWidget(buildTestWidget());
 
       // Assert - InfoBar should show altitude level (default is Surface)
       expect(find.textContaining('Surface'), findsOneWidget);
