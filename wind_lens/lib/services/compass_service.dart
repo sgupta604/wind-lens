@@ -39,6 +39,18 @@ class CompassService {
   /// without overwhelming the widget tree with 50-100 Hz sensor data.
   static const Duration emitInterval = Duration(milliseconds: 50);
 
+  /// Raw pitch threshold (degrees) at which heading LOCKS.
+  /// When |rawPitch| >= this value, heading freezes at the last stable value.
+  /// Uses raw pitch (not smoothed) so the lock reacts instantly without lag.
+  /// Device testing shows compass flips at ~42-47°, so lock before that.
+  static const double headingLockPitch = 40.0;
+
+  /// Raw pitch threshold (degrees) at which heading UNLOCKS (hysteresis).
+  /// Heading stays locked until |rawPitch| drops below this value.
+  /// The gap between lock (40) and unlock (30) prevents oscillation
+  /// at the boundary from sensor noise.
+  static const double headingUnlockPitch = 30.0;
+
   // --- Internal state ---
 
   /// Latest raw heading from magnetometer (updated at sensor hardware rate).
@@ -52,6 +64,17 @@ class CompassService {
 
   /// Current smoothed pitch (updated at timer rate).
   double _smoothedPitch = 0;
+
+  /// Whether heading is currently locked due to high pitch (gimbal lock).
+  /// Set to true when |rawPitch| >= [headingLockPitch], cleared when
+  /// |rawPitch| < [headingUnlockPitch]. Hysteresis prevents oscillation.
+  bool _isHeadingLocked = false;
+
+  /// Last heading value from when pitch was comfortably below the lock
+  /// threshold. Saved on every tick where heading is NOT locked, so that
+  /// when the lock engages, we freeze at a heading from BEFORE any
+  /// gimbal-lock contamination.
+  double _lastStableHeading = 0;
 
   /// Subscription to native compass events (flutter_compass).
   StreamSubscription<CompassEvent>? _compassSub;
@@ -78,6 +101,13 @@ class CompassService {
 
   /// Current smoothed pitch in degrees.
   double get pitch => _smoothedPitch;
+
+  /// Whether heading is currently locked due to gimbal lock (high pitch).
+  ///
+  /// Exposed for test observability. When true, heading is frozen at
+  /// [_lastStableHeading] and ignores raw compass input.
+  @visibleForTesting
+  bool get isHeadingLocked => _isHeadingLocked;
 
   /// Starts listening to sensor events and begins the emission timer.
   ///
@@ -106,9 +136,33 @@ class CompassService {
 
     // Fixed-rate timer: smooth toward raw values and always emit
     _emitTimer = Timer.periodic(emitInterval, (_) {
-      _smoothedHeading =
-          _lerpAngle(_smoothedHeading, _rawHeading, smoothingFactor);
+      // Smooth pitch -- pitch itself has no gimbal lock issue
       _smoothedPitch += (_rawPitch - _smoothedPitch) * smoothingFactor;
+
+      // Gimbal lock mitigation v2: hysteresis-based heading lock.
+      // Uses RAW pitch (not smoothed) for instant reaction -- smoothed pitch
+      // lags behind, so by the time it crosses the threshold the heading
+      // may have already chased the flipped value.
+      // Only locks for positive pitch (tilting up toward sky). Negative pitch
+      // (tilting down) is irrelevant — no sky to render particles on.
+      if (!_isHeadingLocked && _rawPitch >= headingLockPitch) {
+        // LOCK: save the PREVIOUS tick's heading (before any flip contamination)
+        _isHeadingLocked = true;
+        _smoothedHeading = _lastStableHeading;
+      } else if (_isHeadingLocked && _rawPitch < headingUnlockPitch) {
+        // UNLOCK: resume normal tracking
+        _isHeadingLocked = false;
+      }
+
+      if (_isHeadingLocked) {
+        // Heading frozen -- don't update _smoothedHeading
+      } else {
+        // Normal heading tracking
+        _smoothedHeading =
+            _lerpAngle(_smoothedHeading, _rawHeading, smoothingFactor);
+        // Save as the last known-good heading for potential future lock
+        _lastStableHeading = _smoothedHeading;
+      }
 
       _controller.add(CompassData(
         heading: _smoothedHeading,
@@ -148,11 +202,33 @@ class CompassService {
   /// Runs one cycle of smoothing + emission for unit testing.
   ///
   /// This is equivalent to one timer tick. Always emits a CompassData event.
+  /// Logic MUST be identical to the timer callback body.
   @visibleForTesting
   void tick() {
-    _smoothedHeading =
-        _lerpAngle(_smoothedHeading, _rawHeading, smoothingFactor);
+    // Smooth pitch -- pitch itself has no gimbal lock issue
     _smoothedPitch += (_rawPitch - _smoothedPitch) * smoothingFactor;
+
+    // Gimbal lock mitigation v2: hysteresis-based heading lock.
+    // Uses RAW pitch for instant reaction (see timer callback for rationale).
+    // Only positive pitch (tilting up) — negative pitch irrelevant for sky app.
+    if (!_isHeadingLocked && _rawPitch >= headingLockPitch) {
+      // LOCK: save the PREVIOUS tick's heading (before any flip contamination)
+      _isHeadingLocked = true;
+      _smoothedHeading = _lastStableHeading;
+    } else if (_isHeadingLocked && _rawPitch < headingUnlockPitch) {
+      // UNLOCK: resume normal tracking
+      _isHeadingLocked = false;
+    }
+
+    if (_isHeadingLocked) {
+      // Heading frozen -- don't update _smoothedHeading
+    } else {
+      // Normal heading tracking
+      _smoothedHeading =
+          _lerpAngle(_smoothedHeading, _rawHeading, smoothingFactor);
+      // Save as the last known-good heading for potential future lock
+      _lastStableHeading = _smoothedHeading;
+    }
 
     _controller.add(CompassData(
       heading: _smoothedHeading,

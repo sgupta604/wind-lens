@@ -787,4 +787,277 @@ void main() {
       );
     });
   });
+
+  group('Gimbal Lock Mitigation v2 (Hysteresis)', () {
+    late CompassService compassService;
+
+    setUp(() {
+      compassService = CompassService();
+    });
+
+    tearDown(() {
+      compassService.dispose();
+    });
+
+    group('hysteresis lock/unlock thresholds', () {
+      test('heading locks when raw pitch >= 40 degrees', () {
+        // Converge heading at low pitch first
+        compassService.setRawHeading(90.0);
+        compassService.setRawPitch(0.0);
+        for (int i = 0; i < 200; i++) {
+          compassService.tick();
+        }
+        expect(compassService.isHeadingLocked, isFalse);
+
+        // Set raw pitch to 45 (above lock threshold of 40)
+        compassService.setRawPitch(45.0);
+        compassService.tick();
+
+        expect(
+          compassService.isHeadingLocked,
+          isTrue,
+          reason: 'Heading should lock when raw pitch >= 40 degrees',
+        );
+      });
+
+      test('heading stays locked when raw pitch drops to 35 (between thresholds)', () {
+        // Converge heading, then lock
+        compassService.setRawHeading(90.0);
+        compassService.setRawPitch(0.0);
+        for (int i = 0; i < 200; i++) {
+          compassService.tick();
+        }
+
+        // Lock by exceeding 40
+        compassService.setRawPitch(45.0);
+        compassService.tick();
+        expect(compassService.isHeadingLocked, isTrue);
+
+        // Drop to 35 (between unlock=30 and lock=40) -- should STAY locked
+        compassService.setRawPitch(35.0);
+        compassService.tick();
+
+        expect(
+          compassService.isHeadingLocked,
+          isTrue,
+          reason: 'Hysteresis: heading should stay locked when pitch is between '
+              'unlock (30) and lock (40) thresholds',
+        );
+      });
+
+      test('heading unlocks when raw pitch drops below 30 degrees', () {
+        // Converge heading, then lock
+        compassService.setRawHeading(90.0);
+        compassService.setRawPitch(0.0);
+        for (int i = 0; i < 200; i++) {
+          compassService.tick();
+        }
+
+        // Lock
+        compassService.setRawPitch(45.0);
+        compassService.tick();
+        expect(compassService.isHeadingLocked, isTrue);
+
+        // Drop below unlock threshold (30)
+        compassService.setRawPitch(25.0);
+        compassService.tick();
+
+        expect(
+          compassService.isHeadingLocked,
+          isFalse,
+          reason: 'Heading should unlock when raw pitch drops below 30 degrees',
+        );
+      });
+
+      test('heading does NOT lock for negative pitch (phone tilted down)', () {
+        // Converge heading at low pitch
+        compassService.setRawHeading(90.0);
+        compassService.setRawPitch(0.0);
+        for (int i = 0; i < 200; i++) {
+          compassService.tick();
+        }
+
+        // Negative pitch (tilted down toward ground) — should NOT lock
+        // because there's no sky to render particles on when looking down
+        compassService.setRawPitch(-50.0);
+        compassService.tick();
+
+        expect(
+          compassService.isHeadingLocked,
+          isFalse,
+          reason: 'Heading should NOT lock for negative pitch — only locks when tilting up toward sky',
+        );
+      });
+    });
+
+    group('stable heading preservation', () {
+      test('saves heading from before the lock frame, not the current frame', () {
+        // Converge heading to 90 at low pitch
+        compassService.setRawHeading(90.0);
+        compassService.setRawPitch(0.0);
+        for (int i = 0; i < 200; i++) {
+          compassService.tick();
+        }
+        expect(compassService.heading, closeTo(90.0, 1.0));
+
+        // Now set pitch to 70 (triggers lock)
+        // AND set heading to 270 (180-degree flip from gimbal lock)
+        compassService.setRawPitch(70.0);
+        compassService.setRawHeading(270.0);
+
+        // Tick many times -- heading should stay at ~90 (the saved stable value)
+        for (int i = 0; i < 100; i++) {
+          compassService.tick();
+        }
+
+        expect(
+          compassService.heading,
+          closeTo(90.0, 2.0),
+          reason: 'Heading should be frozen at the last stable value (~90) '
+              'saved before the lock, not at the flipped value (270)',
+        );
+      });
+
+      test('heading remains frozen while locked even with varying raw heading', () {
+        // Converge heading to 45 at low pitch
+        compassService.setRawHeading(45.0);
+        compassService.setRawPitch(0.0);
+        for (int i = 0; i < 200; i++) {
+          compassService.tick();
+        }
+        final stableHeading = compassService.heading;
+
+        // Lock
+        compassService.setRawPitch(80.0);
+        compassService.tick();
+        expect(compassService.isHeadingLocked, isTrue);
+
+        // Send various raw heading values while locked
+        for (final heading in [180.0, 270.0, 0.0, 315.0, 90.0]) {
+          compassService.setRawHeading(heading);
+          for (int i = 0; i < 10; i++) {
+            compassService.tick();
+          }
+        }
+
+        expect(
+          compassService.heading,
+          closeTo(stableHeading, 1.0),
+          reason: 'Heading must stay frozen at pre-lock value regardless of '
+              'raw heading changes while locked',
+        );
+      });
+    });
+
+    group('unlock and resume', () {
+      test('heading converges to new target after unlocking', () {
+        // Converge heading to 90
+        compassService.setRawHeading(90.0);
+        compassService.setRawPitch(0.0);
+        for (int i = 0; i < 200; i++) {
+          compassService.tick();
+        }
+
+        // Lock heading
+        compassService.setRawPitch(70.0);
+        compassService.tick();
+        expect(compassService.isHeadingLocked, isTrue);
+
+        // Unlock by dropping pitch below 30
+        compassService.setRawPitch(20.0);
+        compassService.tick();
+        expect(compassService.isHeadingLocked, isFalse);
+
+        // Set new heading target and converge
+        compassService.setRawHeading(270.0);
+        for (int i = 0; i < 200; i++) {
+          compassService.tick();
+        }
+
+        expect(
+          compassService.heading,
+          closeTo(270.0, 2.0),
+          reason: 'After unlocking, heading should converge to new raw heading target',
+        );
+      });
+    });
+
+    group('rapid tilt scenario', () {
+      test('simultaneous pitch+heading flip preserves pre-flip heading', () {
+        // Converge heading to 45 at low pitch
+        compassService.setRawHeading(45.0);
+        compassService.setRawPitch(0.0);
+        for (int i = 0; i < 200; i++) {
+          compassService.tick();
+        }
+        expect(compassService.heading, closeTo(45.0, 1.0));
+
+        // Instant simultaneous flip: pitch jumps to 85, heading flips to 225
+        compassService.setRawPitch(85.0);
+        compassService.setRawHeading(225.0);
+        compassService.tick();
+
+        // Heading should stay at ~45 (saved before the flip)
+        expect(
+          compassService.heading,
+          closeTo(45.0, 2.0),
+          reason: 'On rapid tilt, heading should be frozen at the pre-flip '
+              'stable value (~45), not the flipped value (225)',
+        );
+      });
+    });
+
+    group('integration with existing behavior', () {
+      test('heading unchanged after tick when pitch above lock threshold', () {
+        // Set heading to known value, then set pitch above lock threshold
+        compassService.setRawHeading(45.0);
+        // Converge heading to 45 degrees at normal pitch
+        for (int i = 0; i < 100; i++) {
+          compassService.tick();
+        }
+        final headingBeforeLock = compassService.heading;
+
+        // Set pitch above lock threshold
+        compassService.setRawPitch(70.0);
+        compassService.tick();
+
+        // Change raw heading -- should NOT affect smoothed heading
+        compassService.setRawHeading(180.0);
+        compassService.tick();
+
+        expect(
+          compassService.heading,
+          closeTo(headingBeforeLock, 0.5),
+          reason: 'Heading should be frozen when pitch exceeds lock threshold',
+        );
+      });
+
+      test('heading resumes tracking when pitch drops below unlock threshold', () {
+        // Start at high pitch (locked)
+        compassService.setRawHeading(45.0);
+        compassService.setRawPitch(0.0);
+        for (int i = 0; i < 100; i++) {
+          compassService.tick();
+        }
+
+        // Lock
+        compassService.setRawPitch(70.0);
+        compassService.tick();
+
+        // Drop pitch below unlock threshold and change heading target
+        compassService.setRawPitch(0.0);
+        compassService.setRawHeading(270.0);
+        // Wait for pitch to converge below threshold and heading to update
+        for (int i = 0; i < 200; i++) {
+          compassService.tick();
+        }
+
+        expect(
+          compassService.heading,
+          closeTo(270.0, 5.0),
+          reason: 'Heading should resume tracking after pitch drops below unlock threshold',
+        );
+      });
+    });
+  });
 }

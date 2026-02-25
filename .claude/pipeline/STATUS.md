@@ -7,7 +7,7 @@
 
 ## Current State
 
-**Current Feature:** SPEC-001 architectural-foundation
+**Current Feature:** gimbal-lock v2 (FINALIZED 2026-02-25)
 **Current Phase:** finalized
 **Branch:** `feature/terrain-sky-detection`
 **Next Command:** `/research heywhatsthat-client` (P2B-002: HeyWhatsThat API client)
@@ -345,6 +345,8 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 | BUG-009 | Compass widget freeze (stops updating after ~1s) | DONE v2 (2026-02-06) |
 | compass-native | Native OS compass integration (flutter_compass) | DONE (2026-02-13) |
 | P2B-001 | location-service | DONE (2026-02-15) |
+| SPEC-001 | architectural-foundation | DONE (2026-02-25) |
+| gimbal-lock v2 | Heading freeze at high pitch angles — hysteresis lock (replaces v1 soft blend) | DONE (2026-02-25) |
 
 ---
 
