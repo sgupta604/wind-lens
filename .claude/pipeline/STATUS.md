@@ -7,11 +7,38 @@
 
 ## Current State
 
-**Current Feature:** gimbal-lock v2 (FINALIZED 2026-02-25)
-**Current Phase:** finalized
-**Branch:** `feature/terrain-sky-detection`
-**Next Command:** `/research heywhatsthat-client` (P2B-002: HeyWhatsThat API client)
-**Master:** Clean, 405 tests passing -- safe to revert to if anything breaks
+**Current Feature:** home-screen (SPEC-002)
+**Current Phase:** plan-complete
+**Branch:** `master`
+**Next Command:** `/implement home-screen`
+**Master:** Clean, 606 tests passing
+
+### Current Pipeline: home-screen (SPEC-002) - **PLAN COMPLETE** (2026-02-26)
+
+- [x] /research - Complete (spec serves as research: SPEC-002_home_screen.md)
+- [x] /plan - Complete (2026-02-26) - 12 new files, 2 modified, ~18 new tests, 6 phases
+- [ ] /implement - Not started
+- [ ] /test - Not started
+- [ ] /finalize - Not started
+
+**Spec Document:** `.claude/features/home-screen/SPEC-002_home_screen.md`
+**Plan Document:** `.claude/features/home-screen/2026-02-26T12:00_plan.md`
+**Tasks:** `.claude/features/home-screen/tasks.md`
+
+### Completed Pipeline: real-wind-data (P2B-006) - **FINALIZED** (2026-02-26)
+
+- [x] /research - Complete (2026-02-26) - Live API testing, dual-API fallback designed, companion Dart implementation created
+- [x] /plan - Complete (2026-02-26) - Architecture, 4 new files, 1 modified file, ~36 new tests, 6 phases
+- [x] /implement - Complete (2026-02-26) - 4 new source files, 3 new test files, service_providers.dart wired
+- [x] /test - Complete (2026-02-26) - 610 tests passing (+37 new), zero analyzer issues in new code
+- [x] /finalize - Complete (2026-02-26) - CLAUDE.md updated, SUMMARY.md created, committed locally
+
+**Research Document:** `.claude/features/real-wind-data/P2B-006_ogc_edr_wind_research.md`
+**Plan Document:** `.claude/features/real-wind-data/2026-02-26T12:00_plan.md`
+**Tasks:** `.claude/features/real-wind-data/tasks.md`
+**Summary:** `.claude/features/real-wind-data/SUMMARY.md`
+
+### Previous Feature: gimbal-lock v2 (FINALIZED 2026-02-25)
 
 ### Current Pipeline: architectural-foundation (SPEC-001) - **FINALIZED** (2026-02-25)
 
@@ -347,6 +374,7 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 | P2B-001 | location-service | DONE (2026-02-15) |
 | SPEC-001 | architectural-foundation | DONE (2026-02-25) |
 | gimbal-lock v2 | Heading freeze at high pitch angles — hysteresis lock (replaces v1 soft blend) | DONE (2026-02-25) |
+| P2B-006 | real-wind-data (OGC EDR — Shyft primary, Folkweather fallback) | DONE (2026-02-26) |
 
 ---
 
@@ -365,7 +393,7 @@ See `ROADMAP_PHASE2.md` for full details. All work on branch `feature/terrain-sk
 | 3 | P2B-003 horizon-cache | Waiting | Cache horizon profiles locally |
 | 4 | P2B-004 terrain-sky-mask | Waiting | Map horizon onto camera view |
 | 5 | P2B-005 detection-mode-toggle | Waiting | HSV / Terrain / Combined toggle |
-| 6 | P2B-006 real-wind-data | Waiting | OGC EDR real wind data |
+| 6 | P2B-006 real-wind-data | **FINALIZED** | OGC EDR real wind data (Shyft/Folkweather) |
 
 **Reference docs:**
 - `/workspace/heywhatsthat-api-reference (1).md` — HeyWhatsThat API endpoints

@@ -33,12 +33,17 @@ final sensorServiceProvider = AutoDisposeProvider<SensorService>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef SensorServiceRef = AutoDisposeProviderRef<SensorService>;
-String _$windDataSourceHash() => r'3223725c059ab5acebca91a0163d2b3229bc8538';
+String _$windDataSourceHash() => r'c5d970b5eff307d07bd2127f0e2b583c2f1841a4';
 
 /// Provides the [WindDataSource] implementation.
 ///
-/// Currently returns [MockWindDataSource] which wraps [FakeWindService].
-/// Swap this single line when OGC EDR is ready.
+/// Returns [CachedWindDataSource] wrapping [OgcEdrWindDataSource] which
+/// fetches real wind data from OGC EDR APIs (Shyft primary, Folkweather
+/// fallback). The cache uses a 10-minute TTL keyed by rounded lat/lng
+/// plus altitude level.
+///
+/// The [WindApiClient] HTTP client is disposed when this provider is
+/// no longer watched.
 ///
 /// Copied from [windDataSource].
 @ProviderFor(windDataSource)

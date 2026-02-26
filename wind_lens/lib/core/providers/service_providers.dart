@@ -7,7 +7,9 @@ import '../services/wind_data_source.dart';
 import '../../services/horizon/mock_horizon_provider.dart';
 import '../../services/sensors/device_sensor_service.dart';
 import '../../services/sky_detection/hsv_sky_detector.dart';
-import '../../services/wind/mock_wind_source.dart';
+import '../../services/wind/cached_wind_source.dart';
+import '../../services/wind/ogc_edr_wind_source.dart';
+import '../../services/wind/wind_api_client.dart';
 import 'lifecycle_provider.dart';
 
 part 'service_providers.g.dart';
@@ -34,11 +36,21 @@ SensorService sensorService(SensorServiceRef ref) {
 
 /// Provides the [WindDataSource] implementation.
 ///
-/// Currently returns [MockWindDataSource] which wraps [FakeWindService].
-/// Swap this single line when OGC EDR is ready.
+/// Returns [CachedWindDataSource] wrapping [OgcEdrWindDataSource] which
+/// fetches real wind data from OGC EDR APIs (Shyft primary, Folkweather
+/// fallback). The cache uses a 10-minute TTL keyed by rounded lat/lng
+/// plus altitude level.
+///
+/// The [WindApiClient] HTTP client is disposed when this provider is
+/// no longer watched.
 @riverpod
 WindDataSource windDataSource(WindDataSourceRef ref) {
-  return MockWindDataSource();
+  final apiClient = WindApiClient();
+  ref.onDispose(() => apiClient.dispose());
+  return CachedWindDataSource(
+    delegate: OgcEdrWindDataSource(apiClient: apiClient),
+    ttl: const Duration(minutes: 10),
+  );
 }
 
 /// Provides the [HorizonProvider] implementation.

@@ -196,7 +196,11 @@ lib/
 │   │   └── device_sensor_service.dart  # DeviceSensorService implements SensorService
 │   ├── wind/
 │   │   ├── mock_wind_source.dart       # MockWindDataSource (wraps FakeWindService)
-│   │   └── cached_wind_source.dart     # CachedWindDataSource (TTL=10min memory cache)
+│   │   ├── cached_wind_source.dart     # CachedWindDataSource (TTL=10min memory cache)
+│   │   ├── wind_api_constants.dart     # API URLs, keys, timeout, param names
+│   │   ├── wind_models.dart            # WindVector + WindField plain classes (NOT Freezed)
+│   │   ├── wind_api_client.dart        # Shared HTTP + parsing: Shyft/Folkweather with fallback
+│   │   └── ogc_edr_wind_source.dart    # OgcEdrWindDataSource implements WindDataSource
 │   ├── horizon/
 │   │   ├── mock_horizon_provider.dart  # Returns flat horizon
 │   │   └── cached_horizon_provider.dart # Memory+disk cache (3 decimal key, no expiry)
@@ -228,7 +232,7 @@ Sidecar:       sensorNotifiersProvider (ValueNotifier<double> heading + pitch at
 ```
 
 **Key patterns:**
-- **Swap-points:** To add a real wind API, implement `WindDataSource` and change one line in `service_providers.dart`.
+- **Swap-points:** Real wind data (P2B-006) is live via `OgcEdrWindDataSource`. To swap APIs, implement a new `WindDataSource` and change one line in `service_providers.dart`.
 - **SensorNotifiers sidecar:** Heading/pitch bypass Riverpod rebuilds. `ParticleOverlay` reads `headingNotifier.value` directly in its tick loop — zero widget rebuilds for sensor data.
 - **SceneState null while loading:** Camera feed appears immediately. Particles appear once wind data resolves.
 - **StablePosition debounce:** GPS jitter does not thrash horizon/wind providers.
@@ -280,7 +284,7 @@ Each downstream feature is a plug-in that implements an existing interface:
 |---------|-------------------|---------------|
 | HeyWhatsThat client (P2B-002) | `HwtHorizonProvider implements HorizonProvider` | `horizonProviderServiceProvider` in service_providers.dart |
 | Terrain sky mask (P2B-003/004) | `TerrainSkyDetector implements SkyDetector` | `skyDetectorInstanceProvider` in service_providers.dart |
-| Real wind data (P2B-006) | `OgcEdrWindDataSource implements WindDataSource` | `windDataSourceProvider` in service_providers.dart |
+| Real wind data (P2B-006) | DONE: `OgcEdrWindDataSource implements WindDataSource` | Wired in `windDataSourceProvider` |
 
 **Before P2B-004:** Fix the `as HsvSkyDetector` cast in `ar_view_screen.dart` and `debug_panel.dart`. Add `skyFraction` and `forceRecalibrate()` to the `SkyDetector` interface, or use a separate debug info provider.
 
@@ -290,17 +294,17 @@ Each downstream feature is a plug-in that implements an existing interface:
 2. **Old model classes:** `CompassData` and `LocationData` still exist alongside `SensorState`/`PositionData`.
 3. **Riverpod Ref deprecations:** 10 info-level warnings from generated code. Resolves with Riverpod 3.0 upgrade.
 4. **HsvSkyDetector hard cast:** `as HsvSkyDetector` in ARViewScreen/DebugPanel. Must fix before adding other detector types.
-5. **CachedWindDataSource not wired:** Exists + tested but `windDataSourceProvider` still returns bare `MockWindDataSource`. Wire alongside OGC EDR.
+5. **CachedWindDataSource wired (P2B-006 complete):** `windDataSourceProvider` now returns `CachedWindDataSource(delegate: OgcEdrWindDataSource(...))`. `MockWindDataSource` and `FakeWindService` are still present for tests but no longer wired in production.
 
 ## Testing Requirements
 
 **MUST test on real device** - iOS simulator has no camera, compass, or accelerometer.
 
-**Test suite:** 559 tests auto-discovered by `flutter test`. Five additional test files require explicit paths:
+**Test suite:** 610 tests auto-discovered by `flutter test`. Five additional test files require explicit paths:
 ```bash
 flutter test test/utils/ test/services/sensors/ test/services/sky_detection/sky_mask_test.dart test/core/providers/data_providers_test.dart
 ```
-Total: 606 tests, all passing.
+Total: 610 tests, all passing.
 
 ## Sky Detection
 
