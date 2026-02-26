@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'features/ar_view/ar_view_screen.dart';
+import 'features/home/home_screen.dart';
 
 /// The main Wind Lens application widget, wrapped in a ProviderScope
 /// for Riverpod dependency injection.
@@ -16,10 +16,10 @@ class WindLensApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ProviderScope(
       child: MaterialApp(
-        title: 'Wind Lens',
+        title: 'Shyft Lens',
         theme: ThemeData.dark(),
         debugShowCheckedModeBanner: false,
-        home: const ARViewScreen(),
+        home: const HomeScreen(),
       ),
     );
   }

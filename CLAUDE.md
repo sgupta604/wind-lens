@@ -175,8 +175,19 @@ lib/
 │   │   └── lifecycle_provider.dart # AppLifecycleObserver: pauses/resumes SensorService
 │   └── utils/                   # Shared utilities (canonical)
 │       ├── color_utils.dart     # Color helper functions
-│       └── wind_colors.dart     # Speed-to-color gradient
+│       ├── wind_colors.dart     # Speed-to-color gradient
+│       └── wind_utils.dart      # degreesToCardinal() — 16-point compass rose
 ├── features/
+│   ├── home/                    # App landing page (HomeScreen)
+│   │   ├── home_screen.dart     # ConsumerStatefulWidget: entry point, particle AnimationController
+│   │   └── widgets/
+│   │       ├── home_top_bar.dart        # "ShyftLens" logo + "ATMOSPHERIC AR" + Live AR button
+│   │       ├── home_wind_row.dart       # Speed / Direction / Altitude data row (ConsumerWidget)
+│   │       ├── home_terrain_section.dart # Stack: grid + terrain + particles + altitude rail + compass
+│   │       ├── home_particle_painter.dart # CustomPainter: 80 _HomeParticle objects, trail rendering
+│   │       ├── home_altitude_rail.dart   # Right-edge altitude ticks (ConsumerWidget)
+│   │       ├── home_compass_bar.dart     # Bottom compass row (ValueListenableBuilder on headingNotifier)
+│   │       └── home_layer_toggles.dart   # Four toggle buttons (visual-only in MVP)
 │   └── ar_view/                 # Main AR experience
 │       ├── ar_view_screen.dart  # ConsumerStatefulWidget: reads sceneStateProvider
 │       └── widgets/
@@ -276,6 +287,26 @@ screenAngle = windDirection - compassHeading
 - Sky detection: processFrame() < 16ms
 - **NO object allocation in render loop** (Freezed copyWith is forbidden in hot paths)
 
+### CustomPainter State Survival Pattern
+Flutter recreates `CustomPainter` instances on every widget rebuild. If particle state (positions, velocities, trails) is stored inside the painter, it is reset each frame.
+
+The fix: store mutable state in the **parent StatefulWidget** (or a dedicated state object), and pass it into the painter on each rebuild.
+
+```dart
+// In the StatefulWidget:
+late List<_HomeParticle> _particles;  // persists across rebuilds
+
+// Pass reference to painter:
+CustomPaint(
+  painter: HomeParticlePainter(
+    animation: _controller,
+    particles: _particles,       // painter reads/mutates but does not own
+  ),
+)
+```
+
+This pattern is used in `HomeTerrainSection` / `HomeParticlePainter`. Apply it to any `CustomPainter` that manages simulation state.
+
 ## Adding New Features (Post SPEC-001)
 
 Each downstream feature is a plug-in that implements an existing interface:
@@ -300,11 +331,11 @@ Each downstream feature is a plug-in that implements an existing interface:
 
 **MUST test on real device** - iOS simulator has no camera, compass, or accelerometer.
 
-**Test suite:** 610 tests auto-discovered by `flutter test`. Five additional test files require explicit paths:
+**Test suite:** 628 tests auto-discovered by `flutter test`. Five additional test files require explicit paths:
 ```bash
 flutter test test/utils/ test/services/sensors/ test/services/sky_detection/sky_mask_test.dart test/core/providers/data_providers_test.dart
 ```
-Total: 610 tests, all passing.
+Total: 628 tests, all passing.
 
 ## Sky Detection
 

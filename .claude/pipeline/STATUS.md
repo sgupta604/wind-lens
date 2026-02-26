@@ -7,23 +7,24 @@
 
 ## Current State
 
-**Current Feature:** home-screen (SPEC-002)
-**Current Phase:** plan-complete
-**Branch:** `master`
-**Next Command:** `/implement home-screen`
-**Master:** Clean, 606 tests passing
+**Current Feature:** wind-dome (next)
+**Current Phase:** not-started
+**Branch:** `feature/wind-dome-homescreen`
+**Next Command:** `/research wind-dome`
+**Master:** Clean, 628 tests passing (after home-screen finalize)
 
-### Current Pipeline: home-screen (SPEC-002) - **PLAN COMPLETE** (2026-02-26)
+### Completed Pipeline: home-screen (SPEC-002) - **FINALIZED** (2026-02-26)
 
 - [x] /research - Complete (spec serves as research: SPEC-002_home_screen.md)
 - [x] /plan - Complete (2026-02-26) - 12 new files, 2 modified, ~18 new tests, 6 phases
-- [ ] /implement - Not started
-- [ ] /test - Not started
-- [ ] /finalize - Not started
+- [x] /implement - Complete (2026-02-26) - 12 new files, 3 modified, 18 new tests, all passing
+- [x] /test - Complete (2026-02-26) - 628 tests passing, zero analyzer issues in new code
+- [x] /finalize - Complete (2026-02-26) - CLAUDE.md updated (test count + CustomPainter state pattern), SUMMARY.md created, committed locally
 
 **Spec Document:** `.claude/features/home-screen/SPEC-002_home_screen.md`
 **Plan Document:** `.claude/features/home-screen/2026-02-26T12:00_plan.md`
 **Tasks:** `.claude/features/home-screen/tasks.md`
+**Summary:** `.claude/features/home-screen/SUMMARY.md`
 
 ### Completed Pipeline: real-wind-data (P2B-006) - **FINALIZED** (2026-02-26)
 
@@ -375,6 +376,7 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 | SPEC-001 | architectural-foundation | DONE (2026-02-25) |
 | gimbal-lock v2 | Heading freeze at high pitch angles — hysteresis lock (replaces v1 soft blend) | DONE (2026-02-25) |
 | P2B-006 | real-wind-data (OGC EDR — Shyft primary, Folkweather fallback) | DONE (2026-02-26) |
+| home-screen | HomeScreen landing page, Shyft Lens branding, terrain panorama, animated particles | DONE (2026-02-26) |
 
 ---
 

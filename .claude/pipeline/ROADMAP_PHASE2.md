@@ -11,9 +11,9 @@
 **Post-MVP Bugs:** Complete (9/9 fixed - BUG-001 through BUG-009)
 **Phase 2a Features:** 4/4 complete (performance-optimization, wind-streamlines, particle-colors, compass-widget DONE)
 **Additional fixes:** compass-native (flutter_compass), code-cleanup (debug panel extraction)
-**Tests:** 606 passing (559 auto-discovered + 47 explicit)
-**Current Branch:** `feature/terrain-sky-detection`
-**Ready for:** P2B-002 HeyWhatsThat client (SPEC-001 complete, interfaces in place)
+**Tests:** 628+ passing (610 auto-discovered + explicit paths + 18 home-screen)
+**Current Branch:** `feature/wind-dome-homescreen`
+**Ready for:** home-screen test/finalize, then wind-dome implementation
 
 ---
 
@@ -26,11 +26,13 @@
 | P2A-003 | compass-widget | ~~Medium~~ | ~~Low~~ | **DONE** | Compass showing heading |
 | P2A-004 | particle-colors | ~~Medium~~ | ~~Low~~ | **DONE** | Included in wind-streamlines |
 | SPEC-001 | architectural-foundation | ~~Critical~~ | ~~High~~ | **DONE** | Freezed models, Riverpod, service interfaces, directory restructure. 606 tests. **Summary:** `.claude/features/architectural-foundation/SUMMARY.md` |
-| SPEC-002 | photo-capture-overlay | **High** | High | Waiting (needs SPEC-001) | Capture photo + frozen wind overlay. **Spec:** `.claude/features/SPEC-002-photo-capture-overlay.md` |
+| SPEC-002 | photo-capture-overlay | Medium | High | **Backburner** | Capture photo + frozen wind overlay. **Spec:** `.claude/features/SPEC-002-photo-capture-overlay.md` |
 | P2B-001 | location-service | ~~High~~ | ~~Low~~ | **DONE** | GPS coordinates + permission handling |
 | P2B-002+003 | heywhatsthat-client | **High** | Medium | Waiting (needs SPEC-001) | API client + local horizon caching (merged) |
 | P2B-004+005 | terrain-sky-mask | **High** | Medium | Waiting | Terrain sky detection + mode toggle (merged) |
-| P2B-006 | real-wind-data | High | High | Waiting | Integrate OGC EDR API for real wind data |
+| P2B-006 | real-wind-data | ~~High~~ | ~~High~~ | **DONE** | Real wind from OGC EDR APIs (Shyft/Folkweather). **Summary:** `.claude/features/real-wind-data/SUMMARY.md` |
+| SPEC-003 | home-screen | **High** | Medium | **Implementing** | HomeScreen entry point with ShyftLens branding. **Spec:** `.claude/features/home-screen/SPEC-002_home_screen.md` |
+| SPEC-004 | wind-dome | **High** | High | Planned | 3D wind dome visualization. **Spec:** `.claude/features/wind-dome/SPEC-002-wind-dome.md` |
 | P2C-001 | map-view | Medium | High | Future | Toggle AR to top-down weather map view |
 | P2C-002 | altitude-input | Low | Medium | Future | Input specific altitude in feet |
 
@@ -531,18 +533,20 @@ SPEC-001: Architectural Foundation  <-- CURRENT (branch: feature/architectural-f
   Phase 3a: Complete wiring — SceneState, SkyMaskData, lifecycle  ✅ DONE (514 tests)
   Phase 3b: Polish — DataStatusBar, caching, integration tests  ← CURRENT
 
-Phase 2b: Terrain Sky Detection & Location  (after SPEC-001)
+Phase 2b: Real Data & New Screens  (current focus)
   Step 1: P2B-001 location-service         ✅ DONE
-  Step 2: P2B-002+003 heywhatsthat-client  ← API client + horizon caching (merged)
-  Step 3: P2B-004+005 terrain-sky-mask     ← Terrain detection + mode toggle (merged)
-  Step 4: P2B-006 real-wind-data           ← Real weather data
+  Step 2: P2B-006 real-wind-data           ✅ DONE (Shyft/Folkweather OGC EDR)
+  Step 3: SPEC-003 home-screen             ← IMPLEMENTING (ShyftLens rebrand)
+  Step 4: SPEC-004 wind-dome               ← Next (3D dome + Open-Meteo forecast)
 
-SPEC-002: Photo Capture & Wind Overlay  (after SPEC-001 + terrain features)
-  Single photo capture with frozen scene state overlay
+Phase 2b (deferred): Terrain Sky Detection
+  P2B-002+003 heywhatsthat-client          Deferred (terrain sky detection on backburner)
+  P2B-004+005 terrain-sky-mask             Deferred
+  SPEC-002 photo-capture-overlay           Backburner
 
 Phase 2c: Advanced Features (future)
   P2C-001 map-view (depends on location + data)
-  P2C-002 altitude-input (polish, low priority)
+  P2C-002 altitude-input / continuous slider (polish, low priority)
 ```
 
 **Principle:** One step at a time. Each step should work and be testable before proceeding. If something breaks, we revert to master.
