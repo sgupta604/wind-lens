@@ -100,6 +100,234 @@ class WindApiClient {
     return _fetchFolkArea(encodedPoly, pressureLevel);
   }
 
+  // ─── Point Wind Time-Series Query ──────────────────────────────
+
+  /// Fetches a time series of wind vectors at a single geographic point.
+  ///
+  /// Returns a list of (DateTime, double u, double v) records for [hours]
+  /// forecast hours. Tries Shyft first, falls back to Folkweather.
+  ///
+  /// [pressureLevel]: 0 for surface (10m AGL), otherwise hPa (e.g., 850, 700).
+  ///
+  /// On both-APIs-fail, returns an empty list (graceful degradation).
+  Future<List<({DateTime time, double u, double v})>> fetchPointWindSeries({
+    required double lat,
+    required double lng,
+    required int pressureLevel,
+    int hours = 72,
+  }) async {
+    // Try Shyft primary
+    try {
+      return await _fetchShyftPointSeries(lat, lng, pressureLevel, hours);
+    } catch (_) {
+      // Fall through to Folkweather
+    }
+
+    // Try Folkweather fallback
+    try {
+      return await _fetchFolkPointSeries(lat, lng, pressureLevel, hours);
+    } catch (_) {
+      // Both APIs failed
+    }
+
+    return [];
+  }
+
+  Future<List<({DateTime time, double u, double v})>> _fetchShyftPointSeries(
+    double lat,
+    double lng,
+    int pressureLevel,
+    int hours,
+  ) async {
+    final collection = pressureLevel == 0
+        ? WindApiConstants.shyftSurfaceCollection
+        : WindApiConstants.shyftIsobaricCollection;
+
+    final coordsParam = 'POINT($lng $lat)';
+    final datetimeRange = _dateTimeRangeUtc(hours);
+
+    final queryParams = <String, String>{
+      'coords': coordsParam,
+      'parameter-name':
+          '${WindApiConstants.shyftUParam},${WindApiConstants.shyftVParam}',
+      'apikey': WindApiConstants.shyftApiKey,
+      'f': WindApiConstants.shyftPositionFormat,
+      'datetime': datetimeRange,
+    };
+
+    if (pressureLevel > 0) {
+      queryParams['z'] = pressureLevel.toString();
+    }
+
+    final uri = Uri.parse(
+      '${WindApiConstants.shyftBaseUrl}/$collection/position',
+    ).replace(queryParameters: queryParams);
+
+    final response =
+        await _client.get(uri).timeout(WindApiConstants.timeout);
+
+    if (response.statusCode != 200) {
+      throw Exception('Shyft series HTTP ${response.statusCode}');
+    }
+
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    return _parseShyftTimeSeriesResponse(json);
+  }
+
+  /// Parses Shyft CoverageCollection time-series response.
+  ///
+  /// Shyft returns separate Coverage objects for U and V, each containing
+  /// a `t.values` array of ISO timestamps and matching `values` arrays.
+  List<({DateTime time, double u, double v})> _parseShyftTimeSeriesResponse(
+      Map<String, dynamic> json) {
+    final coverages = json['coverages'] as List<dynamic>?;
+    if (coverages == null || coverages.isEmpty) {
+      throw Exception('Shyft series: missing or empty coverages');
+    }
+
+    List<String>? timestamps;
+    List<double>? uValues;
+    List<double>? vValues;
+
+    for (final coverage in coverages) {
+      final ranges = coverage['ranges'] as Map<String, dynamic>?;
+      final domain = coverage['domain'] as Map<String, dynamic>?;
+      if (ranges == null) continue;
+
+      // Extract timestamps from the first coverage that has them
+      if (timestamps == null && domain != null) {
+        final axes = domain['axes'] as Map<String, dynamic>?;
+        final tAxis = axes?['t'] as Map<String, dynamic>?;
+        final tValues = tAxis?['values'] as List?;
+        if (tValues != null) {
+          timestamps = tValues.map((v) => v.toString()).toList();
+        }
+      }
+
+      if (ranges.containsKey(WindApiConstants.shyftUParam)) {
+        final values =
+            ranges[WindApiConstants.shyftUParam]['values'] as List?;
+        if (values != null) {
+          uValues = values.map((v) => v != null ? (v as num).toDouble() : 0.0).toList();
+        }
+      }
+      if (ranges.containsKey(WindApiConstants.shyftVParam)) {
+        final values =
+            ranges[WindApiConstants.shyftVParam]['values'] as List?;
+        if (values != null) {
+          vValues = values.map((v) => v != null ? (v as num).toDouble() : 0.0).toList();
+        }
+      }
+    }
+
+    if (timestamps == null || uValues == null || vValues == null) {
+      throw Exception('Shyft series: could not extract time/U/V');
+    }
+
+    // Handle mismatched array lengths: use shortest
+    final count = [timestamps.length, uValues.length, vValues.length]
+        .reduce((a, b) => a < b ? a : b);
+
+    final results = <({DateTime time, double u, double v})>[];
+    for (int i = 0; i < count; i++) {
+      results.add((
+        time: DateTime.parse(timestamps[i]),
+        u: uValues[i],
+        v: vValues[i],
+      ));
+    }
+    return results;
+  }
+
+  Future<List<({DateTime time, double u, double v})>> _fetchFolkPointSeries(
+    double lat,
+    double lng,
+    int pressureLevel,
+    int hours,
+  ) async {
+    final collection = pressureLevel == 0
+        ? WindApiConstants.folkSurfaceCollection
+        : _folkCollection(pressureLevel);
+
+    final coordsParam = 'POINT($lng $lat)';
+    final datetimeRange = _dateTimeRangeUtc(hours);
+
+    final queryParams = <String, String>{
+      'coords': coordsParam,
+      'parameter-name':
+          '${WindApiConstants.folkUParam},${WindApiConstants.folkVParam}',
+      'f': WindApiConstants.folkFormat,
+      'datetime': datetimeRange,
+    };
+
+    if (pressureLevel == 0) {
+      queryParams['z'] = '10';
+    } else {
+      queryParams['z'] = pressureLevel.toString();
+    }
+
+    final uri = Uri.parse(
+      '${WindApiConstants.folkBaseUrl}/$collection/position',
+    ).replace(queryParameters: queryParams);
+
+    final response =
+        await _client.get(uri).timeout(WindApiConstants.timeout);
+
+    if (response.statusCode != 200) {
+      throw Exception('Folkweather series HTTP ${response.statusCode}');
+    }
+
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    return _parseFolkTimeSeriesResponse(json);
+  }
+
+  /// Parses Folkweather single Coverage time-series response.
+  ///
+  /// Folkweather returns both UGRD and VGRD in the same Coverage's ranges,
+  /// with timestamps in `domain.axes.t.values`.
+  List<({DateTime time, double u, double v})> _parseFolkTimeSeriesResponse(
+      Map<String, dynamic> json) {
+    final domain = json['domain'] as Map<String, dynamic>?;
+    final ranges = json['ranges'] as Map<String, dynamic>?;
+
+    if (domain == null || ranges == null) {
+      throw Exception('Folkweather series: missing domain/ranges');
+    }
+
+    final axes = domain['axes'] as Map<String, dynamic>?;
+    final tAxis = axes?['t'] as Map<String, dynamic>?;
+    final tValues = tAxis?['values'] as List?;
+
+    if (tValues == null || tValues.isEmpty) {
+      throw Exception('Folkweather series: missing t.values');
+    }
+
+    final timestamps = tValues.map((v) => v.toString()).toList();
+
+    final uValues = (ranges[WindApiConstants.folkUParam]
+            as Map<String, dynamic>?)?['values'] as List?;
+    final vValues = (ranges[WindApiConstants.folkVParam]
+            as Map<String, dynamic>?)?['values'] as List?;
+
+    if (uValues == null || vValues == null) {
+      throw Exception('Folkweather series: missing UGRD/VGRD values');
+    }
+
+    // Handle mismatched array lengths: use shortest
+    final count = [timestamps.length, uValues.length, vValues.length]
+        .reduce((a, b) => a < b ? a : b);
+
+    final results = <({DateTime time, double u, double v})>[];
+    for (int i = 0; i < count; i++) {
+      results.add((
+        time: DateTime.parse(timestamps[i]),
+        u: uValues[i] != null ? (uValues[i] as num).toDouble() : 0.0,
+        v: vValues[i] != null ? (vValues[i] as num).toDouble() : 0.0,
+      ));
+    }
+    return results;
+  }
+
   // ─── Shyft Point Methods ──────────────────────────────────────
 
   Future<(double, double)> _fetchShyftPoint(
@@ -409,6 +637,21 @@ class WindApiClient {
         ? DateTime.utc(now.year, now.month, now.day, now.hour + 1)
         : DateTime.utc(now.year, now.month, now.day, now.hour);
     return '${rounded.toIso8601String().split('.')[0]}Z';
+  }
+
+  /// Returns an ISO 8601 datetime range string for OGC EDR time-series queries.
+  ///
+  /// Format: "2026-02-27T12:00:00Z/2026-03-02T12:00:00Z"
+  /// The range starts at the nearest hour and extends [hours] into the future.
+  String _dateTimeRangeUtc(int hours) {
+    final now = DateTime.now().toUtc();
+    final start = now.minute >= 30
+        ? DateTime.utc(now.year, now.month, now.day, now.hour + 1)
+        : DateTime.utc(now.year, now.month, now.day, now.hour);
+    final end = start.add(Duration(hours: hours));
+    final startStr = '${start.toIso8601String().split('.')[0]}Z';
+    final endStr = '${end.toIso8601String().split('.')[0]}Z';
+    return '$startStr/$endStr';
   }
 
   /// Selects the correct Folkweather collection for a given pressure level.

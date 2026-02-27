@@ -46,6 +46,8 @@ dependencies:
   flutter_riverpod: ^2.4.9       # Riverpod state management
   riverpod_annotation: ^2.3.3    # Riverpod annotations for codegen
   google_fonts: ^6.1.0            # Google Fonts (Bebas Neue, DM Mono)
+  flutter_map: ^7.0.0              # Map tiles for Wind Dome
+  latlong2: ^0.9.1                 # Coordinate type for flutter_map
 
 dev_dependencies:
   flutter_test:

@@ -9,7 +9,14 @@ class HomeTopBar extends StatefulWidget {
   /// Callback invoked when the Live AR button is tapped.
   final VoidCallback onLiveArTap;
 
-  const HomeTopBar({super.key, required this.onLiveArTap});
+  /// Callback invoked when the Wind Dome button is tapped.
+  final VoidCallback? onWindDomeTap;
+
+  const HomeTopBar({
+    super.key,
+    required this.onLiveArTap,
+    this.onWindDomeTap,
+  });
 
   @override
   State<HomeTopBar> createState() => _HomeTopBarState();
@@ -71,55 +78,96 @@ class _HomeTopBarState extends State<HomeTopBar>
             ],
           ),
 
-          // Live AR button
-          Semantics(
-            label: 'Open live AR camera view',
-            button: true,
-            child: GestureDetector(
-              onTap: widget.onLiveArTap,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(100),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Pulsing red dot
-                    AnimatedBuilder(
-                      animation: _pulseAnimation,
-                      builder: (context, child) {
-                        return Opacity(
-                          opacity: _pulseAnimation.value,
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
+          // Button row
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Wind Dome button
+              if (widget.onWindDomeTap != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Semantics(
+                    label: 'Open Wind Dome 3D visualization',
+                    button: true,
+                    child: GestureDetector(
+                      onTap: widget.onWindDomeTap,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(100),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.4),
                           ),
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'LIVE AR',
-                      style: GoogleFonts.dmMono(
-                        fontSize: 12,
-                        color: Colors.black,
-                        letterSpacing: 0.15 * 12, // 0.15em
-                        fontWeight: FontWeight.w500,
+                        ),
+                        child: Text(
+                          'DOME',
+                          style: GoogleFonts.dmMono(
+                            fontSize: 11,
+                            color: Colors.white,
+                            letterSpacing: 0.15 * 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
                     ),
-                  ],
+                  ),
+                ),
+
+              // Live AR button
+              Semantics(
+                label: 'Open live AR camera view',
+                button: true,
+                child: GestureDetector(
+                  onTap: widget.onLiveArTap,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Pulsing red dot
+                        AnimatedBuilder(
+                          animation: _pulseAnimation,
+                          builder: (context, child) {
+                            return Opacity(
+                              opacity: _pulseAnimation.value,
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'LIVE AR',
+                          style: GoogleFonts.dmMono(
+                            fontSize: 12,
+                            color: Colors.black,
+                            letterSpacing: 0.15 * 12, // 0.15em
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
         ],
       ),

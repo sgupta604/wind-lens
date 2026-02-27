@@ -7,11 +7,60 @@
 
 ## Current State
 
-**Current Feature:** wind-dome (next)
-**Current Phase:** not-started
+**Current Feature:** wind-dome-render-fixes
+**Current Phase:** implement-complete
 **Branch:** `feature/wind-dome-homescreen`
-**Next Command:** `/research wind-dome`
-**Master:** Clean, 628 tests passing (after home-screen finalize)
+**Next Command:** `/test wind-dome-render-fixes`
+**Master:** Clean, all auto-discovered tests passing (exit code 0)
+
+### Current Pipeline: wind-dome-render-fixes (7 rendering/gesture fixes from on-device testing)
+
+- [x] /research - Complete (2026-02-27) - 7 issues documented in WIND_DOME_RENDER_FIXES.md
+- [x] /plan - Complete (2026-02-27) - 3 files modified, 1 new test file, ~8 new tests, 6 phases, 13 tasks
+- [x] /implement - Complete (2026-02-27) - 3 files modified, 8 new tests, 717 total passing, zero analyzer issues
+- [ ] /test - Not started
+- [ ] /finalize - Not started
+
+**Fixes Brief:** `.claude/features/wind-dome/WIND_DOME_RENDER_FIXES.md`
+**Research Document:** `.claude/features/wind-dome-render-fixes/2026-02-27T16:00_research.md`
+**Plan Document:** `.claude/features/wind-dome-render-fixes/2026-02-27T16:00_plan.md`
+**Tasks:** `.claude/features/wind-dome-render-fixes/tasks.md`
+
+### Previous Pipeline: wind-dome-rendering (complete rendering rewrite porting JSX prototype)
+
+- [x] /research - Complete (2026-02-27) - Prototype analysis, 3 files to rewrite, 1 to update
+- [x] /plan - Complete (2026-02-27) - 3 rewrites + 1 update, 12 tasks in 6 phases, ~5 new tests
+- [x] /implement - Complete (2026-02-27) - 4 files rewritten, 3 test files updated, 62 dome tests (was 56), all pass
+- [ ] /test - Deferred (on-device testing found 7 rendering issues -> wind-dome-render-fixes pipeline)
+- [ ] /finalize - Deferred (blocked by wind-dome-render-fixes)
+
+**Research Document:** `.claude/features/wind-dome-rendering/2026-02-27T14:00_research.md`
+**Plan Document:** `.claude/features/wind-dome-rendering/2026-02-27T14:00_plan.md`
+**Tasks:** `.claude/features/wind-dome-rendering/tasks.md`
+
+### Previous Pipeline: wind-dome-fixes (rendering/gesture bug fixes) - **SUPERSEDED**
+
+- [x] /research - Complete (2026-02-27) - On-device testing diagnosis, 5 discrete issues identified
+- [x] /plan - Complete (2026-02-27) - 5 fixes, 11 tasks in 6 phases, ~6 new tests, 5 files modified
+- [x] /implement - Complete (2026-02-27) - 5 fixes applied, 6 new tests, 703 total passing, zero analyzer issues
+- [-] /test - Superseded by wind-dome-rendering (full rewrite makes incremental fixes obsolete)
+- [-] /finalize - Superseded by wind-dome-rendering
+
+**Plan Document:** `.claude/features/wind-dome-fixes/2026-02-27T13:00_plan.md`
+**Tasks:** `.claude/features/wind-dome-fixes/tasks.md`
+**Implementation:** `.claude/active-work/wind-dome-fixes/implementation.md`
+
+### Completed Pipeline: wind-dome (Phase 1 MVP) - **IMPLEMENTED** (2026-02-27)
+
+- [x] /research - Skipped (SPEC-002-wind-dome version2.md serves as research)
+- [x] /plan - Complete (2026-02-27) - 10 new files, 4 modified, ~63 new tests, 6 phases
+- [x] /implement - Complete (2026-02-27) - 11 new files, 4 modified, 69 new tests, all passing
+- [ ] /test - Deferred (on-device testing found rendering bugs → wind-dome-fixes pipeline)
+- [ ] /finalize - Deferred (blocked by wind-dome-fixes)
+
+**Spec Document:** `.claude/features/wind-dome/SPEC-002-wind-dome version2.md`
+**Plan Document:** `.claude/features/wind-dome/2026-02-27T12:00_plan.md`
+**Tasks:** `.claude/features/wind-dome/tasks.md`
 
 ### Completed Pipeline: home-screen (SPEC-002) - **FINALIZED** (2026-02-26)
 
