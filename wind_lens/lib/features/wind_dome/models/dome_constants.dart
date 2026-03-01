@@ -117,6 +117,23 @@ class DomeConstants {
   /// Stroke width for the ground disc edge.
   static const double groundDiscStrokeWidth = 1.0;
 
+  // ─── Compass Rose ─────────────────────────────────────────────
+
+  /// Radius multiplier for compass labels (placed just outside dome edge).
+  static const double compassLabelRadiusMultiplier = 1.12;
+
+  /// Y coordinate of compass labels on the ground plane.
+  static const double compassLabelGroundY = 0.03;
+
+  /// Font size for the North label.
+  static const double compassNorthFontSize = 13.0;
+
+  /// Font size for other cardinal direction labels (S, E, W).
+  static const double compassCardinalFontSize = 11.0;
+
+  /// Length of compass tick marks in render units (inward from dome edge).
+  static const double compassTickLength = 2.5;
+
   /// Private constructor to prevent instantiation.
   DomeConstants._();
 }

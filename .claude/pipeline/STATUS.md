@@ -7,19 +7,31 @@
 
 ## Current State
 
-**Current Feature:** wind-dome-render-fixes
-**Current Phase:** implement-complete
+**Current Feature:** location-picker
+**Current Phase:** plan-complete
 **Branch:** `feature/wind-dome-homescreen`
-**Next Command:** `/test wind-dome-render-fixes`
+**Next Command:** `/implement location-picker`
 **Master:** Clean, all auto-discovered tests passing (exit code 0)
 
-### Current Pipeline: wind-dome-render-fixes (7 rendering/gesture fixes from on-device testing)
+### Current Pipeline: location-picker (map-based location override for wind data)
+
+- [x] /research - Complete (2026-03-01) - Provider graph analysis, 4 new files, 5 modified, flutter_map already in deps
+- [x] /plan - Complete (2026-03-01) - 4 new source + 2 test files, 5 modified files, ~20 new tests, 6 phases, 15 tasks
+- [ ] /implement - Not started
+- [ ] /test - Not started
+- [ ] /finalize - Not started
+
+**Research Document:** `.claude/features/location-picker/2026-03-01T12:00_research.md`
+**Plan Document:** `.claude/features/location-picker/2026-03-01T12:30_plan.md`
+**Tasks:** `.claude/features/location-picker/tasks.md`
+
+### Previous Pipeline: wind-dome-render-fixes (7 rendering/gesture fixes from on-device testing)
 
 - [x] /research - Complete (2026-02-27) - 7 issues documented in WIND_DOME_RENDER_FIXES.md
 - [x] /plan - Complete (2026-02-27) - 3 files modified, 1 new test file, ~8 new tests, 6 phases, 13 tasks
 - [x] /implement - Complete (2026-02-27) - 3 files modified, 8 new tests, 717 total passing, zero analyzer issues
-- [ ] /test - Not started
-- [ ] /finalize - Not started
+- [x] /test - Complete (2026-03-01) - 719 tests passing, 72 dome tests, zero analyzer errors, test-success.md created
+- [x] /finalize - Complete (2026-03-01) - 225 lines added, committed locally, SUMMARY.md created
 
 **Fixes Brief:** `.claude/features/wind-dome/WIND_DOME_RENDER_FIXES.md`
 **Research Document:** `.claude/features/wind-dome-render-fixes/2026-02-27T16:00_research.md`

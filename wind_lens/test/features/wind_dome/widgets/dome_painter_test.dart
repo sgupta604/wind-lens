@@ -177,6 +177,83 @@ void main() {
       });
     });
 
+    group('compass rose', () {
+      test('paint() with compass rose renders without throwing', () {
+        final painter = DomePainter(
+          particles: [],
+          theta: DomeConstants.defaultTheta,
+          phi: DomeConstants.defaultPhi,
+          camR: DomeConstants.camR,
+          domeR: DomeConstants.domeR,
+          domeH: DomeConstants.domeH,
+          time: 0.0,
+        );
+
+        final recorder = ui.PictureRecorder();
+        final canvas = Canvas(recorder);
+        const size = Size(400, 800);
+
+        expect(
+          () => painter.paint(canvas, size),
+          returnsNormally,
+        );
+        recorder.endRecording();
+      });
+
+      test('paint() with compass rose renders at various camera angles', () {
+        // Test compass labels at different orbit positions to ensure
+        // no behind-camera crashes
+        for (final theta in [0.0, pi / 2, pi, 3 * pi / 2]) {
+          for (final phi in [0.3, pi / 4, pi / 2]) {
+            final painter = DomePainter(
+              particles: [],
+              theta: theta,
+              phi: phi,
+              camR: DomeConstants.camR,
+              domeR: DomeConstants.domeR,
+              domeH: DomeConstants.domeH,
+              time: 0.5,
+            );
+
+            final recorder = ui.PictureRecorder();
+            final canvas = Canvas(recorder);
+            const size = Size(400, 800);
+
+            expect(
+              () => painter.paint(canvas, size),
+              returnsNormally,
+            );
+            recorder.endRecording();
+          }
+        }
+      });
+
+      test('compass labels project to visible screen positions from default view', () {
+        final painter = DomePainter(
+          particles: [],
+          theta: DomeConstants.defaultTheta,
+          phi: DomeConstants.defaultPhi,
+          camR: DomeConstants.camR,
+          domeR: DomeConstants.domeR,
+          domeH: DomeConstants.domeH,
+          time: 0.0,
+        );
+
+        const size = Size(400, 800);
+
+        // North label position (x=0, z=-domeR*1.12)
+        final northPos = painter.project3DForTest(
+          0,
+          DomeConstants.compassLabelGroundY,
+          -DomeConstants.domeR * DomeConstants.compassLabelRadiusMultiplier,
+          size,
+        );
+
+        // At default camera angle, north should be visible
+        expect(northPos, isNotNull);
+      });
+    });
+
     group('projection', () {
       test('project3D maps dome center to near canvas center', () {
         final painter = DomePainter(

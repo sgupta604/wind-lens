@@ -92,6 +92,7 @@ class DomePainter extends CustomPainter {
     final focal = _focalLength(size);
 
     _drawGroundDisc(canvas, size, viewMatrix, focal);
+    _drawCompassRose(canvas, size, viewMatrix, focal);
     _drawFootprint(canvas, size, viewMatrix, focal);
     _drawWireframe(canvas, size, viewMatrix, focal);
     _drawVerticalAxis(canvas, size, viewMatrix, focal);
@@ -138,6 +139,120 @@ class DomePainter extends CustomPainter {
     canvas.drawPath(path, _groundDiscFillPaint);
     // Stroke: subtle white edge ring
     canvas.drawPath(path, _groundDiscStrokePaint);
+  }
+
+  // ─── Compass Rose ──────────────────────────────────────────────
+
+  /// Draws cardinal and intercardinal direction labels and tick marks on the
+  /// ground plane, just outside the dome footprint.
+  ///
+  /// Labels sit at [DomeConstants.compassLabelRadiusMultiplier] * domeR on the
+  /// ground plane (y = [DomeConstants.compassLabelGroundY]). Tick marks extend
+  /// inward from domeR by [DomeConstants.compassTickLength] render units.
+  ///
+  /// Called AFTER [_drawGroundDisc] but BEFORE [_drawWireframe] so the labels
+  /// sit on the ground behind the wireframe but above the dark disc.
+  void _drawCompassRose(
+      Canvas canvas, Size size, vm.Matrix4 viewMatrix, double focal) {
+    final labelR = domeR * DomeConstants.compassLabelRadiusMultiplier;
+    final groundY = DomeConstants.compassLabelGroundY;
+
+    // Cardinal directions in dome-local 3D space:
+    // N = -z, S = +z, E = +x, W = -x (standard right-hand coordinate system)
+    const cardinals = <(String, double, double)>[
+      ('N', 0.0, -1.0),
+      ('S', 0.0, 1.0),
+      ('E', 1.0, 0.0),
+      ('W', -1.0, 0.0),
+    ];
+
+    // Intercardinal directions for tick marks only
+    const intercardinals = <(double, double)>[
+      (0.7071, -0.7071), // NE
+      (0.7071, 0.7071),  // SE
+      (-0.7071, 0.7071), // SW
+      (-0.7071, -0.7071), // NW
+    ];
+
+    // Draw tick marks at all 8 compass positions
+    _wirePaint.strokeWidth = 1.0;
+
+    for (final (label, dx, dz) in cardinals) {
+      // Tick mark: from dome edge inward
+      final outerX = dx * domeR;
+      final outerZ = dz * domeR;
+      final innerX = dx * (domeR - DomeConstants.compassTickLength);
+      final innerZ = dz * (domeR - DomeConstants.compassTickLength);
+
+      final pOuter =
+          _project3D(outerX, groundY, outerZ, viewMatrix, focal, size);
+      final pInner =
+          _project3D(innerX, groundY, innerZ, viewMatrix, focal, size);
+
+      if (pOuter != null && pInner != null) {
+        final isNorth = label == 'N';
+        _wirePaint.color = isNorth
+            ? const Color(0xBBFF6633) // orange-red at 73% opacity
+            : Colors.white.withValues(alpha: 0.4);
+        canvas.drawLine(pOuter, pInner, _wirePaint);
+      }
+
+      // Label: placed just outside the dome footprint
+      final labelX = dx * labelR;
+      final labelZ = dz * labelR;
+      final pLabel =
+          _project3D(labelX, groundY, labelZ, viewMatrix, focal, size);
+
+      if (pLabel != null) {
+        final isNorth = label == 'N';
+        _drawLabel(
+          canvas,
+          pLabel,
+          label,
+          isNorth
+              ? const Color(0xDDFF6633) // orange-red at 87% opacity
+              : Colors.white.withValues(alpha: 0.6),
+          isNorth
+              ? DomeConstants.compassNorthFontSize
+              : DomeConstants.compassCardinalFontSize,
+        );
+      }
+    }
+
+    // Intercardinal tick marks only (no labels)
+    _wirePaint.color = Colors.white.withValues(alpha: 0.25);
+    for (final (dx, dz) in intercardinals) {
+      final outerX = dx * domeR;
+      final outerZ = dz * domeR;
+      final innerX = dx * (domeR - DomeConstants.compassTickLength * 0.6);
+      final innerZ = dz * (domeR - DomeConstants.compassTickLength * 0.6);
+
+      final pOuter =
+          _project3D(outerX, groundY, outerZ, viewMatrix, focal, size);
+      final pInner =
+          _project3D(innerX, groundY, innerZ, viewMatrix, focal, size);
+
+      if (pOuter != null && pInner != null) {
+        canvas.drawLine(pOuter, pInner, _wirePaint);
+      }
+    }
+  }
+
+  /// Draws a centered text label at the given screen position.
+  void _drawLabel(
+      Canvas canvas, Offset pos, String text, Color color, double fontSize) {
+    final tp = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, Offset(pos.dx - tp.width / 2, pos.dy - tp.height / 2));
   }
 
   // ─── Camera ──────────────────────────────────────────────────

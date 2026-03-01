@@ -9,5 +9,21 @@ void main() {
       final computedDomeR = 1000.0 / DomeConstants.metersPerRenderUnit;
       expect(computedDomeR, closeTo(DomeConstants.domeR, 0.001));
     });
+
+    group('compass rose constants', () {
+      test('compassLabelRadiusMultiplier places labels outside dome', () {
+        expect(DomeConstants.compassLabelRadiusMultiplier, greaterThan(1.0));
+      });
+
+      test('compassTickLength is positive and less than domeR', () {
+        expect(DomeConstants.compassTickLength, greaterThan(0));
+        expect(DomeConstants.compassTickLength, lessThan(DomeConstants.domeR));
+      });
+
+      test('compassNorthFontSize >= compassCardinalFontSize', () {
+        expect(DomeConstants.compassNorthFontSize,
+            greaterThanOrEqualTo(DomeConstants.compassCardinalFontSize));
+      });
+    });
   });
 }
