@@ -6,14 +6,15 @@ part of 'data_providers.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$horizonProfileHash() => r'b4b212425a2ecae7a24802760c2633081904dd3b';
+String _$horizonProfileHash() => r'05c3f2c5904d8a0a7a0054690ba54b57e2bf3a94';
 
-/// Fetches the horizon profile for the current stable position.
+/// Fetches the horizon profile for the effective position.
 ///
 /// Returns [AsyncValue<HorizonProfile>] that auto-refetches when
-/// [stablePositionProvider] changes (i.e., user moves >100m).
+/// [effectivePositionProvider] changes (i.e., user moves >100m or
+/// sets a location override).
 ///
-/// Throws [StateError] if no GPS fix is available yet.
+/// Throws [StateError] if no position is available yet.
 ///
 /// Copied from [horizonProfile].
 @ProviderFor(horizonProfile)
@@ -31,14 +32,14 @@ final horizonProfileProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef HorizonProfileRef = AutoDisposeFutureProviderRef<HorizonProfile>;
-String _$windDataHash() => r'2605f4d7ffbb584fe636fc889b559ca7da3fe1f2';
+String _$windDataHash() => r'1fe63a91e07a28a8059a7f79b3168758ce8324d6';
 
-/// Fetches wind data for the current stable position and selected altitude.
+/// Fetches wind data for the effective position and selected altitude.
 ///
 /// Returns [AsyncValue<WindData>] that auto-refetches when either
-/// [stablePositionProvider] or [selectedAltitudeProvider] changes.
+/// [effectivePositionProvider] or [selectedAltitudeProvider] changes.
 ///
-/// Throws [StateError] if no GPS fix is available yet.
+/// Throws [StateError] if no position is available yet.
 ///
 /// Copied from [windData].
 @ProviderFor(windData)

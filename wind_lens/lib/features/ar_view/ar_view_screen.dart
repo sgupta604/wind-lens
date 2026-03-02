@@ -9,6 +9,7 @@ import 'package:wind_lens/core/models/view_mode.dart';
 import 'package:wind_lens/core/models/wind_data.dart';
 import 'package:wind_lens/core/providers/data_providers.dart';
 import 'package:wind_lens/core/providers/scene_provider.dart';
+import 'package:wind_lens/core/providers/location_override_provider.dart';
 import 'package:wind_lens/core/providers/sensor_providers.dart';
 import 'package:wind_lens/core/providers/service_providers.dart';
 import 'package:wind_lens/services/sky_detection/hsv_sky_detector.dart';
@@ -35,7 +36,7 @@ import 'widgets/particle_overlay.dart';
 /// Uses Riverpod for state management:
 /// - [sceneStateProvider] for composed wind/horizon/position data
 /// - [selectedAltitudeProvider] for user-selected altitude level
-/// - [stablePositionProvider] for GPS location display
+/// - [effectivePositionProvider] for GPS/override location display
 /// - [sensorNotifiersProvider] for high-frequency heading/pitch (60Hz)
 ///
 /// Local state (not managed by Riverpod):
@@ -165,8 +166,8 @@ class _ARViewScreenState extends ConsumerState<ARViewScreen> {
     // Watch sensor notifiers for heading/pitch values
     final sensorNotifiers = ref.watch(sensorNotifiersProvider);
 
-    // Watch stable position for GPS display in debug panel
-    final position = ref.watch(stablePositionProvider);
+    // Watch effective position (GPS or override) for display in debug panel
+    final position = ref.watch(effectivePositionProvider);
 
     // Watch sceneState for wind data (null while GPS/wind loading)
     final sceneState = ref.watch(sceneStateProvider);

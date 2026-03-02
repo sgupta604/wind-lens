@@ -7,23 +7,29 @@
 
 ## Current State
 
-**Current Feature:** location-picker
-**Current Phase:** plan-complete
-**Branch:** `feature/wind-dome-homescreen`
-**Next Command:** `/implement location-picker`
+**Current Feature:** location-picker (bug fixes + UX enhancement)
+**Current Phase:** implement-complete
+**Branch:** `feature/location-picker`
+**Next Command:** `/test location-picker`
 **Master:** Clean, all auto-discovered tests passing (exit code 0)
 
-### Current Pipeline: location-picker (map-based location override for wind data)
+### Current Pipeline: location-picker bug fixes (4 bugs + 1 UX enhancement from on-device testing)
 
 - [x] /research - Complete (2026-03-01) - Provider graph analysis, 4 new files, 5 modified, flutter_map already in deps
 - [x] /plan - Complete (2026-03-01) - 4 new source + 2 test files, 5 modified files, ~20 new tests, 6 phases, 15 tasks
-- [ ] /implement - Not started
-- [ ] /test - Not started
+- [x] /implement - Complete (2026-03-02) - 6 new source, 5 modified, 20 new tests, 786 total passing, zero analyzer errors
+- [x] /test - On-device testing found 4 bugs + 1 UX request
+- [x] /diagnose - Complete (2026-03-02) - Root cause: UI reads stablePositionProvider instead of effectivePositionProvider
+- [x] /plan (fix) - Complete (2026-03-02) - 4 modified + 2 new files, ~8 new tests, 5 phases, 11 tasks
+- [x] /implement (fix) - Complete (2026-03-02) - 4 bugs fixed, 1 UX enhancement, 5 new tests, 792 total passing, zero analyzer errors
+- [ ] /test (fix) - Not started
 - [ ] /finalize - Not started
 
 **Research Document:** `.claude/features/location-picker/2026-03-01T12:00_research.md`
-**Plan Document:** `.claude/features/location-picker/2026-03-01T12:30_plan.md`
+**Original Plan:** `.claude/features/location-picker/2026-03-01T12:30_plan.md`
+**Fix Plan:** `.claude/features/location-picker/2026-03-02T12:00_plan.md`
 **Tasks:** `.claude/features/location-picker/tasks.md`
+**Diagnosis:** `.claude/active-work/location-picker/diagnosis.md`
 
 ### Previous Pipeline: wind-dome-render-fixes (7 rendering/gesture fixes from on-device testing)
 

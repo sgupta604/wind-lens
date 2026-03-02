@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:wind_lens/core/providers/sensor_providers.dart';
 import 'package:wind_lens/features/ar_view/ar_view_screen.dart';
+import 'package:wind_lens/features/location_picker/location_picker_screen.dart';
 import 'package:wind_lens/features/wind_dome/wind_dome_screen.dart';
 
 import 'widgets/home_layer_toggles.dart';
@@ -63,6 +64,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
+  void _navigateToLocationPicker() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const LocationPickerScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final sensorNotifiers = ref.watch(sensorNotifiersProvider);
@@ -75,6 +82,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             HomeTopBar(
               onLiveArTap: _navigateToAR,
               onWindDomeTap: _navigateToWindDome,
+              onLocationTap: _navigateToLocationPicker,
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 28),

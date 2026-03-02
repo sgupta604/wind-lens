@@ -5,6 +5,7 @@ import 'package:wind_lens/core/providers/scene_provider.dart';
 import 'package:wind_lens/core/providers/sensor_providers.dart';
 import 'package:wind_lens/features/ar_view/ar_view_screen.dart';
 import 'package:wind_lens/features/home/home_screen.dart';
+import 'package:wind_lens/features/location_picker/location_picker_screen.dart';
 
 void main() {
   late SensorNotifiers testNotifiers;
@@ -92,6 +93,26 @@ void main() {
       await tester.pump();
 
       expect(find.text('Surface'), findsOneWidget);
+    });
+
+    testWidgets('shows location pin icon button', (tester) async {
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pump();
+
+      expect(find.bySemanticsLabel('Open location picker'), findsOneWidget);
+    });
+
+    testWidgets('Location button navigates to LocationPickerScreen on tap',
+        (tester) async {
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pump();
+
+      await tester.tap(find.bySemanticsLabel('Open location picker'));
+      // Use pump() not pumpAndSettle() -- animation controllers never settle
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(LocationPickerScreen), findsOneWidget);
     });
   });
 }

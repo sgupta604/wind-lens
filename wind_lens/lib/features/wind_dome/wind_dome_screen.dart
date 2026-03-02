@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/providers/sensor_providers.dart';
+import '../../core/providers/location_override_provider.dart';
 import '../../services/performance_manager.dart';
 import 'models/dome_constants.dart';
 import 'models/dome_particle.dart';
@@ -12,6 +12,7 @@ import 'providers/dome_providers.dart';
 import 'widgets/dome_forecast_slider.dart';
 import 'widgets/dome_info_bar.dart';
 import 'widgets/dome_painter.dart';
+import 'widgets/location_indicator_chip.dart';
 
 /// Full-screen 3D wind dome visualization on a black background.
 ///
@@ -163,7 +164,7 @@ class _WindDomeScreenState extends ConsumerState<WindDomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final position = ref.watch(stablePositionProvider);
+    final position = ref.watch(effectivePositionProvider);
     final profileAsync = ref.watch(domeWindProfileProvider);
 
     // Reactive dome radius: compute from domeSizeProvider
@@ -223,6 +224,13 @@ class _WindDomeScreenState extends ConsumerState<WindDomeScreen>
             child: DomeInfoBar(
               onBack: () => Navigator.of(context).pop(),
             ),
+          ),
+
+          // Location indicator chip (below info bar)
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 56,
+            left: 16,
+            child: const LocationIndicatorChip(),
           ),
 
           // Forecast slider (bottom)

@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/providers/sensor_providers.dart';
+import '../../../core/providers/location_override_provider.dart';
 import '../../../services/wind/dome_wind_fetcher.dart';
 import '../../../services/wind/wind_api_client.dart';
 import '../models/dome_wind_field.dart';
@@ -33,16 +33,17 @@ final domeSizeProvider = StateProvider<double>((ref) => 1000.0);
 /// no network call required.
 final hoursAheadProvider = StateProvider<int>((ref) => 0);
 
-/// Fetches the dome wind profile for the current GPS position.
+/// Fetches the dome wind profile for the effective position.
 ///
-/// Watches [stablePositionProvider] so it auto-refetches when the user
-/// moves >100m. Returns null while waiting for GPS fix.
+/// Watches [effectivePositionProvider] so it auto-refetches when the user
+/// moves >100m or sets a location override. Returns null while waiting
+/// for a position fix.
 ///
 /// The [DomeWindFetcher] caches results for 10 minutes, so rapid
 /// provider rebuilds do not trigger redundant API calls.
 final domeWindProfileProvider =
     FutureProvider<DomeWindProfile?>((ref) async {
-  final position = ref.watch(stablePositionProvider);
+  final position = ref.watch(effectivePositionProvider);
   if (position == null) return null;
 
   final fetcher = ref.watch(domeWindFetcherProvider);
