@@ -7,13 +7,13 @@
 
 ## Current State
 
-**Current Feature:** location-picker (bug fixes + UX enhancement)
-**Current Phase:** implement-complete
-**Branch:** `feature/location-picker`
-**Next Command:** `/test location-picker`
-**Master:** Clean, all auto-discovered tests passing (exit code 0)
+**Current Feature:** (none — ready for next feature)
+**Current Phase:** idle
+**Branch:** `master`
+**Next Command:** pick next feature from ROADMAP_PHASE2.md
+**Master:** Clean, all 746 auto-discovered tests passing, pushed to remote (be7a848)
 
-### Current Pipeline: location-picker bug fixes (4 bugs + 1 UX enhancement from on-device testing)
+### Completed Pipeline: location-picker (FINALIZED 2026-03-02)
 
 - [x] /research - Complete (2026-03-01) - Provider graph analysis, 4 new files, 5 modified, flutter_map already in deps
 - [x] /plan - Complete (2026-03-01) - 4 new source + 2 test files, 5 modified files, ~20 new tests, 6 phases, 15 tasks
@@ -22,8 +22,8 @@
 - [x] /diagnose - Complete (2026-03-02) - Root cause: UI reads stablePositionProvider instead of effectivePositionProvider
 - [x] /plan (fix) - Complete (2026-03-02) - 4 modified + 2 new files, ~8 new tests, 5 phases, 11 tasks
 - [x] /implement (fix) - Complete (2026-03-02) - 4 bugs fixed, 1 UX enhancement, 5 new tests, 792 total passing, zero analyzer errors
-- [ ] /test (fix) - Not started
-- [ ] /finalize - Not started
+- [x] /test (fix) - Complete (2026-03-02) - 746 tests passing, 0 failures, 0 analyzer errors
+- [x] /finalize - Complete (2026-03-02) - Committed eb67ef0, merged to master be7a848, pushed to remote
 
 **Research Document:** `.claude/features/location-picker/2026-03-01T12:00_research.md`
 **Original Plan:** `.claude/features/location-picker/2026-03-01T12:30_plan.md`
@@ -444,6 +444,8 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 | gimbal-lock v2 | Heading freeze at high pitch angles — hysteresis lock (replaces v1 soft blend) | DONE (2026-02-25) |
 | P2B-006 | real-wind-data (OGC EDR — Shyft primary, Folkweather fallback) | DONE (2026-02-26) |
 | home-screen | HomeScreen landing page, Shyft Lens branding, terrain panorama, animated particles | DONE (2026-02-26) |
+| wind-dome | 3D wind dome visualization, dome painter, altitude rings, real wind data | DONE (2026-03-01) |
+| location-picker | OSM map picker, location override provider, effectivePositionProvider, GPS chain fix, LocationIndicatorChip | DONE (2026-03-02) |
 
 ---
 
