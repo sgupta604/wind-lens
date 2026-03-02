@@ -12,10 +12,14 @@ class HomeTopBar extends StatefulWidget {
   /// Callback invoked when the Wind Dome button is tapped.
   final VoidCallback? onWindDomeTap;
 
+  /// Callback invoked when the Location picker button is tapped.
+  final VoidCallback? onLocationTap;
+
   const HomeTopBar({
     super.key,
     required this.onLiveArTap,
     this.onWindDomeTap,
+    this.onLocationTap,
   });
 
   @override
@@ -82,6 +86,38 @@ class _HomeTopBarState extends State<HomeTopBar>
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Location picker button
+              if (widget.onLocationTap != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Semantics(
+                    label: 'Open location picker',
+                    button: true,
+                    child: GestureDetector(
+                      onTap: widget.onLocationTap,
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.transparent,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Center(
+                          child: Image.asset(
+                            'assets/icons/location_pin.png',
+                            width: 20,
+                            height: 20,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
               // Wind Dome button
               if (widget.onWindDomeTap != null)
                 Padding(
