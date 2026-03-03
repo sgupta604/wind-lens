@@ -86,7 +86,7 @@ void main() {
       expect(fakeClient.capturedLevels, [850]);
     });
 
-    test('getWind with AltitudeLevel.jetStream passes pressureLevel 300', () async {
+    test('getWind with AltitudeLevel.jetStream passes pressureLevel 250', () async {
       final fakeClient = FakeWindApiClient();
       final source = OgcEdrWindDataSource(apiClient: fakeClient);
 
@@ -95,7 +95,7 @@ void main() {
         altitude: AltitudeLevel.jetStream,
       );
 
-      expect(fakeClient.capturedLevels, [300]);
+      expect(fakeClient.capturedLevels, [250]);
     });
 
     test('getWind returns WindData with correct u/v from API', () async {

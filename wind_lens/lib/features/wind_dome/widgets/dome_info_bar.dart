@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/data_providers.dart';
 import '../models/dome_wind_field.dart';
 import '../providers/dome_providers.dart';
 
@@ -29,9 +30,14 @@ class DomeInfoBar extends ConsumerWidget {
     final windField = ref.watch(currentDomeWindFieldProvider);
     final hoursAhead = ref.watch(hoursAheadProvider);
     final currentSize = ref.watch(domeSizeProvider);
+    final arWind = ref.watch(windDataProvider);
 
-    final windSpeed = _surfaceSpeed(windField);
     final isLive = hoursAhead == 0;
+    // When live (hoursAhead == 0), display the AR wind speed for consistency.
+    // When in forecast mode, use the dome's own time-series surface speed.
+    final windSpeed = isLive
+        ? (arWind.valueOrNull?.speed ?? _surfaceSpeed(windField))
+        : _surfaceSpeed(windField);
 
     return Semantics(
       label:

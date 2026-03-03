@@ -12,6 +12,7 @@ import 'package:wind_lens/core/providers/scene_provider.dart';
 import 'package:wind_lens/core/providers/location_override_provider.dart';
 import 'package:wind_lens/core/providers/sensor_providers.dart';
 import 'package:wind_lens/core/providers/service_providers.dart';
+import 'package:wind_lens/core/widgets/location_indicator_chip.dart';
 import 'package:wind_lens/services/sky_detection/hsv_sky_detector.dart';
 import 'widgets/altitude_slider.dart';
 import 'widgets/camera_view.dart';
@@ -284,6 +285,13 @@ class _ARViewScreenState extends ConsumerState<ARViewScreen> {
                   hasPosition: position != null,
                 ),
               ),
+            ),
+
+            // Layer 9: Location indicator chip (top-right)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 8,
+              right: 16,
+              child: const LocationIndicatorChip(),
             ),
           ],
         ),

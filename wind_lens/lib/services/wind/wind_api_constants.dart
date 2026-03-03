@@ -72,7 +72,7 @@ class WindApiConstants {
   /// Folkweather pressure levels available on HRRR (not on GFS).
   /// Route these levels to [folkHrrrIsobaricCollection].
   /// All other levels route to [folkGfsIsobaricCollection].
-  static const folkHrrrLevels = {850, 925, 1000};
+  static const folkHrrrLevels = {250, 300, 500, 700, 850, 925, 1000};
 
   /// Private constructor to prevent instantiation.
   WindApiConstants._();
