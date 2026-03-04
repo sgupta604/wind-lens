@@ -13,6 +13,7 @@ const _sizePresets = <(String, double)>[
   ('500m', 500.0),
   ('1km', 1000.0),
   ('2km', 2000.0),
+  ('5km', 5000.0),
 ];
 
 /// Top info bar showing wind speed, live/forecast badge, back button, and

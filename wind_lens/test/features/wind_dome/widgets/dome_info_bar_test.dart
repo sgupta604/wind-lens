@@ -60,11 +60,12 @@ void main() {
     });
 
     group('size preset buttons', () {
-      testWidgets('renders three size preset buttons', (tester) async {
+      testWidgets('renders four size preset buttons', (tester) async {
         await tester.pumpWidget(_buildWidget());
         expect(find.text('500m'), findsOneWidget);
         expect(find.text('1km'), findsOneWidget);
         expect(find.text('2km'), findsOneWidget);
+        expect(find.text('5km'), findsOneWidget);
       });
 
       testWidgets('tapping 500m updates domeSizeProvider', (tester) async {
@@ -99,15 +100,47 @@ void main() {
         expect(container.read(domeSizeProvider), 500.0);
       });
 
+      testWidgets('tapping 5km updates domeSizeProvider', (tester) async {
+        late ProviderContainer container;
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              currentDomeWindFieldProvider.overrideWith((ref) => null),
+              hoursAheadProvider.overrideWith((ref) => 0),
+            ],
+            child: MaterialApp(
+              home: Scaffold(
+                body: Consumer(
+                  builder: (context, ref, _) {
+                    container = ProviderScope.containerOf(context);
+                    return DomeInfoBar(onBack: () {});
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+
+        // Default should be 1000.0
+        expect(container.read(domeSizeProvider), 1000.0);
+
+        // Tap the 5km button
+        await tester.tap(find.text('5km'));
+        await tester.pump();
+
+        expect(container.read(domeSizeProvider), 5000.0);
+      });
+
       testWidgets('active preset is visually distinct', (tester) async {
         await tester.pumpWidget(_buildWidget());
 
         // The default is 1000.0, so "1km" should be the active button.
         // We verify by checking that the "1km" text widget exists and
-        // that there are exactly 3 size buttons rendered.
-        expect(find.text('1km'), findsOneWidget);
+        // that there are exactly 4 size buttons rendered.
         expect(find.text('500m'), findsOneWidget);
+        expect(find.text('1km'), findsOneWidget);
         expect(find.text('2km'), findsOneWidget);
+        expect(find.text('5km'), findsOneWidget);
       });
     });
 

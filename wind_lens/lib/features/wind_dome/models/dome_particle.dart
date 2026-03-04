@@ -117,8 +117,10 @@ class DomeParticle {
     final wind = field.sample(x, y, z);
 
     // Apply wind velocity (render-units/second via velocityScale)
+    // +u = eastward  -> +x = East  (same sign, no flip needed)
+    // +v = northward -> -z = North (opposite sign, negate v)
     x += wind.u * DomeConstants.velocityScale * dt;
-    z += wind.v * DomeConstants.velocityScale * dt;
+    z -= wind.v * DomeConstants.velocityScale * dt;
 
     // Gentle updraft: increases with altitude (prototype line 249)
     y += (DomeConstants.updraftBase +

@@ -175,6 +175,32 @@ void main() {
         );
         recorder.endRecording();
       });
+
+      test('paint() with domeR=90.0 (5km preset) renders without throwing', () {
+        // 5000m / metersPerRenderUnit = 90.0 render units
+        const xlDomeR = 90.0;
+        const xlDomeH = xlDomeR * (14.0 / 18.0); // maintain ratio
+
+        final painter = DomePainter(
+          particles: [],
+          theta: DomeConstants.defaultTheta,
+          phi: DomeConstants.defaultPhi,
+          camR: DomeConstants.camR,
+          domeR: xlDomeR,
+          domeH: xlDomeH,
+          time: 2.0,
+        );
+
+        final recorder = ui.PictureRecorder();
+        final canvas = Canvas(recorder);
+        const size = Size(400, 800);
+
+        expect(
+          () => painter.paint(canvas, size),
+          returnsNormally,
+        );
+        recorder.endRecording();
+      });
     });
 
     group('compass rose', () {
