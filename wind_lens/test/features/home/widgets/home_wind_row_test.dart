@@ -79,10 +79,10 @@ void main() {
       expect(find.text('9.7'), findsOneWidget);
     });
 
-    testWidgets('shows cardinal direction when wind data available',
+    testWidgets('shows wind flow direction (toward) when wind data available',
         (tester) async {
-      // u=-7.2, v=-6.5: direction = atan2(7.2, 6.5) * 180/pi + 360 % 360
-      // = ~47.9 degrees -> NE
+      // u=-7.2, v=-6.5: meteorological "from" = ~47.9° (NE)
+      // Flow direction (toward) = 47.9 + 180 = ~227.9° -> SW
       final scene = _makeScene(uComponent: -7.2, vComponent: -6.5);
 
       await tester.pumpWidget(
@@ -96,7 +96,7 @@ void main() {
         ),
       );
 
-      expect(find.text('NE'), findsOneWidget);
+      expect(find.text('SW'), findsOneWidget);
     });
 
     testWidgets('shows altitude label matching selectedAltitudeProvider',

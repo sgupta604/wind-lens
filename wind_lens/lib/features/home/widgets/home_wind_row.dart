@@ -35,11 +35,15 @@ class HomeWindRow extends ConsumerWidget {
 
     final wind = sceneState?.wind;
     final speedValue = wind != null ? wind.speed.toStringAsFixed(1) : '--';
+    // Show wind flow direction (where it's headed), not meteorological "from".
+    final towardDegrees = wind != null
+        ? (wind.directionDegrees + 180) % 360
+        : 0.0;
     final directionValue = wind != null
-        ? degreesToCardinal(wind.directionDegrees)
+        ? degreesToCardinal(towardDegrees)
         : '--';
     final bearingText = wind != null
-        ? 'bearing ${wind.directionDegrees.round()}\u00B0'
+        ? 'toward ${towardDegrees.round()}\u00B0'
         : '';
     final altitudeValue = _altitudeValue(selectedAltitude);
 
@@ -70,8 +74,8 @@ class HomeWindRow extends ConsumerWidget {
             Expanded(
               child: Semantics(
                 label: wind != null
-                    ? 'Wind direction $directionValue'
-                    : 'Wind direction loading',
+                    ? 'Wind heading $directionValue'
+                    : 'Wind heading loading',
                 child: _DataColumn(
                   label: 'DIRECTION',
                   value: directionValue,
