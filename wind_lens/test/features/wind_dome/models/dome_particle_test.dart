@@ -185,6 +185,50 @@ void main() {
         expect(p.y, closeTo(0.01 + DomeConstants.updraftBase, 0.02));
       });
 
+      test('positive v (northward wind) moves particle in -z direction', () {
+        final northwardField = DomeWindField(
+          validTime: DateTime.utc(2026),
+          layers: const [
+            DomeWindLayer(altitudeMeters: 0, u: 0.0, v: 10.0),
+            DomeWindLayer(altitudeMeters: 1800, u: 0.0, v: 10.0),
+          ],
+        );
+        final p = DomeParticle();
+        p.x = 0;
+        p.y = 1.0;
+        p.z = 0;
+
+        p.tick(northwardField, 1.0 / 60, domeR, domeH, rng: Random(42));
+
+        // +v = northward, North = -z in dome space
+        expect(p.z, lessThan(0),
+            reason: 'Northward wind should move particle toward -z (North)');
+        expect(p.x, closeTo(0, 0.001),
+            reason: 'Zero u should not move particle in x');
+      });
+
+      test('positive u (eastward wind) moves particle in +x direction', () {
+        final eastwardField = DomeWindField(
+          validTime: DateTime.utc(2026),
+          layers: const [
+            DomeWindLayer(altitudeMeters: 0, u: 10.0, v: 0.0),
+            DomeWindLayer(altitudeMeters: 1800, u: 10.0, v: 0.0),
+          ],
+        );
+        final p = DomeParticle();
+        p.x = 0;
+        p.y = 1.0;
+        p.z = 0;
+
+        p.tick(eastwardField, 1.0 / 60, domeR, domeH, rng: Random(42));
+
+        // +u = eastward, East = +x in dome space
+        expect(p.x, greaterThan(0),
+            reason: 'Eastward wind should move particle toward +x (East)');
+        expect(p.z, closeTo(0, 0.001),
+            reason: 'Zero v should not move particle in z');
+      });
+
       test('containment uses 1.02x margin', () {
         // Place particle just outside the dome at 1.01x radius (inside 1.02x margin)
         final p = DomeParticle();

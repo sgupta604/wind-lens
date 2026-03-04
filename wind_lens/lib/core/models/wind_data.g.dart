@@ -27,5 +27,8 @@ Map<String, dynamic> _$$WindDataImplToJson(_$WindDataImpl instance) =>
 const _$AltitudeLevelEnumMap = {
   AltitudeLevel.surface: 'surface',
   AltitudeLevel.midLevel: 'midLevel',
+  AltitudeLevel.level700: 'level700',
+  AltitudeLevel.level500: 'level500',
+  AltitudeLevel.level300: 'level300',
   AltitudeLevel.jetStream: 'jetStream',
 };

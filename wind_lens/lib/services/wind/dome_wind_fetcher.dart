@@ -1,3 +1,5 @@
+import 'dart:developer' show log;
+
 import 'wind_api_client.dart';
 import '../../features/wind_dome/models/dome_wind_field.dart';
 import '../../features/wind_dome/models/dome_wind_layer.dart';
@@ -69,6 +71,11 @@ class DomeWindFetcher {
         ),
       );
 
+      log('DomeWindFetcher: ${seriesList[0].length} surface, '
+          '${seriesList[1].length} 850hPa, '
+          '${seriesList[2].length} 700hPa timesteps',
+          name: 'DomeWindFetcher');
+
       // Determine the max number of timesteps across all levels
       int maxSteps = 0;
       for (final series in seriesList) {
@@ -114,6 +121,14 @@ class DomeWindFetcher {
               DateTime.now().toUtc().add(Duration(hours: t)),
           layers: layers,
         ));
+      }
+
+      if (hourlyFields.length > 1) {
+        final first = hourlyFields.first.layers.first;
+        final last = hourlyFields.last.layers.first;
+        log('DomeWindFetcher: hour0 u=${first.u.toStringAsFixed(2)} v=${first.v.toStringAsFixed(2)}, '
+            'hourN u=${last.u.toStringAsFixed(2)} v=${last.v.toStringAsFixed(2)}',
+            name: 'DomeWindFetcher');
       }
 
       final profile = DomeWindProfile(

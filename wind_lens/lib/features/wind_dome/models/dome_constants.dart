@@ -32,6 +32,12 @@ class DomeConstants {
   /// Derived from prototype: 0.012 render-units per m/s per frame at 60fps.
   /// velocityScale = 0.012 * 60 = 0.72.
   /// Usage: x += wind.u * velocityScale * dt
+  ///
+  /// Speed-up factor: particles cross the dome ~20x faster than real wind.
+  /// At 5 m/s in a 1km dome (domeR=18): 3.6 RU/s, crossing 36 RU diameter
+  /// in 10s vs real-world 200s. This ratio is constant across all dome sizes
+  /// because tick() operates in render-units and the dome scales linearly
+  /// (bigger dome = larger domeR = same RU velocity but more RU to cross).
   static const double velocityScale = 0.72;
 
   /// Base vertical drift rate in render-units per second.

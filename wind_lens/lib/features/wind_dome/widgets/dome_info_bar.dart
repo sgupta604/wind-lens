@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/data_providers.dart';
+import '../models/dome_constants.dart';
 import '../models/dome_wind_field.dart';
 import '../providers/dome_providers.dart';
 
@@ -11,6 +13,7 @@ const _sizePresets = <(String, double)>[
   ('500m', 500.0),
   ('1km', 1000.0),
   ('2km', 2000.0),
+  ('5km', 5000.0),
 ];
 
 /// Top info bar showing wind speed, live/forecast badge, back button, and
@@ -29,9 +32,14 @@ class DomeInfoBar extends ConsumerWidget {
     final windField = ref.watch(currentDomeWindFieldProvider);
     final hoursAhead = ref.watch(hoursAheadProvider);
     final currentSize = ref.watch(domeSizeProvider);
+    final arWind = ref.watch(windDataProvider);
 
-    final windSpeed = _surfaceSpeed(windField);
     final isLive = hoursAhead == 0;
+    // When live (hoursAhead == 0), display the AR wind speed for consistency.
+    // When in forecast mode, use the dome's own time-series surface speed.
+    final windSpeed = isLive
+        ? (arWind.valueOrNull?.speed ?? _surfaceSpeed(windField))
+        : _surfaceSpeed(windField);
 
     return Semantics(
       label:
@@ -130,6 +138,21 @@ class DomeInfoBar extends ConsumerWidget {
                     const SizedBox(width: 8),
                 ],
               ],
+            ),
+
+            const SizedBox(height: 4),
+
+            // Altitude range label
+            Semantics(
+              label: 'Dome altitude range: Surface to ${DomeConstants.maxAltitudeMeters.toInt()} meters',
+              child: Text(
+                'Surface \u2013 ${DomeConstants.maxAltitudeMeters.toInt()}m',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.54),
+                  fontSize: 10,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
           ],
         ),

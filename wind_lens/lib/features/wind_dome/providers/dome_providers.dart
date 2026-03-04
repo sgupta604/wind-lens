@@ -17,7 +17,7 @@ final domeWindFetcherProvider = Provider<DomeWindFetcher>((ref) {
 
 /// User-selected dome radius in meters.
 ///
-/// Presets: 500, 1000, 2000. Default is 1000.0 (1km), which matches
+/// Presets: 500, 1000, 2000, 5000. Default is 1000.0 (1km), which matches
 /// the "1km" preset button exactly for clean UX.
 ///
 /// Drives:

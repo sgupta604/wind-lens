@@ -309,7 +309,7 @@ void main() {
       expect(capturedUrl, contains('hrrr-isobaric'));
     });
 
-    test('Folkweather 300 routes to gfs-isobaric-latest', () async {
+    test('Folkweather 300 routes to hrrr-isobaric', () async {
       String? capturedUrl;
       final client = WindApiClient(
         client: MockClient((request) async {
@@ -327,7 +327,7 @@ void main() {
         pressureLevel: 300,
       );
 
-      expect(capturedUrl, contains('gfs-isobaric-latest'));
+      expect(capturedUrl, contains('hrrr-isobaric'));
     });
 
     test('Folkweather surface routes to hrrr-height-agl with z=10', () async {
