@@ -61,12 +61,17 @@ final windDataSourceProvider = AutoDisposeProvider<WindDataSource>.internal(
 // ignore: unused_element
 typedef WindDataSourceRef = AutoDisposeProviderRef<WindDataSource>;
 String _$horizonProviderServiceHash() =>
-    r'1f443851585f0528244abdf5685065fb76b7b63e';
+    r'05bf5f34675270ff9b66fab014deec96f1a5691d';
 
 /// Provides the [HorizonProvider] implementation.
 ///
-/// Currently returns [MockHorizonProvider] which returns flat horizons.
-/// Swap when HeyWhatsThat client is ready.
+/// Returns [CachedHorizonProvider] wrapping [HwtHorizonProvider] which
+/// fetches real terrain horizon profiles from the HeyWhatsThat API.
+/// The cache uses 3-decimal-place lat/lng keys (~111m resolution) with
+/// no expiry (terrain does not change).
+///
+/// The [HwtHorizonProvider] HTTP client is disposed when this provider
+/// is no longer watched.
 ///
 /// Copied from [horizonProviderService].
 @ProviderFor(horizonProviderService)

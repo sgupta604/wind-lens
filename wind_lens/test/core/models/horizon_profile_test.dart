@@ -204,5 +204,54 @@ void main() {
         expect(restored, equals(original));
       });
     });
+
+    group('declination and panoramaId fields', () {
+      test('declination defaults to 0.0', () {
+        final profile = HorizonProfile(
+          latitude: 37.0,
+          longitude: -122.0,
+          elevationAngles: {0.0: 5.0},
+          fetchedAt: timestamp,
+        );
+
+        expect(profile.declination, 0.0);
+      });
+
+      test('panoramaId defaults to null', () {
+        final profile = HorizonProfile(
+          latitude: 37.0,
+          longitude: -122.0,
+          elevationAngles: {0.0: 5.0},
+          fetchedAt: timestamp,
+        );
+
+        expect(profile.panoramaId, isNull);
+      });
+
+      test('JSON round-trip preserves declination and panoramaId', () {
+        final original = HorizonProfile(
+          latitude: 47.6062,
+          longitude: -122.3321,
+          elevationAngles: {0.0: 5.0, 90.0: 10.0},
+          fetchedAt: timestamp,
+          declination: 15.0,
+          panoramaId: 'RDJCX2LU',
+        );
+
+        final json = original.toJson();
+        final restored = HorizonProfile.fromJson(json);
+
+        expect(restored, equals(original));
+        expect(restored.declination, 15.0);
+        expect(restored.panoramaId, 'RDJCX2LU');
+      });
+
+      test('flat() factory has declination 0.0 and panoramaId null', () {
+        final profile = HorizonProfile.flat(37.0, -122.0);
+
+        expect(profile.declination, 0.0);
+        expect(profile.panoramaId, isNull);
+      });
+    });
   });
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:wind_lens/core/models/horizon_profile.dart';
+import 'package:wind_lens/core/providers/data_providers.dart';
 import 'package:wind_lens/core/providers/sensor_providers.dart';
 
 import 'home_altitude_rail.dart';
@@ -11,17 +13,19 @@ import 'home_particle_painter.dart';
 ///
 /// Contains a [Stack] with layers (bottom to top):
 /// 1. Grid overlay (faint lines)
-/// 2. Terrain silhouette (procedural bezier)
+/// 2. Terrain silhouette (procedural bezier or real HeyWhatsThat data)
 /// 3. Animated particles
 /// 4. Altitude rail (right edge)
 /// 5. Compass bar (bottom edge)
+/// 6. Loading indicator (during terrain fetch)
 ///
 /// Decorative painters are wrapped in [ExcludeSemantics] since they
 /// provide no meaningful information to screen readers.
 ///
-/// Stateful so it owns the [HomeParticleState] which must survive
-/// across painter recreations (Flutter creates a new painter each build).
-class HomeTerrainSection extends StatefulWidget {
+/// ConsumerStatefulWidget so it can watch [horizonProfileProvider] and
+/// own [HomeParticleState] which must survive across painter recreations
+/// (Flutter creates a new painter each build).
+class HomeTerrainSection extends ConsumerStatefulWidget {
   /// The animation controller driving particle rendering.
   final AnimationController particleController;
 
@@ -35,14 +39,19 @@ class HomeTerrainSection extends StatefulWidget {
   });
 
   @override
-  State<HomeTerrainSection> createState() => _HomeTerrainSectionState();
+  ConsumerState<HomeTerrainSection> createState() =>
+      _HomeTerrainSectionState();
 }
 
-class _HomeTerrainSectionState extends State<HomeTerrainSection> {
+class _HomeTerrainSectionState extends ConsumerState<HomeTerrainSection> {
   final HomeParticleState _particleState = HomeParticleState();
 
   @override
   Widget build(BuildContext context) {
+    final horizonAsync = ref.watch(horizonProfileProvider);
+    final profile = horizonAsync.valueOrNull;
+    final isLoading = horizonAsync is AsyncLoading;
+
     return ExcludeSemantics(
       excluding: false,
       child: Stack(
@@ -60,7 +69,7 @@ class _HomeTerrainSectionState extends State<HomeTerrainSection> {
           Positioned.fill(
             child: ExcludeSemantics(
               child: CustomPaint(
-                painter: HomeTerrainPainter(),
+                painter: HomeTerrainPainter(profile: profile),
               ),
             ),
           ),
@@ -94,6 +103,24 @@ class _HomeTerrainSectionState extends State<HomeTerrainSection> {
               headingNotifier: widget.sensorNotifiers.heading,
             ),
           ),
+
+          // Layer 5: Loading indicator (during terrain fetch)
+          if (isLoading)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 40,
+              child: Center(
+                child: Text(
+                  'Computing terrain...',
+                  style: TextStyle(
+                    fontFamily: 'DM Mono',
+                    fontSize: 10,
+                    color: const Color(0xFF888888),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -128,28 +155,25 @@ class _HomeGridPainter extends CustomPainter {
   bool shouldRepaint(_HomeGridPainter oldDelegate) => false;
 }
 
-/// Procedural terrain silhouette painter.
+/// Terrain silhouette painter with real data and procedural fallback.
 ///
-/// Draws a decorative mountain/terrain shape using bezier curves.
-/// Accepts an optional [HorizonProfile] for future swap-in with
-/// real terrain data from HeyWhatsThat.
+/// When [profile] is non-null, draws a terrain silhouette generated from
+/// real HeyWhatsThat elevation data (360 bearing-to-elevation entries).
+/// When [profile] is null, uses a hardcoded decorative bezier path.
 ///
-/// When [profile] is null (default), uses a hardcoded decorative path.
-/// When non-null, the path would be generated from real elevation data.
-///
-/// Fill: LinearGradient #2a2a2a (ridge) → #111111 (base).
-/// Ridge glow: 2-pass — soft ambient (width 6, 4% white) then crisp (width 1, #666).
+/// Fill: LinearGradient #2a2a2a (ridge) -> #111111 (base).
+/// Ridge glow: 2-pass -- soft ambient (width 6, 4% white) then crisp (width 1, #666).
 /// Horizon line: 1px at height * 0.60, rgba(255,255,255,0.08).
 /// Sky atmosphere: subtle radial gradient in upper portion.
 class HomeTerrainPainter extends CustomPainter {
-  /// Optional horizon profile for real terrain data (future).
+  /// Optional horizon profile for real terrain data.
   final HorizonProfile? profile;
 
   HomeTerrainPainter({this.profile});
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Sky atmosphere — subtle radial gradient in upper sky area
+    // Sky atmosphere -- subtle radial gradient in upper sky area
     final atmospherePaint = Paint()
       ..shader = RadialGradient(
         center: const Alignment(0.0, -0.3),
@@ -175,7 +199,7 @@ class HomeTerrainPainter extends CustomPainter {
       horizonPaint,
     );
 
-    // Terrain fill — gradient from ridge (#2a2a2a) to base (#111111)
+    // Terrain fill -- gradient from ridge (#2a2a2a) to base (#111111)
     final path = _buildTerrainPath(size);
     final bounds = path.getBounds();
     final fillPaint = Paint()
@@ -187,7 +211,7 @@ class HomeTerrainPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
     canvas.drawPath(path, fillPaint);
 
-    // Ridge glow — pass 1: soft ambient
+    // Ridge glow -- pass 1: soft ambient
     final ridgePath = _buildRidgePath(size);
     final glowPaint = Paint()
       ..color = const Color.fromRGBO(255, 255, 255, 0.04)
@@ -196,7 +220,7 @@ class HomeTerrainPainter extends CustomPainter {
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0);
     canvas.drawPath(ridgePath, glowPaint);
 
-    // Ridge glow — pass 2: crisp highlight
+    // Ridge glow -- pass 2: crisp highlight
     final ridgePaint = Paint()
       ..color = const Color(0xFF666666)
       ..style = PaintingStyle.stroke
@@ -204,8 +228,117 @@ class HomeTerrainPainter extends CustomPainter {
     canvas.drawPath(ridgePath, ridgePaint);
   }
 
-  /// Terrain moved up — tallest peak at ~35% from top (was 30% from bottom).
+  /// Builds the filled terrain path.
+  ///
+  /// When [profile] is non-null, generates path from real elevation data.
+  /// When null, falls back to the hardcoded procedural bezier path.
   Path _buildTerrainPath(Size size) {
+    if (profile != null) {
+      return _buildProfileTerrainPath(size, profile!);
+    }
+    return _buildProceduralTerrainPath(size);
+  }
+
+  /// Builds the ridge (top edge) path for glow rendering.
+  ///
+  /// When [profile] is non-null, generates ridge from real elevation data.
+  /// When null, falls back to the hardcoded procedural bezier ridge.
+  Path _buildRidgePath(Size size) {
+    if (profile != null) {
+      return _buildProfileRidgePath(size, profile!);
+    }
+    return _buildProceduralRidgePath(size);
+  }
+
+  // ---- Real data paths from HorizonProfile ----
+
+  /// Elevation range constants for mapping elevation angles to Y coordinates.
+  ///
+  /// Elevations below [_minElev] are clamped to the ground ceiling.
+  /// Elevations above [_maxElev] are clamped to the sky floor.
+  static const _minElev = -5.0;
+  static const _maxElev = 30.0;
+
+  /// Fraction of canvas height reserved as sky headroom at top.
+  static const _skyFloor = 0.20;
+
+  /// Fraction of canvas height where ground starts at bottom.
+  static const _groundCeiling = 0.85;
+
+  /// Maps an elevation angle to a Y coordinate on the canvas.
+  ///
+  /// Higher elevation = higher on screen (lower Y value).
+  /// Clamps to [_minElev, _maxElev] range.
+  double _elevToY(double elevation, double height) {
+    final clamped = elevation.clamp(_minElev, _maxElev);
+    final t = (clamped - _minElev) / (_maxElev - _minElev);
+    // t=0 (min elev) -> groundCeiling, t=1 (max elev) -> skyFloor
+    return height * (_groundCeiling - t * (_groundCeiling - _skyFloor));
+  }
+
+  /// Builds a filled terrain path from real elevation data.
+  ///
+  /// Loops 0-360 degrees, queries [profile.getElevationAtBearing] for
+  /// each degree, and maps to canvas coordinates. The path is closed
+  /// along the bottom edge.
+  Path _buildProfileTerrainPath(Size size, HorizonProfile p) {
+    final path = Path();
+    path.moveTo(0, size.height); // bottom-left
+
+    for (int bearing = 0; bearing < 360; bearing++) {
+      final elev = p.getElevationAtBearing(bearing.toDouble());
+      final x = (bearing / 360) * size.width;
+      final y = _elevToY(elev, size.height);
+
+      if (bearing == 0) {
+        path.lineTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+
+    path.lineTo(size.width, _elevToY(
+      p.getElevationAtBearing(0), size.height,
+    )); // wrap to bearing 0
+    path.lineTo(size.width, size.height); // bottom-right
+    path.close();
+
+    return path;
+  }
+
+  /// Builds a ridge (top edge only) path from real elevation data.
+  ///
+  /// Same mapping as [_buildProfileTerrainPath] but without the bottom
+  /// edge closure -- used for the glow/highlight stroke.
+  Path _buildProfileRidgePath(Size size, HorizonProfile p) {
+    final ridgePath = Path();
+
+    for (int bearing = 0; bearing < 360; bearing++) {
+      final elev = p.getElevationAtBearing(bearing.toDouble());
+      final x = (bearing / 360) * size.width;
+      final y = _elevToY(elev, size.height);
+
+      if (bearing == 0) {
+        ridgePath.moveTo(x, y);
+      } else {
+        ridgePath.lineTo(x, y);
+      }
+    }
+
+    // Close to bearing 0 at the right edge
+    ridgePath.lineTo(size.width, _elevToY(
+      p.getElevationAtBearing(0), size.height,
+    ));
+
+    return ridgePath;
+  }
+
+  // ---- Procedural bezier paths (fallback when no profile) ----
+
+  /// Hardcoded decorative terrain path with bezier curves.
+  ///
+  /// Tallest peak at ~35% from top (was 30% from bottom).
+  Path _buildProceduralTerrainPath(Size size) {
     final path = Path();
     path.moveTo(0, size.height); // bottom-left
 
@@ -249,7 +382,8 @@ class HomeTerrainPainter extends CustomPainter {
     return path;
   }
 
-  Path _buildRidgePath(Size size) {
+  /// Hardcoded decorative ridge path with bezier curves.
+  Path _buildProceduralRidgePath(Size size) {
     final ridgePath = Path();
     ridgePath.moveTo(0, size.height * 0.66);
     ridgePath.quadraticBezierTo(
@@ -283,5 +417,6 @@ class HomeTerrainPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(HomeTerrainPainter oldDelegate) => false;
+  bool shouldRepaint(HomeTerrainPainter oldDelegate) =>
+      profile != oldDelegate.profile;
 }
