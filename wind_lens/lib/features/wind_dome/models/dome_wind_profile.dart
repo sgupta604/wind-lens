@@ -21,12 +21,17 @@ class DomeWindProfile {
   /// Longitude of the fetch point (for cache key).
   final double lng;
 
+  /// Dome radius this profile was fetched for (meters).
+  /// Used to detect stale data when dome size changes.
+  final double? radiusMeters;
+
   /// Creates a wind profile with the given hourly fields.
   DomeWindProfile({
     required this.hourly,
     required this.fetchedAt,
     required this.lat,
     required this.lng,
+    this.radiusMeters,
   });
 
   /// Returns the wind field for [hoursAhead] with clamping.

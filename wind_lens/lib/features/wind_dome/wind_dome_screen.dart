@@ -247,18 +247,18 @@ class _WindDomeScreenState extends ConsumerState<WindDomeScreen>
             child: const DomeForecastSlider(),
           ),
 
-          // Loading indicator
+          // Loading indicator (above forecast slider)
           if (profileAsync.isLoading)
             Positioned(
-              top: MediaQuery.of(context).padding.top + 60,
+              bottom: MediaQuery.of(context).padding.bottom + 72,
               left: 0,
               right: 0,
               child: const Center(
                 child: Text(
                   'Loading wind data...',
                   style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 12,
+                    color: Colors.white70,
+                    fontSize: 13,
                   ),
                 ),
               ),

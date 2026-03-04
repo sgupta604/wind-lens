@@ -65,8 +65,16 @@ final domeWindProfileProvider =
 ///
 /// This is what the tick loop reads every frame -- no network, instant.
 final currentDomeWindFieldProvider = Provider<DomeWindField?>((ref) {
-  final profile = ref.watch(domeWindProfileProvider).valueOrNull;
+  final asyncProfile = ref.watch(domeWindProfileProvider);
+  final profile = asyncProfile.valueOrNull;
   if (profile == null) return null;
+
+  // If the profile was fetched for a different dome size, return null
+  // to avoid showing stale data (e.g. 5km point data in a 15km dome).
+  final domeSize = ref.watch(domeSizeProvider);
+  if (profile.radiusMeters != null && profile.radiusMeters != domeSize) {
+    return null;
+  }
 
   final hours = ref.watch(hoursAheadProvider);
   return profile.fieldAt(hours);

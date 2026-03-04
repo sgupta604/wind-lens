@@ -79,7 +79,7 @@ class DomeWindFetcher {
     if (isGrid) {
       profile = await _fetchGrid(lat, lng, radiusMeters);
     } else {
-      profile = await _fetchPoint(lat, lng);
+      profile = await _fetchPoint(lat, lng, radiusMeters);
     }
 
     // Cache result
@@ -91,7 +91,7 @@ class DomeWindFetcher {
   }
 
   /// Fetches point-based wind data (existing behavior).
-  Future<DomeWindProfile> _fetchPoint(double lat, double lng) async {
+  Future<DomeWindProfile> _fetchPoint(double lat, double lng, double radiusMeters) async {
     try {
       // Fetch 3 pressure levels in parallel
       final seriesList = await Future.wait(
@@ -118,7 +118,7 @@ class DomeWindFetcher {
 
       if (maxSteps == 0) {
         // All APIs returned empty -- degrade to zero wind
-        return _zeroProfile(lat, lng);
+        return _zeroProfile(lat, lng, radiusMeters: radiusMeters);
       }
 
       // Assemble: zip 3 series by time index into DomeWindFields
@@ -170,9 +170,10 @@ class DomeWindFetcher {
         fetchedAt: DateTime.now(),
         lat: lat,
         lng: lng,
+        radiusMeters: radiusMeters,
       );
     } catch (_) {
-      return _zeroProfile(lat, lng);
+      return _zeroProfile(lat, lng, radiusMeters: radiusMeters);
     }
   }
 
@@ -221,7 +222,7 @@ class DomeWindFetcher {
 
       if (maxSteps == 0) {
         // Grid returned empty -- fall back to point
-        return _fetchPoint(lat, lng);
+        return _fetchPoint(lat, lng, radiusMeters);
       }
 
       // Assemble: zip 3 grid series by time index into DomeWindFields
@@ -284,16 +285,17 @@ class DomeWindFetcher {
         fetchedAt: DateTime.now(),
         lat: lat,
         lng: lng,
+        radiusMeters: radiusMeters,
       );
     } catch (e) {
       log('DomeWindFetcher: grid fetch failed ($e), falling back to point',
           name: 'DomeWindFetcher');
-      return _fetchPoint(lat, lng);
+      return _fetchPoint(lat, lng, radiusMeters);
     }
   }
 
   /// Creates a zero-wind profile for graceful degradation.
-  DomeWindProfile _zeroProfile(double lat, double lng) {
+  DomeWindProfile _zeroProfile(double lat, double lng, {double? radiusMeters}) {
     final now = DateTime.now().toUtc();
     return DomeWindProfile(
       hourly: List.generate(
@@ -305,6 +307,7 @@ class DomeWindFetcher {
       fetchedAt: now,
       lat: lat,
       lng: lng,
+      radiusMeters: radiusMeters,
     );
   }
 
