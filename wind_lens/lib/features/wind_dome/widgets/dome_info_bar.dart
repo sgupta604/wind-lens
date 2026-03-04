@@ -9,11 +9,15 @@ import '../models/dome_wind_field.dart';
 import '../providers/dome_providers.dart';
 
 /// Size presets for the dome radius in meters.
+///
+/// Presets >= 25km trigger grid-based wind fetching with spatial variation.
 const _sizePresets = <(String, double)>[
   ('500m', 500.0),
   ('1km', 1000.0),
   ('2km', 2000.0),
   ('5km', 5000.0),
+  ('25km', 25000.0),
+  ('50km', 50000.0),
 ];
 
 /// Top info bar showing wind speed, live/forecast badge, back button, and

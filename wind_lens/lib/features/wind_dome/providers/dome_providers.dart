@@ -17,12 +17,12 @@ final domeWindFetcherProvider = Provider<DomeWindFetcher>((ref) {
 
 /// User-selected dome radius in meters.
 ///
-/// Presets: 500, 1000, 2000, 5000. Default is 1000.0 (1km), which matches
-/// the "1km" preset button exactly for clean UX.
+/// Presets: 500, 1000, 2000, 5000, 25000, 50000. Default is 1000.0 (1km),
+/// which matches the "1km" preset button exactly for clean UX.
 ///
 /// Drives:
 /// - Particle velocity scaling via renderScale (domeRRender / domeSizeMeters)
-/// - Future: DomeWindFetcher grid fetch radius
+/// - DomeWindFetcher: grid vs point fetch based on gridFetchThresholdMeters
 /// - DomeInfoBar size preset button highlighting
 final domeSizeProvider = StateProvider<double>((ref) => 1000.0);
 
@@ -35,19 +35,26 @@ final hoursAheadProvider = StateProvider<int>((ref) => 0);
 
 /// Fetches the dome wind profile for the effective position.
 ///
-/// Watches [effectivePositionProvider] so it auto-refetches when the user
-/// moves >100m or sets a location override. Returns null while waiting
-/// for a position fix.
+/// Watches [effectivePositionProvider] and [domeSizeProvider] so it
+/// auto-refetches when the user moves >100m, sets a location override,
+/// or changes the dome size. When dome size >= 15km, triggers grid-based
+/// fetching with spatial wind variation.
 ///
-/// The [DomeWindFetcher] caches results for 10 minutes, so rapid
-/// provider rebuilds do not trigger redundant API calls.
+/// The [DomeWindFetcher] caches results for 10 minutes and separates
+/// grid vs point entries, so rapid provider rebuilds do not trigger
+/// redundant API calls.
 final domeWindProfileProvider =
     FutureProvider<DomeWindProfile?>((ref) async {
   final position = ref.watch(effectivePositionProvider);
   if (position == null) return null;
 
   final fetcher = ref.watch(domeWindFetcherProvider);
-  return fetcher.fetch(position.latitude, position.longitude);
+  final domeSize = ref.watch(domeSizeProvider);
+  return fetcher.fetch(
+    position.latitude,
+    position.longitude,
+    radiusMeters: domeSize,
+  );
 });
 
 /// Selects the current hour's wind field from the cached profile.
@@ -58,8 +65,16 @@ final domeWindProfileProvider =
 ///
 /// This is what the tick loop reads every frame -- no network, instant.
 final currentDomeWindFieldProvider = Provider<DomeWindField?>((ref) {
-  final profile = ref.watch(domeWindProfileProvider).valueOrNull;
+  final asyncProfile = ref.watch(domeWindProfileProvider);
+  final profile = asyncProfile.valueOrNull;
   if (profile == null) return null;
+
+  // If the profile was fetched for a different dome size, return null
+  // to avoid showing stale data (e.g. 5km point data in a 15km dome).
+  final domeSize = ref.watch(domeSizeProvider);
+  if (profile.radiusMeters != null && profile.radiusMeters != domeSize) {
+    return null;
+  }
 
   final hours = ref.watch(hoursAheadProvider);
   return profile.fieldAt(hours);

@@ -184,6 +184,10 @@ class _WindDomeScreenState extends ConsumerState<WindDomeScreen>
       final newDomeH =
           newDomeR * (DomeConstants.domeH / DomeConstants.domeR);
       _reinitializeParticles(newDomeR, newDomeH);
+      // Reset camera orbit to fit new dome size
+      setState(() {
+        _camR = newDomeR * 2.8; // Same ratio as DomeConstants.camR / domeR
+      });
     });
 
     return Scaffold(
@@ -243,18 +247,18 @@ class _WindDomeScreenState extends ConsumerState<WindDomeScreen>
             child: const DomeForecastSlider(),
           ),
 
-          // Loading indicator
+          // Loading indicator (above forecast slider)
           if (profileAsync.isLoading)
             Positioned(
-              top: MediaQuery.of(context).padding.top + 60,
+              bottom: MediaQuery.of(context).padding.bottom + 72,
               left: 0,
               right: 0,
               child: const Center(
                 child: Text(
                   'Loading wind data...',
                   style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 12,
+                    color: Colors.white70,
+                    fontSize: 13,
                   ),
                 ),
               ),
@@ -319,7 +323,7 @@ class _WindDomeScreenState extends ConsumerState<WindDomeScreen>
         final pinchDelta = currentDist - _lastPinchDistance;
         final scale = _currentDomeR / DomeConstants.domeR;
         setState(() {
-          _camR = (_camR - pinchDelta * 0.5).clamp(
+          _camR = (_camR - pinchDelta * 0.5 * scale).clamp(
             DomeConstants.camRMin * scale,
             DomeConstants.camRMax * scale,
           );

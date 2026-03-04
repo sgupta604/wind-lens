@@ -327,5 +327,130 @@ void main() {
         );
       }
     });
+
+    group('velocity scales with dome size', () {
+      // A uniform wind field: u=10 m/s, v=0 across all altitudes.
+      late DomeWindField uniformField;
+      final dt = 1.0 / 60; // one frame at 60 FPS
+
+      setUp(() {
+        uniformField = DomeWindField(
+          validTime: DateTime.utc(2026),
+          layers: const [
+            DomeWindLayer(altitudeMeters: 0, u: 10.0, v: 0.0),
+            DomeWindLayer(altitudeMeters: 1800, u: 10.0, v: 0.0),
+          ],
+        );
+      });
+
+      test('x-displacement at 50x dome is 50x displacement at base dome', () {
+        // Tick at base dome size (domeR = 18)
+        final pBase = DomeParticle();
+        pBase.x = 0;
+        pBase.y = 1.0;
+        pBase.z = 0;
+        pBase.tick(uniformField, dt, domeR, domeH, rng: Random(42));
+        final baseDisplacement = pBase.x;
+
+        // Tick at 50x dome size (domeR = 900, domeH = 700)
+        final largeDomeR = domeR * 50;
+        final largeDomeH = domeH * 50;
+        final pLarge = DomeParticle();
+        pLarge.x = 0;
+        pLarge.y = 1.0; // Same low altitude in render units
+        pLarge.z = 0;
+        pLarge.tick(uniformField, dt, largeDomeR, largeDomeH, rng: Random(42));
+        final largeDisplacement = pLarge.x;
+
+        // Large dome should have 50x the displacement in render units
+        // so particles cross the dome at the same visual speed
+        expect(
+          largeDisplacement,
+          closeTo(baseDisplacement * 50, baseDisplacement * 50 * 0.05),
+          reason:
+              'Particle x-displacement should scale linearly with dome size '
+              '(50x dome = 50x displacement)',
+        );
+      });
+
+      test('z-displacement at 50x dome is 50x displacement at base dome', () {
+        // Use v=10, u=0 wind for z-axis test
+        final vField = DomeWindField(
+          validTime: DateTime.utc(2026),
+          layers: const [
+            DomeWindLayer(altitudeMeters: 0, u: 0.0, v: 10.0),
+            DomeWindLayer(altitudeMeters: 1800, u: 0.0, v: 10.0),
+          ],
+        );
+
+        // Tick at base dome size
+        final pBase = DomeParticle();
+        pBase.x = 0;
+        pBase.y = 1.0;
+        pBase.z = 0;
+        pBase.tick(vField, dt, domeR, domeH, rng: Random(42));
+        final baseDisplacement = pBase.z.abs();
+
+        // Tick at 50x dome size
+        final largeDomeR = domeR * 50;
+        final largeDomeH = domeH * 50;
+        final pLarge = DomeParticle();
+        pLarge.x = 0;
+        pLarge.y = 1.0;
+        pLarge.z = 0;
+        pLarge.tick(vField, dt, largeDomeR, largeDomeH, rng: Random(42));
+        final largeDisplacement = pLarge.z.abs();
+
+        expect(
+          largeDisplacement,
+          closeTo(baseDisplacement * 50, baseDisplacement * 50 * 0.05),
+          reason:
+              'Particle z-displacement should scale linearly with dome size',
+        );
+      });
+
+      test('updraft scales with dome size', () {
+        final zeroField = DomeWindField.zero();
+
+        // Tick at base dome size
+        final pBase = DomeParticle();
+        pBase.x = 0;
+        pBase.y = 0.01;
+        pBase.z = 0;
+        pBase.tick(zeroField, 1.0, domeR, domeH, rng: Random(42));
+        final baseUpdraft = pBase.y - 0.01;
+
+        // Tick at 50x dome size
+        final largeDomeR = domeR * 50;
+        final largeDomeH = domeH * 50;
+        final pLarge = DomeParticle();
+        pLarge.x = 0;
+        pLarge.y = 0.01;
+        pLarge.z = 0;
+        pLarge.tick(zeroField, 1.0, largeDomeR, largeDomeH, rng: Random(42));
+        final largeUpdraft = pLarge.y - 0.01;
+
+        // Updraft should scale proportionally with dome size
+        expect(
+          largeUpdraft,
+          closeTo(baseUpdraft * 50, baseUpdraft * 50 * 0.1),
+          reason: 'Updraft should scale linearly with dome size',
+        );
+      });
+
+      test('at base dome size (renderScale=1.0) displacement is unchanged', () {
+        // This verifies the fix does not regress existing behavior
+        final p = DomeParticle();
+        p.x = 0;
+        p.y = 1.0;
+        p.z = 0;
+
+        p.tick(uniformField, dt, domeR, domeH, rng: Random(42));
+
+        // Expected: u * velocityScale * renderScale * dt
+        // = 10 * 0.72 * 1.0 * (1/60) = 0.12
+        expect(p.x, closeTo(0.12, 0.01));
+      });
+    });
   });
 }

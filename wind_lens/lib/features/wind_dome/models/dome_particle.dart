@@ -117,15 +117,19 @@ class DomeParticle {
     final wind = field.sample(x, y, z);
 
     // Apply wind velocity (render-units/second via velocityScale)
+    // Scale by dome size: larger domes need proportionally larger displacement
+    // to maintain the same visual crossing speed.
     // +u = eastward  -> +x = East  (same sign, no flip needed)
     // +v = northward -> -z = North (opposite sign, negate v)
-    x += wind.u * DomeConstants.velocityScale * dt;
-    z -= wind.v * DomeConstants.velocityScale * dt;
+    final renderScale = domeR / DomeConstants.domeR;
+    x += wind.u * DomeConstants.velocityScale * renderScale * dt;
+    z -= wind.v * DomeConstants.velocityScale * renderScale * dt;
 
     // Gentle updraft: increases with altitude (prototype line 249)
+    // Scale by renderScale to match horizontal velocity scaling.
     y += (DomeConstants.updraftBase +
             (y / domeH) * DomeConstants.updraftGradient) *
-        dt;
+        renderScale * dt;
 
     // Check dome containment with 2% margin (prototype line 252)
     if (!insideDome(x, y, z, domeR * 1.02, domeH * 1.02) || y < 0) {

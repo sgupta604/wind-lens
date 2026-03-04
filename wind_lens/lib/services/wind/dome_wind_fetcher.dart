@@ -1,6 +1,7 @@
 import 'dart:developer' show log;
 
 import 'wind_api_client.dart';
+import '../../features/wind_dome/models/dome_constants.dart';
 import '../../features/wind_dome/models/dome_wind_field.dart';
 import '../../features/wind_dome/models/dome_wind_layer.dart';
 import '../../features/wind_dome/models/dome_wind_profile.dart';
@@ -10,8 +11,13 @@ import '../../features/wind_dome/models/dome_wind_profile.dart';
 /// Wraps [WindApiClient] to fetch time-series wind data at 3 pressure levels
 /// (surface, 850hPa, 700hPa) and assembles them into a [DomeWindProfile].
 ///
+/// When [radiusMeters] >= [DomeConstants.gridFetchThresholdMeters] (15km),
+/// uses spatial grid fetching via [fetchWindGridSeries]. Otherwise uses
+/// point-based fetching via [fetchPointWindSeries].
+///
 /// Cache is **static** so it survives fetcher recreation across provider
-/// dispose/rebuild cycles.
+/// dispose/rebuild cycles. Cache key includes grid/point distinction to
+/// prevent stale data when switching dome sizes.
 ///
 /// Pattern follows [CachedWindDataSource]: constructor-injected client
 /// for testability.
@@ -41,14 +47,25 @@ class DomeWindFetcher {
 
   /// Fetches a 72-hour wind profile for the given location.
   ///
+  /// When [radiusMeters] >= [DomeConstants.gridFetchThresholdMeters],
+  /// fetches spatial grid data. Otherwise fetches point data.
+  ///
   /// Returns cached data if available and fresh. Otherwise fetches
   /// 3 pressure levels in parallel via [Future.wait], assembles into
   /// a [DomeWindProfile], and caches the result.
   ///
   /// On all-fail: returns a zero-wind profile (graceful degradation).
-  Future<DomeWindProfile> fetch(double lat, double lng) async {
+  Future<DomeWindProfile> fetch(
+    double lat,
+    double lng, {
+    double radiusMeters = 1000.0,
+  }) async {
+    final isGrid =
+        radiusMeters >= DomeConstants.gridFetchThresholdMeters;
+    final radiusKey = (radiusMeters / 1000).toStringAsFixed(1);
     final key =
-        'dome_${lat.toStringAsFixed(2)}_${lng.toStringAsFixed(2)}';
+        'dome_${lat.toStringAsFixed(2)}_${lng.toStringAsFixed(2)}'
+        '_${isGrid ? 'grid' : 'point'}_r${radiusKey}km';
 
     // Check cache
     if (_cachedKey == key &&
@@ -58,6 +75,23 @@ class DomeWindFetcher {
       return _cached!;
     }
 
+    DomeWindProfile profile;
+    if (isGrid) {
+      profile = await _fetchGrid(lat, lng, radiusMeters);
+    } else {
+      profile = await _fetchPoint(lat, lng, radiusMeters);
+    }
+
+    // Cache result
+    _cached = profile;
+    _cachedKey = key;
+    _cachedAt = DateTime.now();
+
+    return profile;
+  }
+
+  /// Fetches point-based wind data (existing behavior).
+  Future<DomeWindProfile> _fetchPoint(double lat, double lng, double radiusMeters) async {
     try {
       // Fetch 3 pressure levels in parallel
       final seriesList = await Future.wait(
@@ -84,7 +118,7 @@ class DomeWindFetcher {
 
       if (maxSteps == 0) {
         // All APIs returned empty -- degrade to zero wind
-        return _zeroProfile(lat, lng);
+        return _zeroProfile(lat, lng, radiusMeters: radiusMeters);
       }
 
       // Assemble: zip 3 series by time index into DomeWindFields
@@ -131,26 +165,137 @@ class DomeWindFetcher {
             name: 'DomeWindFetcher');
       }
 
-      final profile = DomeWindProfile(
+      return DomeWindProfile(
         hourly: hourlyFields,
         fetchedAt: DateTime.now(),
         lat: lat,
         lng: lng,
+        radiusMeters: radiusMeters,
+      );
+    } catch (_) {
+      return _zeroProfile(lat, lng, radiusMeters: radiusMeters);
+    }
+  }
+
+  /// Fetches grid-based wind data for large dome sizes.
+  ///
+  /// Calls [WindApiClient.fetchWindGridSeries] for each pressure level
+  /// in parallel, then assembles into a [DomeWindProfile] where each
+  /// [DomeWindLayer] carries a [WindField] grid for spatial interpolation.
+  ///
+  /// On grid fetch failure, falls back to point-based data.
+  Future<DomeWindProfile> _fetchGrid(
+    double lat,
+    double lng,
+    double radiusMeters,
+  ) async {
+    final radiusKm = radiusMeters / 1000.0;
+    // Use the base metersPerRenderUnit that matches the screen's geometry.
+    // The screen scales dome radius (computedDomeR = size / baseRate), keeping
+    // the base rate constant. The field must use the same rate.
+    final metersPerRenderUnit = DomeConstants.metersPerRenderUnit;
+
+    try {
+      // Fetch 3 pressure levels in parallel (grid time-series)
+      final gridSeriesList = await Future.wait(
+        _levelMapping.map(
+          (entry) => _apiClient.fetchWindGridSeries(
+            lat: lat,
+            lng: lng,
+            radiusKm: radiusKm,
+            pressureLevel: entry.$1,
+            hours: 72,
+          ),
+        ),
       );
 
-      // Cache result
-      _cached = profile;
-      _cachedKey = key;
-      _cachedAt = DateTime.now();
+      log('DomeWindFetcher grid: ${gridSeriesList[0].length} surface, '
+          '${gridSeriesList[1].length} 850hPa, '
+          '${gridSeriesList[2].length} 700hPa timesteps',
+          name: 'DomeWindFetcher');
 
-      return profile;
-    } catch (_) {
-      return _zeroProfile(lat, lng);
+      // Determine the max number of timesteps across all levels
+      int maxSteps = 0;
+      for (final series in gridSeriesList) {
+        if (series.length > maxSteps) maxSteps = series.length;
+      }
+
+      if (maxSteps == 0) {
+        // Grid returned empty -- fall back to point
+        return _fetchPoint(lat, lng, radiusMeters);
+      }
+
+      // Assemble: zip 3 grid series by time index into DomeWindFields
+      final hourlyFields = <DomeWindField>[];
+      for (int t = 0; t < maxSteps; t++) {
+        final layers = <DomeWindLayer>[];
+        for (int lvl = 0; lvl < _levelMapping.length; lvl++) {
+          final series = gridSeriesList[lvl];
+          if (t < series.length) {
+            final grid = series[t].grid;
+            final center = grid.centerWind();
+            layers.add(DomeWindLayer(
+              altitudeMeters: _levelMapping[lvl].$2,
+              u: center.u,
+              v: center.v,
+              grid: grid,
+            ));
+          } else {
+            // Pad with zero if this level has fewer timesteps
+            layers.add(DomeWindLayer(
+              altitudeMeters: _levelMapping[lvl].$2,
+              u: 0,
+              v: 0,
+            ));
+          }
+        }
+
+        // Sort layers by altitude ascending
+        layers.sort((a, b) => a.altitudeMeters.compareTo(b.altitudeMeters));
+
+        hourlyFields.add(DomeWindField(
+          validTime: gridSeriesList
+                  .where((s) => s.length > t)
+                  .firstOrNull
+                  ?[t]
+                  .time ??
+              DateTime.now().toUtc().add(Duration(hours: t)),
+          layers: layers,
+          centerLat: lat,
+          centerLng: lng,
+          metersPerRenderUnit: metersPerRenderUnit,
+        ));
+      }
+
+      // Log center wind from grid data for on-device debugging.
+      // Compares grid center with the scalar (u, v) to verify consistency.
+      if (hourlyFields.isNotEmpty) {
+        final first = hourlyFields.first;
+        for (final layer in first.layers) {
+          final gridCenter = layer.grid?.centerWind();
+          log('DomeWindFetcher grid center: ${layer.altitudeMeters}m '
+              'scalar=(${layer.u.toStringAsFixed(2)}, ${layer.v.toStringAsFixed(2)}) '
+              'grid=${gridCenter != null ? "(${gridCenter.u.toStringAsFixed(2)}, ${gridCenter.v.toStringAsFixed(2)})" : "none"}',
+              name: 'DomeWindFetcher');
+        }
+      }
+
+      return DomeWindProfile(
+        hourly: hourlyFields,
+        fetchedAt: DateTime.now(),
+        lat: lat,
+        lng: lng,
+        radiusMeters: radiusMeters,
+      );
+    } catch (e) {
+      log('DomeWindFetcher: grid fetch failed ($e), falling back to point',
+          name: 'DomeWindFetcher');
+      return _fetchPoint(lat, lng, radiusMeters);
     }
   }
 
   /// Creates a zero-wind profile for graceful degradation.
-  DomeWindProfile _zeroProfile(double lat, double lng) {
+  DomeWindProfile _zeroProfile(double lat, double lng, {double? radiusMeters}) {
     final now = DateTime.now().toUtc();
     return DomeWindProfile(
       hourly: List.generate(
@@ -162,6 +307,7 @@ class DomeWindFetcher {
       fetchedAt: now,
       lat: lat,
       lng: lng,
+      radiusMeters: radiusMeters,
     );
   }
 
