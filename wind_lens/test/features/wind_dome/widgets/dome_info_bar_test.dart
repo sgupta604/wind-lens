@@ -66,7 +66,7 @@ void main() {
         expect(find.text('1km'), findsOneWidget);
         expect(find.text('2km'), findsOneWidget);
         expect(find.text('5km'), findsOneWidget);
-        expect(find.text('15km'), findsOneWidget);
+        expect(find.text('25km'), findsOneWidget);
         expect(find.text('50km'), findsOneWidget);
       });
 
@@ -143,7 +143,7 @@ void main() {
         expect(find.text('1km'), findsOneWidget);
         expect(find.text('2km'), findsOneWidget);
         expect(find.text('5km'), findsOneWidget);
-        expect(find.text('15km'), findsOneWidget);
+        expect(find.text('25km'), findsOneWidget);
         expect(find.text('50km'), findsOneWidget);
       });
 
@@ -153,11 +153,11 @@ void main() {
         expect(find.text('1km'), findsOneWidget);
         expect(find.text('2km'), findsOneWidget);
         expect(find.text('5km'), findsOneWidget);
-        expect(find.text('15km'), findsOneWidget);
+        expect(find.text('25km'), findsOneWidget);
         expect(find.text('50km'), findsOneWidget);
       });
 
-      testWidgets('tapping 15km updates domeSizeProvider', (tester) async {
+      testWidgets('tapping 25km updates domeSizeProvider', (tester) async {
         late ProviderContainer container;
         await tester.pumpWidget(
           ProviderScope(
@@ -180,10 +180,10 @@ void main() {
 
         expect(container.read(domeSizeProvider), 1000.0);
 
-        await tester.tap(find.text('15km'));
+        await tester.tap(find.text('25km'));
         await tester.pump();
 
-        expect(container.read(domeSizeProvider), 15000.0);
+        expect(container.read(domeSizeProvider), 25000.0);
       });
 
       testWidgets('tapping 50km updates domeSizeProvider', (tester) async {
