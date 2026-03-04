@@ -109,6 +109,16 @@ class DomeConstants {
   /// 1000.0 / 18.0 = ~55.56.
   static const double metersPerRenderUnit = 1000.0 / domeR;
 
+  // ─── Grid Fetch Threshold ──────────────────────────────────
+
+  /// Dome radius in meters at which grid fetch is used instead of point fetch.
+  ///
+  /// Below this threshold, a single wind data point gives sufficient spatial
+  /// resolution (HRRR 3km grid yields ~2-4 points at 5km radius).
+  /// At 15km radius (30km diameter), HRRR provides ~55-100 grid points,
+  /// producing meaningful spatial wind variation across the dome.
+  static const double gridFetchThresholdMeters = 15000.0;
+
   // ─── Ground Disc ────────────────────────────────────────────
 
   /// Number of segments for the ground disc polygon.

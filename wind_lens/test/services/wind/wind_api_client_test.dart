@@ -416,6 +416,202 @@ void main() {
     });
   });
 
+  group('WindApiClient fetchWindGridSeries', () {
+    /// Creates a Shyft area time-series response with multiple timesteps.
+    ///
+    /// Each timestep has a 2x2 grid of points.
+    String shyftAreaSeriesJson(int steps) {
+      final times = List.generate(
+        steps,
+        (i) => DateTime.utc(2026, 2, 27, 12 + i).toIso8601String(),
+      );
+      // 4 composite points x N timesteps = 4*N values
+      final uValues = List.generate(4 * steps, (i) => 1.0 + i * 0.1);
+      final vValues = List.generate(4 * steps, (i) => 5.0 + i * 0.1);
+
+      return jsonEncode({
+        'type': 'Coverage',
+        'domain': {
+          'axes': {
+            'composite': {
+              'values': [
+                [-122.75, 37.5, 850.0],
+                [-122.5, 37.5, 850.0],
+                [-122.75, 37.75, 850.0],
+                [-122.5, 37.75, 850.0],
+              ],
+            },
+            't': {'values': times},
+          },
+        },
+        'ranges': {
+          'u-component-of-wind': {'values': uValues},
+          'v-component-of-wind': {'values': vValues},
+        },
+      });
+    }
+
+    /// Creates a Folkweather area time-series response with multiple timesteps.
+    String folkAreaSeriesJson(int steps) {
+      final times = List.generate(
+        steps,
+        (i) => DateTime.utc(2026, 2, 27, 12 + i).toIso8601String(),
+      );
+      // 4 grid points x N timesteps = 4*N values
+      final uValues = List.generate(4 * steps, (i) => 2.0 + i * 0.1);
+      final vValues = List.generate(4 * steps, (i) => 6.0 + i * 0.1);
+
+      return jsonEncode({
+        'type': 'Coverage',
+        'domain': {
+          'axes': {
+            'x': {'values': [237.25, 237.5]},
+            'y': {'values': [37.5, 37.75]},
+            'z': {'values': [850.0]},
+            't': {'values': times},
+          },
+        },
+        'ranges': {
+          'UGRD': {'values': uValues},
+          'VGRD': {'values': vValues},
+        },
+      });
+    }
+
+    test('Shyft time-series area: parses multiple timesteps into list of (DateTime, WindField)', () async {
+      final client = WindApiClient(
+        client: MockClient((request) async {
+          if (request.url.host == 'ogc.shyftwx.com') {
+            return http.Response(shyftAreaSeriesJson(3), 200);
+          }
+          return http.Response('', 500);
+        }),
+      );
+
+      final results = await client.fetchWindGridSeries(
+        lat: 37.625,
+        lng: -122.625,
+        radiusKm: 15,
+        pressureLevel: 850,
+      );
+
+      expect(results.length, 3);
+      // Each result should have a time and a grid
+      for (final result in results) {
+        expect(result.grid.width, 2);
+        expect(result.grid.height, 2);
+      }
+    });
+
+    test('Shyft fails, Folkweather time-series succeeds', () async {
+      final client = WindApiClient(
+        client: MockClient((request) async {
+          if (request.url.host == 'ogc.shyftwx.com') {
+            return http.Response('Server error', 500);
+          }
+          // Folkweather
+          return http.Response(folkAreaSeriesJson(3), 200);
+        }),
+      );
+
+      final results = await client.fetchWindGridSeries(
+        lat: 37.625,
+        lng: -122.625,
+        radiusKm: 15,
+        pressureLevel: 850,
+      );
+
+      expect(results.length, 3);
+      for (final result in results) {
+        expect(result.grid.width, 2);
+        expect(result.grid.height, 2);
+      }
+    });
+
+    test('both time-series fail, falls back to single-timestep via fetchWindGrid()', () async {
+      final client = WindApiClient(
+        client: MockClient((request) async {
+          final url = request.url.toString();
+          // Time-series area queries fail (they include datetime range)
+          if (url.contains('datetime=') && url.contains('/')) {
+            // Heuristic: range has '/' separator
+            if (url.contains('area')) {
+              return http.Response('Server error', 500);
+            }
+          }
+          // Single-timestep area succeeds
+          if (url.contains('area')) {
+            if (request.url.host == 'ogc.shyftwx.com') {
+              return http.Response(shyftAreaJson(), 200);
+            }
+            return http.Response(folkAreaJson(), 200);
+          }
+          return http.Response('', 500);
+        }),
+      );
+
+      final results = await client.fetchWindGridSeries(
+        lat: 37.625,
+        lng: -122.625,
+        radiusKm: 15,
+        pressureLevel: 850,
+      );
+
+      // Should have exactly 1 result from single-timestep fallback
+      expect(results.length, 1);
+      expect(results[0].grid.width, 2);
+      expect(results[0].grid.height, 2);
+    });
+
+    test('both APIs fail entirely: throws', () async {
+      final client = WindApiClient(
+        client: MockClient((request) async {
+          return http.Response('Server error', 500);
+        }),
+      );
+
+      expect(
+        () => client.fetchWindGridSeries(
+          lat: 37.625,
+          lng: -122.625,
+          radiusKm: 15,
+          pressureLevel: 850,
+        ),
+        throwsException,
+      );
+    });
+
+    test('URL includes datetime range and POLYGON coords', () async {
+      final capturedUrls = <String>[];
+      final client = WindApiClient(
+        client: MockClient((request) async {
+          capturedUrls.add(request.url.toString());
+          if (request.url.host == 'ogc.shyftwx.com') {
+            return http.Response(shyftAreaSeriesJson(3), 200);
+          }
+          return http.Response('', 500);
+        }),
+      );
+
+      await client.fetchWindGridSeries(
+        lat: 37.625,
+        lng: -122.625,
+        radiusKm: 15,
+        pressureLevel: 850,
+      );
+
+      // Should have made at least one request
+      expect(capturedUrls, isNotEmpty);
+      final url = capturedUrls.first;
+      // URL should contain area endpoint
+      expect(url, contains('/area'));
+      // URL should contain datetime range (ISO format with '/')
+      expect(url, contains('datetime='));
+      // URL should contain POLYGON coords
+      expect(url, contains('POLYGON'));
+    });
+  });
+
   group('WindApiClient fetchWindGrid', () {
     test('Shyft parses MultiPointSeries composite into WindField', () async {
       final client = WindApiClient(

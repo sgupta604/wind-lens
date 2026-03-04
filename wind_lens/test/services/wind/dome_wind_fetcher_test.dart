@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+import 'package:wind_lens/features/wind_dome/models/dome_constants.dart';
 import 'package:wind_lens/services/wind/dome_wind_fetcher.dart';
 import 'package:wind_lens/services/wind/wind_api_client.dart';
 import 'package:wind_lens/services/wind/wind_api_constants.dart';

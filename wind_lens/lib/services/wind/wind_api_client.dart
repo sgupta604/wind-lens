@@ -100,6 +100,299 @@ class WindApiClient {
     return _fetchFolkArea(encodedPoly, pressureLevel);
   }
 
+  // ─── Wind Grid Time-Series Query ─────────────────────────────
+
+  /// Fetches a time series of wind grids around a geographic point.
+  ///
+  /// Returns a list of [({DateTime time, WindField grid})] for [hours]
+  /// forecast hours. Tries area + datetime range on Shyft first, then
+  /// Folkweather. If both time-series area queries fail, falls back to
+  /// a single-timestep area query via [fetchWindGrid].
+  ///
+  /// [radiusKm]: Half-width of the bounding box in kilometers.
+  /// [pressureLevel]: 0 for surface, otherwise hPa.
+  ///
+  /// Throws on total failure (both APIs fail, including single-timestep
+  /// fallback).
+  Future<List<({DateTime time, WindField grid})>> fetchWindGridSeries({
+    required double lat,
+    required double lng,
+    required double radiusKm,
+    required int pressureLevel,
+    int hours = 72,
+  }) async {
+    final bbox = _makeBbox(lat, lng, radiusKm);
+    final poly = _bboxToPoly(bbox);
+    final encodedPoly = Uri.encodeComponent(poly);
+    final datetimeRange = _dateTimeRangeUtc(hours);
+
+    // Try Shyft area time-series
+    try {
+      return await _fetchShyftAreaSeries(
+        encodedPoly, pressureLevel, datetimeRange,
+      );
+    } catch (_) {
+      // Fall through to Folkweather
+    }
+
+    // Try Folkweather area time-series
+    try {
+      return await _fetchFolkAreaSeries(
+        encodedPoly, pressureLevel, datetimeRange,
+      );
+    } catch (_) {
+      // Fall through to single-timestep fallback
+    }
+
+    // Fallback: single-timestep grid via existing fetchWindGrid()
+    try {
+      final grid = await fetchWindGrid(
+        lat: lat,
+        lng: lng,
+        radiusKm: radiusKm,
+        pressureLevel: pressureLevel,
+      );
+      final now = DateTime.now().toUtc();
+      final rounded = now.minute >= 30
+          ? DateTime.utc(now.year, now.month, now.day, now.hour + 1)
+          : DateTime.utc(now.year, now.month, now.day, now.hour);
+      return [(time: rounded, grid: grid)];
+    } catch (_) {
+      // Total failure
+    }
+
+    throw Exception(
+      'fetchWindGridSeries: all APIs failed for '
+      '($lat, $lng) ${pressureLevel}hPa',
+    );
+  }
+
+  /// Fetches Shyft area time-series (area query with datetime range).
+  Future<List<({DateTime time, WindField grid})>> _fetchShyftAreaSeries(
+    String encodedPoly,
+    int pressureLevel,
+    String datetimeRange,
+  ) async {
+    final collection = pressureLevel == 0
+        ? WindApiConstants.shyftSurfaceCollection
+        : WindApiConstants.shyftIsobaricCollection;
+
+    var url = '${WindApiConstants.shyftBaseUrl}/$collection/area'
+        '?coords=$encodedPoly'
+        '&parameter-name=${WindApiConstants.shyftUParam},${WindApiConstants.shyftVParam}'
+        '&datetime=$datetimeRange'
+        '&apikey=${WindApiConstants.shyftApiKey}'
+        '&f=${WindApiConstants.shyftAreaFormat}';
+
+    if (pressureLevel > 0) {
+      url += '&z=$pressureLevel';
+    }
+
+    final response =
+        await _client.get(Uri.parse(url)).timeout(WindApiConstants.timeout);
+
+    if (response.statusCode != 200) {
+      throw Exception('Shyft area series HTTP ${response.statusCode}');
+    }
+
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    return _parseShyftAreaSeries(json, pressureLevel);
+  }
+
+  /// Parses a Shyft MultiPointSeries area response with multiple timesteps.
+  ///
+  /// The composite axis contains [lng, lat, pressure] tuples.
+  /// The t axis contains ISO timestamps.
+  /// Values arrays are flattened: (numPoints * numTimesteps) in time-major
+  /// order (all points for t0, all points for t1, ...).
+  List<({DateTime time, WindField grid})> _parseShyftAreaSeries(
+    Map<String, dynamic> json,
+    int pressureLevel,
+  ) {
+    final domain = json['domain'] as Map<String, dynamic>;
+    final axes = domain['axes'] as Map<String, dynamic>;
+
+    // Extract composite points
+    final composites = (axes['composite']['values'] as List)
+        .map((c) => (c as List).cast<num>())
+        .toList();
+
+    if (composites.isEmpty) {
+      throw Exception('Shyft area series: empty composite axis');
+    }
+
+    // Extract timestamps
+    final tAxis = axes['t'] as Map<String, dynamic>?;
+    final tValues = tAxis?['values'] as List?;
+    if (tValues == null || tValues.isEmpty) {
+      throw Exception('Shyft area series: missing t.values');
+    }
+    final timestamps = tValues.map((v) => DateTime.parse(v.toString())).toList();
+
+    // Extract U/V values
+    final rawUs = (json['ranges'][WindApiConstants.shyftUParam]['values'] as List)
+        .map((v) => v != null ? (v as num).toDouble() : 0.0)
+        .toList();
+    final rawVs = (json['ranges'][WindApiConstants.shyftVParam]['values'] as List)
+        .map((v) => v != null ? (v as num).toDouble() : 0.0)
+        .toList();
+
+    // Build grid coordinate arrays
+    final xSet = composites.map((c) => c[0].toDouble()).toSet().toList()..sort();
+    final ySet = composites.map((c) => c[1].toDouble()).toSet().toList()..sort();
+
+    final numPoints = composites.length;
+    final numTimesteps = timestamps.length;
+
+    // Build index map: composite point index -> (row, col) in grid
+    final pointIndices = <int, (int, int)>{};
+    for (int i = 0; i < composites.length; i++) {
+      final col = xSet.indexOf(composites[i][0].toDouble());
+      final row = ySet.indexOf(composites[i][1].toDouble());
+      pointIndices[i] = (row, col);
+    }
+
+    final results = <({DateTime time, WindField grid})>[];
+    final gridSize = xSet.length * ySet.length;
+
+    for (int t = 0; t < numTimesteps; t++) {
+      final gridU = List<double>.filled(gridSize, 0.0);
+      final gridV = List<double>.filled(gridSize, 0.0);
+
+      for (int p = 0; p < numPoints; p++) {
+        final valueIdx = t * numPoints + p;
+        if (valueIdx >= rawUs.length) continue;
+
+        final (row, col) = pointIndices[p]!;
+        final gridIdx = row * xSet.length + col;
+        gridU[gridIdx] = rawUs[valueIdx];
+        gridV[gridIdx] = rawVs[valueIdx];
+      }
+
+      final source =
+          'Shyft ${pressureLevel == 0 ? 'surface' : '${pressureLevel}hPa'} t$t';
+
+      results.add((
+        time: timestamps[t],
+        grid: WindField(
+          xs: List.of(xSet),
+          ys: List.of(ySet),
+          us: gridU,
+          vs: gridV,
+          source: source,
+        ),
+      ));
+    }
+
+    return results;
+  }
+
+  /// Fetches Folkweather area time-series (area query with datetime range).
+  Future<List<({DateTime time, WindField grid})>> _fetchFolkAreaSeries(
+    String encodedPoly,
+    int pressureLevel,
+    String datetimeRange,
+  ) async {
+    final collection = pressureLevel == 0
+        ? WindApiConstants.folkSurfaceCollection
+        : _folkCollection(pressureLevel);
+
+    var url = '${WindApiConstants.folkBaseUrl}/$collection/area'
+        '?coords=$encodedPoly'
+        '&parameter-name=${WindApiConstants.folkUParam},${WindApiConstants.folkVParam}'
+        '&datetime=$datetimeRange'
+        '&f=${WindApiConstants.folkFormat}';
+
+    if (pressureLevel == 0) {
+      url += '&z=10';
+    } else {
+      url += '&z=$pressureLevel';
+    }
+
+    final response =
+        await _client.get(Uri.parse(url)).timeout(WindApiConstants.timeout);
+
+    if (response.statusCode != 200) {
+      throw Exception('Folkweather area series HTTP ${response.statusCode}');
+    }
+
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    return _parseFolkAreaSeries(json, pressureLevel);
+  }
+
+  /// Parses a Folkweather area response with multiple timesteps.
+  ///
+  /// Standard x/y/t axes with row-major values.
+  /// Values are flattened: (numTimesteps * numRows * numCols).
+  /// Longitudes in 0-360 format are normalized to -180/180.
+  List<({DateTime time, WindField grid})> _parseFolkAreaSeries(
+    Map<String, dynamic> json,
+    int pressureLevel,
+  ) {
+    final domain = json['domain'] as Map<String, dynamic>;
+    final axes = domain['axes'] as Map<String, dynamic>;
+
+    // Extract grid coordinates
+    List<double> xs = (axes['x']['values'] as List)
+        .map((v) => (v as num).toDouble())
+        .toList();
+    final ys = (axes['y']['values'] as List)
+        .map((v) => (v as num).toDouble())
+        .toList();
+
+    // Normalize longitudes from 0-360 to -180/180
+    xs = xs.map((x) => x > 180 ? x - 360 : x).toList();
+
+    // Extract timestamps
+    final tAxis = axes['t'] as Map<String, dynamic>?;
+    final tValues = tAxis?['values'] as List?;
+    if (tValues == null || tValues.isEmpty) {
+      throw Exception('Folkweather area series: missing t.values');
+    }
+    final timestamps = tValues.map((v) => DateTime.parse(v.toString())).toList();
+
+    // Extract U/V values
+    final rawUs = (json['ranges'][WindApiConstants.folkUParam]['values'] as List)
+        .map((v) => v != null ? (v as num).toDouble() : 0.0)
+        .toList();
+    final rawVs = (json['ranges'][WindApiConstants.folkVParam]['values'] as List)
+        .map((v) => v != null ? (v as num).toDouble() : 0.0)
+        .toList();
+
+    final numTimesteps = timestamps.length;
+    final pointsPerTimestep = xs.length * ys.length;
+
+    final results = <({DateTime time, WindField grid})>[];
+
+    for (int t = 0; t < numTimesteps; t++) {
+      final offset = t * pointsPerTimestep;
+      final gridU = rawUs.sublist(
+        offset,
+        (offset + pointsPerTimestep).clamp(0, rawUs.length),
+      );
+      final gridV = rawVs.sublist(
+        offset,
+        (offset + pointsPerTimestep).clamp(0, rawVs.length),
+      );
+
+      final source =
+          'Folkweather ${pressureLevel == 0 ? 'surface' : '${pressureLevel}hPa'} t$t';
+
+      results.add((
+        time: timestamps[t],
+        grid: WindField(
+          xs: List.of(xs),
+          ys: List.of(ys),
+          us: gridU,
+          vs: gridV,
+          source: source,
+        ),
+      ));
+    }
+
+    return results;
+  }
+
   // ─── Point Wind Time-Series Query ──────────────────────────────
 
   /// Fetches a time series of wind vectors at a single geographic point.
