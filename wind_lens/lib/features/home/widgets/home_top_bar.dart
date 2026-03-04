@@ -75,7 +75,7 @@ class _HomeTopBarState extends State<HomeTopBar>
                 'ATMOSPHERIC AR',
                 style: GoogleFonts.dmMono(
                   fontSize: 9,
-                  color: const Color(0xFF444444),
+                  color: const Color(0xFF666666),
                   letterSpacing: 3,
                 ),
               ),

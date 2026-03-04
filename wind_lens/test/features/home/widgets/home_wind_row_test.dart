@@ -155,6 +155,24 @@ void main() {
       expect(find.text('18K'), findsOneWidget);
     });
 
+    testWidgets('shows m/s unit label for speed column', (tester) async {
+      final scene = _makeScene(uComponent: -7.2, vComponent: -6.5);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sceneStateProvider.overrideWithValue(scene),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(body: HomeWindRow()),
+          ),
+        ),
+      );
+
+      // Wind API returns meters per second, unit label must say 'm/s'
+      expect(find.text('m/s'), findsOneWidget);
+    });
+
     testWidgets('shows correct altitude for level300', (tester) async {
       final scene = _makeScene(altitude: AltitudeLevel.level300);
 

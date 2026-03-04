@@ -7,11 +7,36 @@
 
 ## Current State
 
-**Current Feature:** None (altitude-slider-redesign FINALIZED 2026-03-04)
-**Current Phase:** N/A
-**Branch:** `feature/on-device-fixes-march` (current)
-**Next Command:** `/research <next-feature>`
+**Current Feature:** home-screen-polish
+**Current Phase:** finalized
+**Branch:** `feature/home-screen-polish`
+**Next Command:** Merge PR or start next feature
 **Master:** Pending merge of on-device-fixes-march (commit 4e12bc4, PR open)
+
+### Completed Pipeline: home-screen-polish (quick UI polish) - **FINALIZED** (2026-03-04)
+
+- [x] /research - Complete (2026-03-04) - 2 in-scope fixes (mph label, sublabel contrast), 2 out-of-scope items documented
+- [x] /plan - Complete (2026-03-04) - 2 files modified, 1 test file updated, 1 new test, 3 phases, 5 tasks
+- [x] /implement - Complete (2026-03-04) - 2 files modified, 1 test added, all tests pass, 0 analyzer errors
+- [x] /test - Complete (2026-03-04) - 863 tests passing, 0 failures, 0 analyzer errors, test-success.md created
+- [x] /finalize - Complete (2026-03-04) - Commit bad0302, pushed to origin/feature/home-screen-polish, PR ready to create at https://github.com/sgupta604/wind-lens/pull/new/feature/home-screen-polish
+
+**Research Document:** `.claude/features/home-screen-polish/2026-03-04T15:00_research.md`
+**Plan Document:** `.claude/features/home-screen-polish/2026-03-04T15:30_plan.md`
+**Tasks:** `.claude/features/home-screen-polish/tasks.md`
+**Implementation:** `.claude/active-work/home-screen-polish/implementation.md`
+
+### Completed Pipeline: heywhatsthat-client (P2B-002+003) - **FINALIZED** (2026-03-04)
+
+- [x] /research - Complete (2026-03-04) - SPEC-003 analyzed, 3 new files, 4 modified, ~10 new tests, all questions resolved
+- [x] /plan - Complete (2026-03-04) - 3 new files, 5 modified, ~18 new tests, 6 phases, 14 tasks
+- [x] /implement - Complete (2026-03-04) - 4 new files, 7 modified, 18 new tests, 844 total passing, 0 analyzer errors
+- [x] /test - Complete (2026-03-04) - 797 auto-discovered + 47 explicit = 844 total passing, 0 errors, 0 warnings in lib/, test-success.md created
+- [x] /finalize - Complete (2026-03-04) - Commit b840a31, pushed to origin/feature/heywhatsthat-client, PR #1 created at https://github.com/sgupta604/wind-lens/pull/1
+
+**Research Document:** `.claude/features/heywhatsthat-client/2026-03-04T12:00_research.md`
+**Plan Document:** `.claude/features/heywhatsthat-client/2026-03-04T13:00_plan.md`
+**Tasks:** `.claude/features/heywhatsthat-client/tasks.md`
 
 ### Completed Pipeline: altitude-slider-redesign (FINALIZED 2026-03-04)
 
@@ -471,6 +496,8 @@ All 8 features complete! Wind Lens MVP is ready for testing on device.
 | home-screen | HomeScreen landing page, Shyft Lens branding, terrain panorama, animated particles | DONE (2026-02-26) |
 | wind-dome | 3D wind dome visualization, dome painter, altitude rings, real wind data | DONE (2026-03-01) |
 | location-picker | OSM map picker, location override provider, effectivePositionProvider, GPS chain fix, LocationIndicatorChip | DONE (2026-03-02) |
+| P2B-002+003 | heywhatsthat-client: HwtHorizonProvider, real terrain silhouette on home screen, declination+panoramaId fields | DONE (2026-03-04) |
+| home-screen-polish | Fix mph→m/s unit label, brighten header/sublabel/subtitle colors for legibility | DONE (2026-03-04) |
 
 ---
 
