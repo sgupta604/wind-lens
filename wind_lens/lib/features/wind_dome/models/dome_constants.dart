@@ -111,9 +111,10 @@ class DomeConstants {
 
   // ─── Grid Fetch Threshold ──────────────────────────────────
 
-  /// Dome radius in meters at or above which grid fetch is used instead of
-  /// point fetch. The comparison is inclusive: radii greater than or equal to
-  /// this value trigger grid fetch.
+  /// Dome radius in meters above which grid fetch is used instead of point
+  /// fetch. The comparison is exclusive: only radii strictly greater than this
+  /// value trigger grid fetch. A radius exactly equal to this threshold uses
+  /// point fetch.
   ///
   /// GFS grid spacing is ~0.25deg (~28km), so a 25km radius bbox captures
   /// only ~1-2 grid points -- borderline for spatial interpolation and prone

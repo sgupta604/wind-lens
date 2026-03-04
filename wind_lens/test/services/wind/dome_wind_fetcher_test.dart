@@ -214,7 +214,7 @@ void main() {
       }
     });
 
-    test('fetch() with radiusMeters == gridFetchThresholdMeters uses grid fetch (inclusive)',
+    test('fetch() with radiusMeters == gridFetchThresholdMeters uses point fetch (not grid)',
         () async {
       final requestedUrls = <String>[];
       final mockClient = MockClient((request) async {
@@ -232,11 +232,20 @@ void main() {
         radiusMeters: DomeConstants.gridFetchThresholdMeters, // 25000.0
       );
 
-      // Should use grid fetch: /area URLs should appear
-      final areaUrls = requestedUrls.where((u) => u.contains('/area'));
-      expect(areaUrls, isNotEmpty,
-          reason: 'radiusMeters == threshold should use grid fetch '
-              '(>= comparison is inclusive)');
+      // Should use point fetch: no /area URLs should appear
+      for (final url in requestedUrls) {
+        expect(url, isNot(contains('/area')),
+            reason: 'radiusMeters == threshold should use point fetch, '
+                'not grid fetch (no /area queries)');
+      }
+
+      // Layers should have null grids (point fetch doesn't produce grids)
+      for (final field in profile.hourly) {
+        for (final layer in field.layers) {
+          expect(layer.grid, isNull,
+              reason: 'Point fetch layers should not have grid data');
+        }
+      }
 
       // Should still return a valid profile
       expect(profile.hourly.length, 3);

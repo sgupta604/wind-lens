@@ -11,7 +11,7 @@ import '../../features/wind_dome/models/dome_wind_profile.dart';
 /// Wraps [WindApiClient] to fetch time-series wind data at 3 pressure levels
 /// (surface, 850hPa, 700hPa) and assembles them into a [DomeWindProfile].
 ///
-/// When [radiusMeters] is greater than or equal to
+/// When [radiusMeters] is strictly greater than
 /// [DomeConstants.gridFetchThresholdMeters] (25km), uses spatial grid
 /// fetching via [fetchWindGridSeries]. Otherwise uses point-based fetching
 /// via [fetchPointWindSeries].
@@ -48,7 +48,7 @@ class DomeWindFetcher {
 
   /// Fetches a 72-hour wind profile for the given location.
   ///
-  /// When [radiusMeters] is greater than or equal to
+  /// When [radiusMeters] is strictly greater than
   /// [DomeConstants.gridFetchThresholdMeters], fetches spatial grid data.
   /// Otherwise fetches point data.
   ///
@@ -63,7 +63,7 @@ class DomeWindFetcher {
     double radiusMeters = 1000.0,
   }) async {
     final isGrid =
-        radiusMeters >= DomeConstants.gridFetchThresholdMeters;
+        radiusMeters > DomeConstants.gridFetchThresholdMeters;
     final radiusKey = (radiusMeters / 1000).toStringAsFixed(1);
     final key =
         'dome_${lat.toStringAsFixed(2)}_${lng.toStringAsFixed(2)}'
@@ -198,7 +198,9 @@ class DomeWindFetcher {
     final metersPerRenderUnit = DomeConstants.metersPerRenderUnit;
 
     try {
-      // Fetch 3 pressure levels in parallel (grid time-series)
+      // Fetch 3 pressure levels in parallel (grid time-series).
+      // Total timeout of 15s prevents borderline bbox sizes from hanging
+      // through the full 4-tier fallback cascade (48s+ per level).
       final gridSeriesList = await Future.wait(
         _levelMapping.map(
           (entry) => _apiClient.fetchWindGridSeries(
@@ -209,7 +211,7 @@ class DomeWindFetcher {
             hours: 72,
           ),
         ),
-      );
+      ).timeout(const Duration(seconds: 15));
 
       log('DomeWindFetcher grid: ${gridSeriesList[0].length} surface, '
           '${gridSeriesList[1].length} 850hPa, '
