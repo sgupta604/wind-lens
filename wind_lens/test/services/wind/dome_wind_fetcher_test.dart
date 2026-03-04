@@ -214,6 +214,34 @@ void main() {
       }
     });
 
+    test('fetch() with radiusMeters == gridFetchThresholdMeters uses grid fetch (inclusive)',
+        () async {
+      final requestedUrls = <String>[];
+      final mockClient = MockClient((request) async {
+        requestedUrls.add(request.url.toString());
+        return http.Response(_shyftSeriesJson(3), 200);
+      });
+
+      final apiClient = WindApiClient(client: mockClient);
+      final fetcher = DomeWindFetcher(apiClient: apiClient);
+
+      // Fetch with radiusMeters exactly equal to the threshold
+      final profile = await fetcher.fetch(
+        37.77,
+        -122.42,
+        radiusMeters: DomeConstants.gridFetchThresholdMeters, // 25000.0
+      );
+
+      // Should use grid fetch: /area URLs should appear
+      final areaUrls = requestedUrls.where((u) => u.contains('/area'));
+      expect(areaUrls, isNotEmpty,
+          reason: 'radiusMeters == threshold should use grid fetch '
+              '(>= comparison is inclusive)');
+
+      // Should still return a valid profile
+      expect(profile.hourly.length, 3);
+    });
+
     test('grid fetch uses DomeConstants.metersPerRenderUnit (not radiusMeters/domeR)',
         () async {
       // Create a Shyft area (MultiPointSeries) response with a 2x2 grid

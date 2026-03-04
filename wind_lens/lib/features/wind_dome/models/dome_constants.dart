@@ -111,13 +111,14 @@ class DomeConstants {
 
   // ─── Grid Fetch Threshold ──────────────────────────────────
 
-  /// Dome radius in meters at which grid fetch is used instead of point fetch.
+  /// Dome radius in meters at or above which grid fetch is used instead of
+  /// point fetch. The comparison is inclusive: radii greater than or equal to
+  /// this value trigger grid fetch.
   ///
-  /// Below this threshold, a single wind data point gives sufficient spatial
-  /// resolution. GFS grid spacing is ~0.25° (~28km), so a 15km radius bbox
-  /// captures only ~1 grid point — not enough for spatial interpolation.
-  /// At 25km+ radius (50km diameter), the bbox reliably spans multiple
-  /// GFS grid cells, producing meaningful spatial wind variation.
+  /// GFS grid spacing is ~0.25deg (~28km), so a 25km radius bbox captures
+  /// only ~1-2 grid points -- borderline for spatial interpolation and prone
+  /// to timeouts. At 50km radius the bbox reliably spans multiple GFS grid
+  /// cells, producing meaningful spatial wind variation.
   static const double gridFetchThresholdMeters = 25000.0;
 
   // ─── Ground Disc ────────────────────────────────────────────

@@ -11,9 +11,10 @@ import '../../features/wind_dome/models/dome_wind_profile.dart';
 /// Wraps [WindApiClient] to fetch time-series wind data at 3 pressure levels
 /// (surface, 850hPa, 700hPa) and assembles them into a [DomeWindProfile].
 ///
-/// When [radiusMeters] >= [DomeConstants.gridFetchThresholdMeters] (15km),
-/// uses spatial grid fetching via [fetchWindGridSeries]. Otherwise uses
-/// point-based fetching via [fetchPointWindSeries].
+/// When [radiusMeters] is greater than or equal to
+/// [DomeConstants.gridFetchThresholdMeters] (25km), uses spatial grid
+/// fetching via [fetchWindGridSeries]. Otherwise uses point-based fetching
+/// via [fetchPointWindSeries].
 ///
 /// Cache is **static** so it survives fetcher recreation across provider
 /// dispose/rebuild cycles. Cache key includes grid/point distinction to
@@ -47,8 +48,9 @@ class DomeWindFetcher {
 
   /// Fetches a 72-hour wind profile for the given location.
   ///
-  /// When [radiusMeters] >= [DomeConstants.gridFetchThresholdMeters],
-  /// fetches spatial grid data. Otherwise fetches point data.
+  /// When [radiusMeters] is greater than or equal to
+  /// [DomeConstants.gridFetchThresholdMeters], fetches spatial grid data.
+  /// Otherwise fetches point data.
   ///
   /// Returns cached data if available and fresh. Otherwise fetches
   /// 3 pressure levels in parallel via [Future.wait], assembles into
