@@ -52,12 +52,12 @@ class HomeWindRow extends ConsumerWidget {
             Expanded(
               child: Semantics(
                 label: wind != null
-                    ? 'Wind speed $speedValue miles per hour'
+                    ? 'Wind speed $speedValue meters per second'
                     : 'Wind speed loading',
                 child: _DataColumn(
                   label: 'SPEED',
                   value: speedValue,
-                  unit: 'mph',
+                  unit: 'm/s',
                 ),
               ),
             ),
@@ -126,7 +126,7 @@ class _DataColumn extends StatelessWidget {
             label,
             style: GoogleFonts.dmMono(
               fontSize: 8,
-              color: const Color(0xFF333333),
+              color: const Color(0xFF555555),
               letterSpacing: 0.25 * 8, // 0.25em
             ),
           ),
@@ -143,7 +143,7 @@ class _DataColumn extends StatelessWidget {
             unit,
             style: GoogleFonts.dmMono(
               fontSize: 9,
-              color: const Color(0xFF444444),
+              color: const Color(0xFF777777),
               letterSpacing: 0.15 * 9, // 0.15em
             ),
           ),
