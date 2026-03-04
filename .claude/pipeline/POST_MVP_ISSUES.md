@@ -450,6 +450,44 @@ For each issue:
 
 ---
 
+### BUG: Dome Wind Direction Inverted vs AR View
+
+**Severity:** High
+**Status:** FIXED (2026-03-04) — `z += wind.v` changed to `z -= wind.v` in dome_particle.dart. Pending test/finalize.
+**Context:** AR showed surface wind going SE, dome showed NW. Root cause: sign error in v-component mapping. Dome +z = South but +v = Northward, so positive v must decrease z.
+
+---
+
+### UX: Dome Altitude Range Label
+
+**Severity:** Low
+**Status:** DONE (2026-03-03) — Added "Surface – 1800m" label in dome_info_bar.dart as part of altitude-slider-redesign.
+
+---
+
+### FEATURE: Large Dome with Spatial Wind Grid (fetchWindGrid)
+
+**Severity:** Enhancement
+**Status:** OPEN — Future pipeline candidate
+**Context:** The dome currently fetches wind at a single GPS point (3 altitude layers). All particles at the same altitude receive identical wind vectors. This is appropriate for current dome sizes (≤5km radius) because HRRR resolution is 3km — there's only ~1-4 grid points inside the dome.
+
+**What it would do:** Add larger dome presets (15km, 50km radius) and wire up the existing `fetchWindGrid()` method in `WindApiClient` to fetch a spatial grid of wind data across the dome's footprint. Particles at different x/z positions would get different wind vectors, showing real spatial wind patterns (convergence zones, wind shear, frontal boundaries).
+
+**Why 15km+:** At 15km radius (30km diameter), HRRR provides ~100 distinct grid points — enough for meaningful spatial variation. At 50km, ~1000 points.
+
+**Prerequisites:**
+- `fetchWindGrid()` already exists in `wind_api_client.dart` (tested but not wired to dome)
+- `DomeWindField.sample(x, y, z)` already accepts x/z params (currently ignored, documented as "unused in MVP")
+- Need: `DomeWindField` to store a 2D grid instead of single column, `sample()` to interpolate horizontally
+
+**Files:**
+- `lib/services/wind/wind_api_client.dart` — `fetchWindGrid()` (exists)
+- `lib/services/wind/dome_wind_fetcher.dart` — needs to call `fetchWindGrid()` instead of `fetchPointWindSeries()`
+- `lib/features/wind_dome/models/dome_wind_field.dart` — needs spatial grid storage + bilinear interpolation in `sample()`
+- `lib/features/wind_dome/widgets/dome_info_bar.dart` — add 15km/50km presets
+
+---
+
 ## Notes
 
 - All issues require **real device testing** - simulator won't show these problems
