@@ -2,16 +2,16 @@
 
 **Last updated:** 2026-03-04
 
-## Current Feature: large-dome-wind-grid
+## Current Feature: large-dome-wind-grid / dome-radius-stale-data
 
 | Field | Value |
 |-------|-------|
-| Feature | large-dome-wind-grid (P2B-007) |
-| Phase | implement (v2) - COMPLETE |
-| Next step | `/test large-dome-wind-grid` |
-| Branch | feature/wind-dome-homescreen |
+| Feature | large-dome-wind-grid (P2B-007) + dome-radius-stale-data (bug fix) |
+| Phase | finalize - COMPLETE |
+| Next step | Merge PR to master |
+| Branch | feature/large-dome-wind-grid |
 
-## Phase History: large-dome-wind-grid
+## Phase History: large-dome-wind-grid + dome-radius-stale-data
 
 | Phase | Status | Date | Notes |
 |-------|--------|------|-------|
@@ -21,8 +21,9 @@
 | diagnose | complete | 2026-03-04 | 3 bugs found: zoom reset, wrong grid direction, frozen particles. Root cause: metersPerRenderUnit mismatch between screen and field |
 | diagnose (v2) | complete | 2026-03-04 | Direction bug at 15km/50km: code coordinate system verified correct. Primary root cause: grid API returns different wind data than point API. Defensive fix: sort Folkweather axes + add diagnostic logging |
 | implement (v2) | complete | 2026-03-04 | Folkweather sort+reindex fix in both area parsers, diagnostic logging in fetcher + API client, 3 new tests, 825 tests pass |
-| test | pending | - | - |
-| finalize | pending | - | - |
+| dome-radius-stale-data | complete | 2026-03-04 | Cache key includes radius, DomeWindProfile carries radiusMeters, stale-data guard in provider, 25km grid threshold, 25km preset |
+| test | complete | 2026-03-04 | 825 tests pass (exit code 0), 47 explicit path tests pass, dart analyze 0 errors 0 warnings |
+| finalize | complete | 2026-03-04 | PR created to master, branch feature/large-dome-wind-grid |
 
 ## Parked Feature: home-screen-polish
 
@@ -57,5 +58,5 @@
 ## Next Command
 
 ```
-/test large-dome-wind-grid
+Merge PR to master (feature/large-dome-wind-grid)
 ```
