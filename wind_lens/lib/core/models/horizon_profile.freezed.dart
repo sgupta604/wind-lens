@@ -30,6 +30,19 @@ mixin _$HorizonProfile {
   Map<double, double> get elevationAngles => throw _privateConstructorUsedError;
   DateTime get fetchedAt => throw _privateConstructorUsedError;
 
+  /// Magnetic declination in degrees from HeyWhatsThat API.
+  ///
+  /// Used for compass correction: trueBearing = magneticBearing + declination.
+  /// Positive means magnetic north is east of true north.
+  /// Stored here for future use by terrain-based sky detection (P2B-004).
+  double get declination => throw _privateConstructorUsedError;
+
+  /// HeyWhatsThat panorama ID that produced this profile.
+  ///
+  /// Stored for potential re-fetch or diagnostic purposes.
+  /// Null for flat/mock profiles or profiles from other sources.
+  String? get panoramaId => throw _privateConstructorUsedError;
+
   /// Serializes this HorizonProfile to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
@@ -52,6 +65,8 @@ abstract class $HorizonProfileCopyWith<$Res> {
     double longitude,
     @DoubleMapConverter() Map<double, double> elevationAngles,
     DateTime fetchedAt,
+    double declination,
+    String? panoramaId,
   });
 }
 
@@ -74,6 +89,8 @@ class _$HorizonProfileCopyWithImpl<$Res, $Val extends HorizonProfile>
     Object? longitude = null,
     Object? elevationAngles = null,
     Object? fetchedAt = null,
+    Object? declination = null,
+    Object? panoramaId = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -93,6 +110,14 @@ class _$HorizonProfileCopyWithImpl<$Res, $Val extends HorizonProfile>
                 ? _value.fetchedAt
                 : fetchedAt // ignore: cast_nullable_to_non_nullable
                       as DateTime,
+            declination: null == declination
+                ? _value.declination
+                : declination // ignore: cast_nullable_to_non_nullable
+                      as double,
+            panoramaId: freezed == panoramaId
+                ? _value.panoramaId
+                : panoramaId // ignore: cast_nullable_to_non_nullable
+                      as String?,
           )
           as $Val,
     );
@@ -113,6 +138,8 @@ abstract class _$$HorizonProfileImplCopyWith<$Res>
     double longitude,
     @DoubleMapConverter() Map<double, double> elevationAngles,
     DateTime fetchedAt,
+    double declination,
+    String? panoramaId,
   });
 }
 
@@ -134,6 +161,8 @@ class __$$HorizonProfileImplCopyWithImpl<$Res>
     Object? longitude = null,
     Object? elevationAngles = null,
     Object? fetchedAt = null,
+    Object? declination = null,
+    Object? panoramaId = freezed,
   }) {
     return _then(
       _$HorizonProfileImpl(
@@ -153,6 +182,14 @@ class __$$HorizonProfileImplCopyWithImpl<$Res>
             ? _value.fetchedAt
             : fetchedAt // ignore: cast_nullable_to_non_nullable
                   as DateTime,
+        declination: null == declination
+            ? _value.declination
+            : declination // ignore: cast_nullable_to_non_nullable
+                  as double,
+        panoramaId: freezed == panoramaId
+            ? _value.panoramaId
+            : panoramaId // ignore: cast_nullable_to_non_nullable
+                  as String?,
       ),
     );
   }
@@ -166,6 +203,8 @@ class _$HorizonProfileImpl extends _HorizonProfile {
     required this.longitude,
     @DoubleMapConverter() required final Map<double, double> elevationAngles,
     required this.fetchedAt,
+    this.declination = 0.0,
+    this.panoramaId,
   }) : _elevationAngles = elevationAngles,
        super._();
 
@@ -194,9 +233,25 @@ class _$HorizonProfileImpl extends _HorizonProfile {
   @override
   final DateTime fetchedAt;
 
+  /// Magnetic declination in degrees from HeyWhatsThat API.
+  ///
+  /// Used for compass correction: trueBearing = magneticBearing + declination.
+  /// Positive means magnetic north is east of true north.
+  /// Stored here for future use by terrain-based sky detection (P2B-004).
+  @override
+  @JsonKey()
+  final double declination;
+
+  /// HeyWhatsThat panorama ID that produced this profile.
+  ///
+  /// Stored for potential re-fetch or diagnostic purposes.
+  /// Null for flat/mock profiles or profiles from other sources.
+  @override
+  final String? panoramaId;
+
   @override
   String toString() {
-    return 'HorizonProfile(latitude: $latitude, longitude: $longitude, elevationAngles: $elevationAngles, fetchedAt: $fetchedAt)';
+    return 'HorizonProfile(latitude: $latitude, longitude: $longitude, elevationAngles: $elevationAngles, fetchedAt: $fetchedAt, declination: $declination, panoramaId: $panoramaId)';
   }
 
   @override
@@ -213,7 +268,11 @@ class _$HorizonProfileImpl extends _HorizonProfile {
               _elevationAngles,
             ) &&
             (identical(other.fetchedAt, fetchedAt) ||
-                other.fetchedAt == fetchedAt));
+                other.fetchedAt == fetchedAt) &&
+            (identical(other.declination, declination) ||
+                other.declination == declination) &&
+            (identical(other.panoramaId, panoramaId) ||
+                other.panoramaId == panoramaId));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -224,6 +283,8 @@ class _$HorizonProfileImpl extends _HorizonProfile {
     longitude,
     const DeepCollectionEquality().hash(_elevationAngles),
     fetchedAt,
+    declination,
+    panoramaId,
   );
 
   /// Create a copy of HorizonProfile
@@ -249,6 +310,8 @@ abstract class _HorizonProfile extends HorizonProfile {
     required final double longitude,
     @DoubleMapConverter() required final Map<double, double> elevationAngles,
     required final DateTime fetchedAt,
+    final double declination,
+    final String? panoramaId,
   }) = _$HorizonProfileImpl;
   const _HorizonProfile._() : super._();
 
@@ -267,6 +330,21 @@ abstract class _HorizonProfile extends HorizonProfile {
   Map<double, double> get elevationAngles;
   @override
   DateTime get fetchedAt;
+
+  /// Magnetic declination in degrees from HeyWhatsThat API.
+  ///
+  /// Used for compass correction: trueBearing = magneticBearing + declination.
+  /// Positive means magnetic north is east of true north.
+  /// Stored here for future use by terrain-based sky detection (P2B-004).
+  @override
+  double get declination;
+
+  /// HeyWhatsThat panorama ID that produced this profile.
+  ///
+  /// Stored for potential re-fetch or diagnostic purposes.
+  /// Null for flat/mock profiles or profiles from other sources.
+  @override
+  String? get panoramaId;
 
   /// Create a copy of HorizonProfile
   /// with the given fields replaced by the non-null parameter values.

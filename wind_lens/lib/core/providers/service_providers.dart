@@ -4,7 +4,8 @@ import '../services/horizon_provider.dart' as core;
 import '../services/sensor_service.dart';
 import '../services/sky_detector.dart';
 import '../services/wind_data_source.dart';
-import '../../services/horizon/mock_horizon_provider.dart';
+import '../../services/horizon/cached_horizon_provider.dart';
+import '../../services/horizon/hwt_horizon_provider.dart';
 import '../../services/sensors/device_sensor_service.dart';
 import '../../services/sky_detection/hsv_sky_detector.dart';
 import '../../services/wind/cached_wind_source.dart';
@@ -55,11 +56,18 @@ WindDataSource windDataSource(WindDataSourceRef ref) {
 
 /// Provides the [HorizonProvider] implementation.
 ///
-/// Currently returns [MockHorizonProvider] which returns flat horizons.
-/// Swap when HeyWhatsThat client is ready.
+/// Returns [CachedHorizonProvider] wrapping [HwtHorizonProvider] which
+/// fetches real terrain horizon profiles from the HeyWhatsThat API.
+/// The cache uses 3-decimal-place lat/lng keys (~111m resolution) with
+/// no expiry (terrain does not change).
+///
+/// The [HwtHorizonProvider] HTTP client is disposed when this provider
+/// is no longer watched.
 @riverpod
 core.HorizonProvider horizonProviderService(HorizonProviderServiceRef ref) {
-  return MockHorizonProvider();
+  final hwt = HwtHorizonProvider();
+  ref.onDispose(() => hwt.dispose());
+  return CachedHorizonProvider(delegate: hwt);
 }
 
 /// Provides the [SkyDetector] implementation.

@@ -50,6 +50,19 @@ class HorizonProfile with _$HorizonProfile {
     /// Elevation angle = how many degrees above horizontal the terrain reaches.
     @DoubleMapConverter() required Map<double, double> elevationAngles,
     required DateTime fetchedAt,
+
+    /// Magnetic declination in degrees from HeyWhatsThat API.
+    ///
+    /// Used for compass correction: trueBearing = magneticBearing + declination.
+    /// Positive means magnetic north is east of true north.
+    /// Stored here for future use by terrain-based sky detection (P2B-004).
+    @Default(0.0) double declination,
+
+    /// HeyWhatsThat panorama ID that produced this profile.
+    ///
+    /// Stored for potential re-fetch or diagnostic purposes.
+    /// Null for flat/mock profiles or profiles from other sources.
+    String? panoramaId,
   }) = _HorizonProfile;
 
   factory HorizonProfile.fromJson(Map<String, dynamic> json) =>

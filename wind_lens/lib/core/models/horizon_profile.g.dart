@@ -14,6 +14,8 @@ _$HorizonProfileImpl _$$HorizonProfileImplFromJson(Map<String, dynamic> json) =>
         json['elevationAngles'] as Map<String, dynamic>,
       ),
       fetchedAt: DateTime.parse(json['fetchedAt'] as String),
+      declination: (json['declination'] as num?)?.toDouble() ?? 0.0,
+      panoramaId: json['panoramaId'] as String?,
     );
 
 Map<String, dynamic> _$$HorizonProfileImplToJson(
@@ -25,4 +27,6 @@ Map<String, dynamic> _$$HorizonProfileImplToJson(
     instance.elevationAngles,
   ),
   'fetchedAt': instance.fetchedAt.toIso8601String(),
+  'declination': instance.declination,
+  'panoramaId': instance.panoramaId,
 };
