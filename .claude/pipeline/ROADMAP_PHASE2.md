@@ -33,8 +33,10 @@
 | P2B-006 | real-wind-data | ~~High~~ | ~~High~~ | **DONE** | Real wind from OGC EDR APIs (Shyft/Folkweather). **Summary:** `.claude/features/real-wind-data/SUMMARY.md` |
 | SPEC-003 | home-screen | **High** | Medium | **Implementing** | HomeScreen entry point with ShyftLens branding. **Spec:** `.claude/features/home-screen/SPEC-002_home_screen.md` |
 | SPEC-004 | wind-dome | **High** | High | Planned | 3D wind dome visualization. **Spec:** `.claude/features/wind-dome/SPEC-002-wind-dome.md` |
+| P2B-007 | large-dome-wind-grid | Medium | Medium | Waiting | 15km/50km dome presets + spatial wind grid via fetchWindGrid() |
+| P2B-008 | photo-capture-overlay | Medium | High | Backburner | Capture photo + frozen wind overlay (was SPEC-002) |
 | P2C-001 | map-view | Medium | High | Future | Toggle AR to top-down weather map view |
-| P2C-002 | altitude-input | Low | Medium | Future | Input specific altitude in feet |
+| P2C-002 | altitude-input | Low | Medium | Mostly Done | 6-level collapsible slider implemented |
 
 ---
 
@@ -539,14 +541,15 @@ Phase 2b: Real Data & New Screens  (current focus)
   Step 3: SPEC-003 home-screen             ← IMPLEMENTING (ShyftLens rebrand)
   Step 4: SPEC-004 wind-dome               ← Next (3D dome + Open-Meteo forecast)
 
-Phase 2b (deferred): Terrain Sky Detection
-  P2B-002+003 heywhatsthat-client          Deferred (terrain sky detection on backburner)
+Phase 2b (deferred): Terrain Sky Detection & Enhancements
+  P2B-002+003 heywhatsthat-client          Deferred (terrain sky detection)
   P2B-004+005 terrain-sky-mask             Deferred
-  SPEC-002 photo-capture-overlay           Backburner
+  P2B-007 large-dome-wind-grid             New — 15km/50km presets + fetchWindGrid() spatial data
+  P2B-008 photo-capture-overlay            Backburner (was SPEC-002)
 
 Phase 2c: Advanced Features (future)
   P2C-001 map-view (depends on location + data)
-  P2C-002 altitude-input / continuous slider (polish, low priority)
+  P2C-002 altitude-input / continuous slider (mostly done via altitude-slider-redesign)
 ```
 
 **Principle:** One step at a time. Each step should work and be testable before proceeding. If something breaks, we revert to master.

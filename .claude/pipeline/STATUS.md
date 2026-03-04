@@ -7,11 +7,21 @@
 
 ## Current State
 
-**Current Feature:** home-screen-polish
-**Current Phase:** finalized
-**Branch:** `feature/home-screen-polish`
-**Next Command:** Merge PR or start next feature
+**Current Feature:** large-dome-wind-grid
+**Current Phase:** research-complete
+**Branch:** `feature/wind-dome-homescreen`
+**Next Command:** `/plan large-dome-wind-grid`
 **Master:** Pending merge of on-device-fixes-march (commit 4e12bc4, PR open)
+
+### Current Pipeline: large-dome-wind-grid (P2B-007)
+
+- [x] /research - Complete (2026-03-04) - 7 FRs, 7 TRs, 8 files to modify, 6 test files, 8 questions resolved, all existing infrastructure analyzed
+- [ ] /plan - Not started
+- [ ] /implement - Not started
+- [ ] /test - Not started
+- [ ] /finalize - Not started
+
+**Research Document:** `.claude/features/large-dome-wind-grid/2026-03-04T16:00_research.md`
 
 ### Completed Pipeline: home-screen-polish (quick UI polish) - **FINALIZED** (2026-03-04)
 

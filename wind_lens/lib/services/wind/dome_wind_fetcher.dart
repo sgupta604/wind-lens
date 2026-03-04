@@ -62,9 +62,10 @@ class DomeWindFetcher {
   }) async {
     final isGrid =
         radiusMeters >= DomeConstants.gridFetchThresholdMeters;
+    final radiusKey = (radiusMeters / 1000).toStringAsFixed(1);
     final key =
         'dome_${lat.toStringAsFixed(2)}_${lng.toStringAsFixed(2)}'
-        '_${isGrid ? 'grid' : 'point'}';
+        '_${isGrid ? 'grid' : 'point'}_r${radiusKey}km';
 
     // Check cache
     if (_cachedKey == key &&
@@ -188,7 +189,10 @@ class DomeWindFetcher {
     double radiusMeters,
   ) async {
     final radiusKm = radiusMeters / 1000.0;
-    final metersPerRenderUnit = radiusMeters / DomeConstants.domeR;
+    // Use the base metersPerRenderUnit that matches the screen's geometry.
+    // The screen scales dome radius (computedDomeR = size / baseRate), keeping
+    // the base rate constant. The field must use the same rate.
+    final metersPerRenderUnit = DomeConstants.metersPerRenderUnit;
 
     try {
       // Fetch 3 pressure levels in parallel (grid time-series)
@@ -260,6 +264,19 @@ class DomeWindFetcher {
           centerLng: lng,
           metersPerRenderUnit: metersPerRenderUnit,
         ));
+      }
+
+      // Log center wind from grid data for on-device debugging.
+      // Compares grid center with the scalar (u, v) to verify consistency.
+      if (hourlyFields.isNotEmpty) {
+        final first = hourlyFields.first;
+        for (final layer in first.layers) {
+          final gridCenter = layer.grid?.centerWind();
+          log('DomeWindFetcher grid center: ${layer.altitudeMeters}m '
+              'scalar=(${layer.u.toStringAsFixed(2)}, ${layer.v.toStringAsFixed(2)}) '
+              'grid=${gridCenter != null ? "(${gridCenter.u.toStringAsFixed(2)}, ${gridCenter.v.toStringAsFixed(2)})" : "none"}',
+              name: 'DomeWindFetcher');
+        }
       }
 
       return DomeWindProfile(

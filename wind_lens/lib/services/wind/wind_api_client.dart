@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'dart:math';
+import 'dart:developer' show log;
+import 'dart:math' hide log;
 
 import 'package:http/http.dart' as http;
 
@@ -128,18 +129,26 @@ class WindApiClient {
 
     // Try Shyft area time-series
     try {
-      return await _fetchShyftAreaSeries(
+      final results = await _fetchShyftAreaSeries(
         encodedPoly, pressureLevel, datetimeRange,
       );
+      log('fetchWindGridSeries: Shyft area success for ${pressureLevel}hPa '
+          '(${results.length} timesteps)',
+          name: 'WindApiClient');
+      return results;
     } catch (_) {
       // Fall through to Folkweather
     }
 
     // Try Folkweather area time-series
     try {
-      return await _fetchFolkAreaSeries(
+      final results = await _fetchFolkAreaSeries(
         encodedPoly, pressureLevel, datetimeRange,
       );
+      log('fetchWindGridSeries: Folkweather area success for ${pressureLevel}hPa '
+          '(${results.length} timesteps)',
+          name: 'WindApiClient');
+      return results;
     } catch (_) {
       // Fall through to single-timestep fallback
     }
@@ -156,6 +165,8 @@ class WindApiClient {
       final rounded = now.minute >= 30
           ? DateTime.utc(now.year, now.month, now.day, now.hour + 1)
           : DateTime.utc(now.year, now.month, now.day, now.hour);
+      log('fetchWindGridSeries: single-timestep fallback for ${pressureLevel}hPa',
+          name: 'WindApiClient');
       return [(time: rounded, grid: grid)];
     } catch (_) {
       // Total failure
@@ -333,15 +344,26 @@ class WindApiClient {
     final axes = domain['axes'] as Map<String, dynamic>;
 
     // Extract grid coordinates
-    List<double> xs = (axes['x']['values'] as List)
+    List<double> rawXs = (axes['x']['values'] as List)
         .map((v) => (v as num).toDouble())
         .toList();
-    final ys = (axes['y']['values'] as List)
+    final rawYs = (axes['y']['values'] as List)
         .map((v) => (v as num).toDouble())
         .toList();
 
     // Normalize longitudes from 0-360 to -180/180
-    xs = xs.map((x) => x > 180 ? x - 360 : x).toList();
+    rawXs = rawXs.map((x) => x > 180 ? x - 360 : x).toList();
+
+    // Sort axes ascending and build sort-index arrays for reindexing.
+    // This matches the Shyft parser pattern and fulfills the WindField
+    // contract that xs and ys are sorted ascending.
+    final xIndices = List.generate(rawXs.length, (i) => i);
+    xIndices.sort((a, b) => rawXs[a].compareTo(rawXs[b]));
+    final sortedXs = [for (final i in xIndices) rawXs[i]];
+
+    final yIndices = List.generate(rawYs.length, (i) => i);
+    yIndices.sort((a, b) => rawYs[a].compareTo(rawYs[b]));
+    final sortedYs = [for (final i in yIndices) rawYs[i]];
 
     // Extract timestamps
     final tAxis = axes['t'] as Map<String, dynamic>?;
@@ -360,20 +382,30 @@ class WindApiClient {
         .toList();
 
     final numTimesteps = timestamps.length;
-    final pointsPerTimestep = xs.length * ys.length;
+    final numCols = rawXs.length;
+    final numRows = rawYs.length;
+    final pointsPerTimestep = numCols * numRows;
 
     final results = <({DateTime time, WindField grid})>[];
 
     for (int t = 0; t < numTimesteps; t++) {
       final offset = t * pointsPerTimestep;
-      final gridU = rawUs.sublist(
-        offset,
-        (offset + pointsPerTimestep).clamp(0, rawUs.length),
-      );
-      final gridV = rawVs.sublist(
-        offset,
-        (offset + pointsPerTimestep).clamp(0, rawVs.length),
-      );
+      final gridU = List<double>.filled(pointsPerTimestep, 0.0);
+      final gridV = List<double>.filled(pointsPerTimestep, 0.0);
+
+      // Reindex from API order (rawYs x rawXs) to sorted order (sortedYs x sortedXs)
+      for (int sortedRow = 0; sortedRow < numRows; sortedRow++) {
+        final apiRow = yIndices[sortedRow];
+        for (int sortedCol = 0; sortedCol < numCols; sortedCol++) {
+          final apiCol = xIndices[sortedCol];
+          final apiIdx = offset + apiRow * numCols + apiCol;
+          final sortedIdx = sortedRow * numCols + sortedCol;
+          if (apiIdx < rawUs.length) {
+            gridU[sortedIdx] = rawUs[apiIdx];
+            gridV[sortedIdx] = rawVs[apiIdx];
+          }
+        }
+      }
 
       final source =
           'Folkweather ${pressureLevel == 0 ? 'surface' : '${pressureLevel}hPa'} t$t';
@@ -381,8 +413,8 @@ class WindApiClient {
       results.add((
         time: timestamps[t],
         grid: WindField(
-          xs: List.of(xs),
-          ys: List.of(ys),
+          xs: List.of(sortedXs),
+          ys: List.of(sortedYs),
           us: gridU,
           vs: gridV,
           source: source,
@@ -897,24 +929,61 @@ class WindApiClient {
   /// Null values (HRRR outside CONUS) are replaced with 0.0.
   WindField _parseFolkArea(Map<String, dynamic> json, String source) {
     final axes = json['domain']['axes'] as Map<String, dynamic>;
-    List<double> xs = (axes['x']['values'] as List)
+    List<double> rawXs = (axes['x']['values'] as List)
         .map((v) => (v as num).toDouble())
         .toList();
-    final ys = (axes['y']['values'] as List)
+    final rawYs = (axes['y']['values'] as List)
         .map((v) => (v as num).toDouble())
         .toList();
 
     // Convert 0-360 longitude to -180/180
-    xs = xs.map((x) => x > 180 ? x - 360 : x).toList();
+    rawXs = rawXs.map((x) => x > 180 ? x - 360 : x).toList();
 
-    final us = (json['ranges'][WindApiConstants.folkUParam]['values'] as List)
+    // Sort axes ascending and build sort-index arrays for reindexing.
+    // This matches the Shyft parser pattern and fulfills the WindField
+    // contract that xs and ys are sorted ascending.
+    final xIndices = List.generate(rawXs.length, (i) => i);
+    xIndices.sort((a, b) => rawXs[a].compareTo(rawXs[b]));
+    final sortedXs = [for (final i in xIndices) rawXs[i]];
+
+    final yIndices = List.generate(rawYs.length, (i) => i);
+    yIndices.sort((a, b) => rawYs[a].compareTo(rawYs[b]));
+    final sortedYs = [for (final i in yIndices) rawYs[i]];
+
+    final rawUs = (json['ranges'][WindApiConstants.folkUParam]['values'] as List)
         .map((v) => v != null ? (v as num).toDouble() : 0.0)
         .toList();
-    final vs = (json['ranges'][WindApiConstants.folkVParam]['values'] as List)
+    final rawVs = (json['ranges'][WindApiConstants.folkVParam]['values'] as List)
         .map((v) => v != null ? (v as num).toDouble() : 0.0)
         .toList();
 
-    return WindField(xs: xs, ys: ys, us: us, vs: vs, source: source);
+    final numCols = rawXs.length;
+    final numRows = rawYs.length;
+    final gridSize = numCols * numRows;
+    final sortedUs = List<double>.filled(gridSize, 0.0);
+    final sortedVs = List<double>.filled(gridSize, 0.0);
+
+    // Reindex from API order (rawYs x rawXs) to sorted order (sortedYs x sortedXs)
+    for (int sortedRow = 0; sortedRow < numRows; sortedRow++) {
+      final apiRow = yIndices[sortedRow];
+      for (int sortedCol = 0; sortedCol < numCols; sortedCol++) {
+        final apiCol = xIndices[sortedCol];
+        final apiIdx = apiRow * numCols + apiCol;
+        final sortedIdx = sortedRow * numCols + sortedCol;
+        if (apiIdx < rawUs.length) {
+          sortedUs[sortedIdx] = rawUs[apiIdx];
+          sortedVs[sortedIdx] = rawVs[apiIdx];
+        }
+      }
+    }
+
+    return WindField(
+      xs: sortedXs,
+      ys: sortedYs,
+      us: sortedUs,
+      vs: sortedVs,
+      source: source,
+    );
   }
 
   // ─── Helpers ──────────────────────────────────────────────────

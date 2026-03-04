@@ -303,6 +303,53 @@
 - [x] DomeWindFetcher.fetch() backward compatible (new param has default)
 - [ ] Grid fallback to point data tested and working (needs DomeWindFetcher tests from test agent)
 
+---
+
+## Phase 7: Direction Fix (Post-Diagnosis v2)
+
+### Task 7.1: Sort Folkweather area parser axes and reindex data
+- [x] Write TDD tests for `_parseFolkAreaSeries` with descending ys
+- [x] Write TDD test for `_parseFolkArea` with descending ys
+- [x] Write backward-compat test for already-ascending axes
+- [x] Verify tests FAIL (TDD red phase)
+- [x] Fix `_parseFolkAreaSeries`: sort xs/ys ascending, build sort-index arrays, reindex data
+- [x] Fix `_parseFolkArea`: same sorting + reindexing pattern
+- [x] Verify tests PASS (TDD green phase)
+
+**Files:**
+- `lib/services/wind/wind_api_client.dart` (modified `_parseFolkAreaSeries` and `_parseFolkArea`)
+- `test/services/wind/wind_api_client_test.dart` (3 new tests)
+
+**Acceptance Criteria:**
+- [x] Descending ys are sorted ascending and data is reindexed to match
+- [x] Already-ascending axes preserve data order (no regression)
+- [x] All 23 wind_api_client tests pass
+
+### Task 7.2: Add diagnostic logging
+- [x] Add `dart:developer` import (with `hide log` on dart:math) to wind_api_client.dart
+- [x] Add API source logging after each successful API call in `fetchWindGridSeries`
+- [x] Add grid center wind logging in `DomeWindFetcher._fetchGrid`
+
+**Files:**
+- `lib/services/wind/wind_api_client.dart` (import + 3 log statements)
+- `lib/services/wind/dome_wind_fetcher.dart` (7-line logging block)
+
+**Acceptance Criteria:**
+- [x] `dart analyze` on modified files: 0 issues
+- [x] Logging does not affect test behavior (exit code 0)
+
+### Task 7.3: Full test suite verification
+- [x] Run `flutter test` -- 825 tests pass, exit code 0
+- [x] Run explicit-path tests -- 47 tests pass
+- [x] `dart analyze` on modified files -- 0 issues
+- [x] No new warnings or errors introduced
+
+**Acceptance Criteria:**
+- [x] All tests pass
+- [x] No analyzer issues in modified files
+
+---
+
 ## Summary
 
 | Phase | Tasks | Est. Tests |
@@ -313,4 +360,5 @@
 | 4. Integration | 3 | 0 (tests updated in P4.3) |
 | 5. Polish | 3 (all [P]) | 0 |
 | 6. Full Test Suite | 1 | full suite run |
-| **Total** | **18** | **~25 new** |
+| 7. Direction Fix | 3 | 3 new |
+| **Total** | **21** | **~28 new** |

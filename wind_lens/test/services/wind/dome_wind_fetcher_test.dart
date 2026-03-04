@@ -213,5 +213,77 @@ void main() {
         }
       }
     });
+
+    test('grid fetch uses DomeConstants.metersPerRenderUnit (not radiusMeters/domeR)',
+        () async {
+      // Create a Shyft area (MultiPointSeries) response with a 2x2 grid
+      String shyftAreaJson(int steps) {
+        final time = DateTime.utc(2026, 2, 27, 12).toIso8601String();
+        final times = List.generate(steps, (i) =>
+            DateTime.utc(2026, 2, 27, 12 + i).toIso8601String());
+
+        // 2x2 grid of composite points: [lng, lat, pressure]
+        // Centered around (37.77N, -122.42E)
+        final composites = [
+          [-122.5, 37.7, 0],
+          [-122.3, 37.7, 0],
+          [-122.5, 37.9, 0],
+          [-122.3, 37.9, 0],
+        ];
+
+        final numPoints = composites.length;
+        // All u=5.0, v=3.0 for simplicity
+        final uValues = List.generate(
+            numPoints * steps, (_) => 5.0);
+        final vValues = List.generate(
+            numPoints * steps, (_) => 3.0);
+
+        return jsonEncode({
+          'domain': {
+            'axes': {
+              'composite': {'values': composites},
+              't': {'values': times},
+            },
+          },
+          'ranges': {
+            WindApiConstants.shyftUParam: {'values': uValues},
+            WindApiConstants.shyftVParam: {'values': vValues},
+          },
+        });
+      }
+
+      final mockClient = MockClient((request) async {
+        final url = request.url.toString();
+        // Return area response for area queries, point response for fallbacks
+        if (url.contains('/area')) {
+          return http.Response(shyftAreaJson(3), 200);
+        }
+        return http.Response(_shyftSeriesJson(3), 200);
+      });
+
+      final apiClient = WindApiClient(client: mockClient);
+      final fetcher = DomeWindFetcher(apiClient: apiClient);
+
+      // Fetch with radiusMeters = 50000 (50km) -- triggers grid path
+      final profile = await fetcher.fetch(
+        37.77,
+        -122.42,
+        radiusMeters: 50000.0,
+      );
+
+      // The DomeWindField.metersPerRenderUnit must match the base rate
+      // that the screen uses (55.56), NOT radiusMeters/domeR (2777.78).
+      for (final field in profile.hourly) {
+        expect(
+          field.metersPerRenderUnit,
+          closeTo(DomeConstants.metersPerRenderUnit, 0.01),
+          reason:
+              'Grid fetch should use DomeConstants.metersPerRenderUnit '
+              '(${DomeConstants.metersPerRenderUnit.toStringAsFixed(2)}), '
+              'not radiusMeters/domeR '
+              '(${(50000.0 / DomeConstants.domeR).toStringAsFixed(2)})',
+        );
+      }
+    });
   });
 }

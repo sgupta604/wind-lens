@@ -184,6 +184,10 @@ class _WindDomeScreenState extends ConsumerState<WindDomeScreen>
       final newDomeH =
           newDomeR * (DomeConstants.domeH / DomeConstants.domeR);
       _reinitializeParticles(newDomeR, newDomeH);
+      // Reset camera orbit to fit new dome size
+      setState(() {
+        _camR = newDomeR * 2.8; // Same ratio as DomeConstants.camR / domeR
+      });
     });
 
     return Scaffold(
@@ -319,7 +323,7 @@ class _WindDomeScreenState extends ConsumerState<WindDomeScreen>
         final pinchDelta = currentDist - _lastPinchDistance;
         final scale = _currentDomeR / DomeConstants.domeR;
         setState(() {
-          _camR = (_camR - pinchDelta * 0.5).clamp(
+          _camR = (_camR - pinchDelta * 0.5 * scale).clamp(
             DomeConstants.camRMin * scale,
             DomeConstants.camRMax * scale,
           );

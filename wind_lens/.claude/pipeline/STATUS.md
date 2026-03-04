@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | Feature | large-dome-wind-grid (P2B-007) |
-| Phase | diagnose - COMPLETE |
-| Next step | `/plan large-dome-wind-grid` |
+| Phase | implement (v2) - COMPLETE |
+| Next step | `/test large-dome-wind-grid` |
 | Branch | feature/wind-dome-homescreen |
 
 ## Phase History: large-dome-wind-grid
@@ -19,6 +19,8 @@
 | plan | complete | 2026-03-04 | 7 files to modify, 0 new files, 18 tasks in 6 phases, ~25 new tests |
 | implement | complete | 2026-03-04 | 6 source files modified, 3 test files updated, 817 tests pass, 0 errors, 0 warnings |
 | diagnose | complete | 2026-03-04 | 3 bugs found: zoom reset, wrong grid direction, frozen particles. Root cause: metersPerRenderUnit mismatch between screen and field |
+| diagnose (v2) | complete | 2026-03-04 | Direction bug at 15km/50km: code coordinate system verified correct. Primary root cause: grid API returns different wind data than point API. Defensive fix: sort Folkweather axes + add diagnostic logging |
+| implement (v2) | complete | 2026-03-04 | Folkweather sort+reindex fix in both area parsers, diagnostic logging in fetcher + API client, 3 new tests, 825 tests pass |
 | test | pending | - | - |
 | finalize | pending | - | - |
 
@@ -55,5 +57,5 @@
 ## Next Command
 
 ```
-/plan large-dome-wind-grid
+/test large-dome-wind-grid
 ```
