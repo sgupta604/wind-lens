@@ -86,6 +86,42 @@ void main() {
       expect(fakeClient.capturedLevels, [850]);
     });
 
+    test('getWind with AltitudeLevel.level700 passes pressureLevel 700', () async {
+      final fakeClient = FakeWindApiClient();
+      final source = OgcEdrWindDataSource(apiClient: fakeClient);
+
+      await source.getWind(
+        position: testPosition,
+        altitude: AltitudeLevel.level700,
+      );
+
+      expect(fakeClient.capturedLevels, [700]);
+    });
+
+    test('getWind with AltitudeLevel.level500 passes pressureLevel 500', () async {
+      final fakeClient = FakeWindApiClient();
+      final source = OgcEdrWindDataSource(apiClient: fakeClient);
+
+      await source.getWind(
+        position: testPosition,
+        altitude: AltitudeLevel.level500,
+      );
+
+      expect(fakeClient.capturedLevels, [500]);
+    });
+
+    test('getWind with AltitudeLevel.level300 passes pressureLevel 300', () async {
+      final fakeClient = FakeWindApiClient();
+      final source = OgcEdrWindDataSource(apiClient: fakeClient);
+
+      await source.getWind(
+        position: testPosition,
+        altitude: AltitudeLevel.level300,
+      );
+
+      expect(fakeClient.capturedLevels, [300]);
+    });
+
     test('getWind with AltitudeLevel.jetStream passes pressureLevel 250', () async {
       final fakeClient = FakeWindApiClient();
       final source = OgcEdrWindDataSource(apiClient: fakeClient);

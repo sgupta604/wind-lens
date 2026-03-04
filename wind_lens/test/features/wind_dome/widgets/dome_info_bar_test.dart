@@ -111,6 +111,13 @@ void main() {
       });
     });
 
+    testWidgets('shows altitude range label', (tester) async {
+      await tester.pumpWidget(_buildWidget());
+      // Should display altitude range text
+      expect(find.textContaining('Surface'), findsWidgets);
+      expect(find.textContaining('1800m'), findsOneWidget);
+    });
+
     group('live vs forecast speed sourcing', () {
       testWidgets('shows AR wind speed when hoursAhead is 0', (tester) async {
         // AR wind: u=3, v=4 -> speed = 5.0

@@ -227,8 +227,10 @@ class _WindDomeScreenState extends ConsumerState<WindDomeScreen>
           ),
 
           // Location indicator chip (below info bar)
+          // Offset increased to avoid overlap with DomeInfoBar's size presets
+          // and altitude range label.
           Positioned(
-            top: MediaQuery.of(context).padding.top + 56,
+            top: MediaQuery.of(context).padding.top + 100,
             left: 16,
             child: const LocationIndicatorChip(),
           ),

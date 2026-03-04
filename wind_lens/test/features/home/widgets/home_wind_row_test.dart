@@ -118,6 +118,60 @@ void main() {
       expect(find.text('4.9K'), findsOneWidget);
       expect(find.text('ft AGL'), findsOneWidget);
     });
+
+    testWidgets('shows correct altitude for level700', (tester) async {
+      final scene = _makeScene(altitude: AltitudeLevel.level700);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sceneStateProvider.overrideWithValue(scene),
+            selectedAltitudeProvider.overrideWith(() => _Level700Altitude()),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(body: HomeWindRow()),
+          ),
+        ),
+      );
+
+      expect(find.text('9.8K'), findsOneWidget);
+    });
+
+    testWidgets('shows correct altitude for level500', (tester) async {
+      final scene = _makeScene(altitude: AltitudeLevel.level500);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sceneStateProvider.overrideWithValue(scene),
+            selectedAltitudeProvider.overrideWith(() => _Level500Altitude()),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(body: HomeWindRow()),
+          ),
+        ),
+      );
+
+      expect(find.text('18K'), findsOneWidget);
+    });
+
+    testWidgets('shows correct altitude for level300', (tester) async {
+      final scene = _makeScene(altitude: AltitudeLevel.level300);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sceneStateProvider.overrideWithValue(scene),
+            selectedAltitudeProvider.overrideWith(() => _Level300Altitude()),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(body: HomeWindRow()),
+          ),
+        ),
+      );
+
+      expect(find.text('29.5K'), findsOneWidget);
+    });
   });
 }
 
@@ -125,4 +179,22 @@ void main() {
 class _MidLevelAltitude extends SelectedAltitude {
   @override
   AltitudeLevel build() => AltitudeLevel.midLevel;
+}
+
+/// Override notifier that starts at level700.
+class _Level700Altitude extends SelectedAltitude {
+  @override
+  AltitudeLevel build() => AltitudeLevel.level700;
+}
+
+/// Override notifier that starts at level500.
+class _Level500Altitude extends SelectedAltitude {
+  @override
+  AltitudeLevel build() => AltitudeLevel.level500;
+}
+
+/// Override notifier that starts at level300.
+class _Level300Altitude extends SelectedAltitude {
+  @override
+  AltitudeLevel build() => AltitudeLevel.level300;
 }

@@ -9,12 +9,24 @@ void main() {
         expect(AltitudeLevel.surface.displayName, 'Surface');
       });
 
-      test('midLevel has displayName "Cloud Level"', () {
-        expect(AltitudeLevel.midLevel.displayName, 'Cloud Level');
+      test('midLevel has displayName "850 hPa"', () {
+        expect(AltitudeLevel.midLevel.displayName, '850 hPa');
       });
 
-      test('jetStream has displayName "Jet Stream"', () {
-        expect(AltitudeLevel.jetStream.displayName, 'Jet Stream');
+      test('level700 has displayName "700 hPa"', () {
+        expect(AltitudeLevel.level700.displayName, '700 hPa');
+      });
+
+      test('level500 has displayName "500 hPa"', () {
+        expect(AltitudeLevel.level500.displayName, '500 hPa');
+      });
+
+      test('level300 has displayName "300 hPa"', () {
+        expect(AltitudeLevel.level300.displayName, '300 hPa');
+      });
+
+      test('jetStream has displayName "250 hPa"', () {
+        expect(AltitudeLevel.jetStream.displayName, '250 hPa');
       });
     });
 
@@ -22,7 +34,17 @@ void main() {
       test('metersAGL values are correct for all levels', () {
         expect(AltitudeLevel.surface.metersAGL, 10.0);
         expect(AltitudeLevel.midLevel.metersAGL, 1500.0);
+        expect(AltitudeLevel.level700.metersAGL, 3000.0);
+        expect(AltitudeLevel.level500.metersAGL, 5500.0);
+        expect(AltitudeLevel.level300.metersAGL, 9000.0);
         expect(AltitudeLevel.jetStream.metersAGL, 10500.0);
+      });
+
+      test('metersAGL increases with altitude level', () {
+        final values = AltitudeLevel.values.map((l) => l.metersAGL).toList();
+        for (int i = 1; i < values.length; i++) {
+          expect(values[i], greaterThan(values[i - 1]));
+        }
       });
     });
 
@@ -32,75 +54,87 @@ void main() {
         expect(AltitudeLevel.surface.particleColor, const Color(0xAAFFFFFF));
         // Mid-level: Cyan with alpha 0xAA
         expect(AltitudeLevel.midLevel.particleColor, const Color(0xAA00DDFF));
+        // 700 hPa: Blue with alpha 0xAA
+        expect(AltitudeLevel.level700.particleColor, const Color(0xAA00AAFF));
+        // 500 hPa: Violet with alpha 0xAA
+        expect(AltitudeLevel.level500.particleColor, const Color(0xAA8855FF));
+        // 300 hPa: Magenta with alpha 0xAA
+        expect(AltitudeLevel.level300.particleColor, const Color(0xAABB33FF));
         // Jet Stream: Purple with alpha 0xAA
         expect(AltitudeLevel.jetStream.particleColor, const Color(0xAADD00FF));
       });
     });
 
     group('parallaxFactor', () {
-      test('parallaxFactor decreases with altitude (1.0 > 0.6 > 0.3)', () {
+      test('parallaxFactor values are correct for all levels', () {
         expect(AltitudeLevel.surface.parallaxFactor, 1.0);
         expect(AltitudeLevel.midLevel.parallaxFactor, 0.6);
+        expect(AltitudeLevel.level700.parallaxFactor, 0.5);
+        expect(AltitudeLevel.level500.parallaxFactor, 0.4);
+        expect(AltitudeLevel.level300.parallaxFactor, 0.35);
         expect(AltitudeLevel.jetStream.parallaxFactor, 0.3);
+      });
 
-        // Verify the ordering relationship
-        expect(
-          AltitudeLevel.surface.parallaxFactor,
-          greaterThan(AltitudeLevel.midLevel.parallaxFactor),
-        );
-        expect(
-          AltitudeLevel.midLevel.parallaxFactor,
-          greaterThan(AltitudeLevel.jetStream.parallaxFactor),
-        );
+      test('parallaxFactor decreases with altitude', () {
+        final values =
+            AltitudeLevel.values.map((l) => l.parallaxFactor).toList();
+        for (int i = 1; i < values.length; i++) {
+          expect(values[i], lessThan(values[i - 1]));
+        }
       });
     });
 
     group('trailScale', () {
-      test('trailScale decreases with altitude (1.0 > 0.7 > 0.5)', () {
+      test('trailScale values are correct for all levels', () {
         expect(AltitudeLevel.surface.trailScale, 1.0);
         expect(AltitudeLevel.midLevel.trailScale, 0.7);
+        expect(AltitudeLevel.level700.trailScale, 0.65);
+        expect(AltitudeLevel.level500.trailScale, 0.6);
+        expect(AltitudeLevel.level300.trailScale, 0.55);
         expect(AltitudeLevel.jetStream.trailScale, 0.5);
+      });
 
-        // Verify the ordering relationship
-        expect(
-          AltitudeLevel.surface.trailScale,
-          greaterThan(AltitudeLevel.midLevel.trailScale),
-        );
-        expect(
-          AltitudeLevel.midLevel.trailScale,
-          greaterThan(AltitudeLevel.jetStream.trailScale),
-        );
+      test('trailScale decreases with altitude', () {
+        final values = AltitudeLevel.values.map((l) => l.trailScale).toList();
+        for (int i = 1; i < values.length; i++) {
+          expect(values[i], lessThan(values[i - 1]));
+        }
       });
     });
 
     group('particleSpeedMultiplier', () {
-      test('particleSpeedMultiplier increases with altitude (1.0 < 1.5 < 3.0)',
-          () {
+      test('particleSpeedMultiplier values are correct for all levels', () {
         expect(AltitudeLevel.surface.particleSpeedMultiplier, 1.0);
         expect(AltitudeLevel.midLevel.particleSpeedMultiplier, 1.5);
+        expect(AltitudeLevel.level700.particleSpeedMultiplier, 1.8);
+        expect(AltitudeLevel.level500.particleSpeedMultiplier, 2.2);
+        expect(AltitudeLevel.level300.particleSpeedMultiplier, 2.7);
         expect(AltitudeLevel.jetStream.particleSpeedMultiplier, 3.0);
+      });
 
-        // Verify the ordering relationship
-        expect(
-          AltitudeLevel.surface.particleSpeedMultiplier,
-          lessThan(AltitudeLevel.midLevel.particleSpeedMultiplier),
-        );
-        expect(
-          AltitudeLevel.midLevel.particleSpeedMultiplier,
-          lessThan(AltitudeLevel.jetStream.particleSpeedMultiplier),
-        );
+      test('particleSpeedMultiplier increases with altitude', () {
+        final values =
+            AltitudeLevel.values.map((l) => l.particleSpeedMultiplier).toList();
+        for (int i = 1; i < values.length; i++) {
+          expect(values[i], greaterThan(values[i - 1]));
+        }
       });
     });
 
     group('enum values', () {
-      test('has exactly three values', () {
-        expect(AltitudeLevel.values.length, 3);
+      test('has exactly six values', () {
+        expect(AltitudeLevel.values.length, 6);
       });
 
-      test('values are in order: surface, midLevel, jetStream', () {
+      test(
+          'values are in order: surface, midLevel, level700, level500, level300, jetStream',
+          () {
         expect(AltitudeLevel.values[0], AltitudeLevel.surface);
         expect(AltitudeLevel.values[1], AltitudeLevel.midLevel);
-        expect(AltitudeLevel.values[2], AltitudeLevel.jetStream);
+        expect(AltitudeLevel.values[2], AltitudeLevel.level700);
+        expect(AltitudeLevel.values[3], AltitudeLevel.level500);
+        expect(AltitudeLevel.values[4], AltitudeLevel.level300);
+        expect(AltitudeLevel.values[5], AltitudeLevel.jetStream);
       });
     });
 
@@ -113,19 +147,28 @@ void main() {
         expect(AltitudeLevel.midLevel.streamlineTrailPoints, 18);
       });
 
+      test('level700 has streamlineTrailPoints of 20', () {
+        expect(AltitudeLevel.level700.streamlineTrailPoints, 20);
+      });
+
+      test('level500 has streamlineTrailPoints of 22', () {
+        expect(AltitudeLevel.level500.streamlineTrailPoints, 22);
+      });
+
+      test('level300 has streamlineTrailPoints of 24', () {
+        expect(AltitudeLevel.level300.streamlineTrailPoints, 24);
+      });
+
       test('jetStream has streamlineTrailPoints of 25', () {
         expect(AltitudeLevel.jetStream.streamlineTrailPoints, 25);
       });
 
       test('streamlineTrailPoints increases with altitude', () {
-        expect(
-          AltitudeLevel.surface.streamlineTrailPoints,
-          lessThan(AltitudeLevel.midLevel.streamlineTrailPoints),
-        );
-        expect(
-          AltitudeLevel.midLevel.streamlineTrailPoints,
-          lessThan(AltitudeLevel.jetStream.streamlineTrailPoints),
-        );
+        final values =
+            AltitudeLevel.values.map((l) => l.streamlineTrailPoints).toList();
+        for (int i = 1; i < values.length; i++) {
+          expect(values[i], greaterThanOrEqualTo(values[i - 1]));
+        }
       });
 
       test('all trail points are within maxTrailPoints limit (30)', () {

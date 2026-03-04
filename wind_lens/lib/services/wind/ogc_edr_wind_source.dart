@@ -12,6 +12,9 @@ import 'wind_api_client.dart';
 /// Maps [AltitudeLevel] to API pressure levels:
 /// - [AltitudeLevel.surface] -> 0 (uses surface collection, not isobaric)
 /// - [AltitudeLevel.midLevel] -> 850 hPa (~1,500m)
+/// - [AltitudeLevel.level700] -> 700 hPa (~3,000m)
+/// - [AltitudeLevel.level500] -> 500 hPa (~5,500m)
+/// - [AltitudeLevel.level300] -> 300 hPa (~9,000m)
 /// - [AltitudeLevel.jetStream] -> 250 hPa (~10,500m)
 ///
 /// On API failure, returns valid [WindData] with zero components (particles
@@ -67,6 +70,9 @@ class OgcEdrWindDataSource implements WindDataSource {
     return switch (altitude) {
       AltitudeLevel.surface => 0,
       AltitudeLevel.midLevel => 850,
+      AltitudeLevel.level700 => 700,
+      AltitudeLevel.level500 => 500,
+      AltitudeLevel.level300 => 300,
       AltitudeLevel.jetStream => 250,
     };
   }

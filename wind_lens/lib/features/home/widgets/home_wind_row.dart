@@ -21,6 +21,9 @@ class HomeWindRow extends ConsumerWidget {
     return switch (level) {
       AltitudeLevel.surface => '33',
       AltitudeLevel.midLevel => '4.9K',
+      AltitudeLevel.level700 => '9.8K',
+      AltitudeLevel.level500 => '18K',
+      AltitudeLevel.level300 => '29.5K',
       AltitudeLevel.jetStream => '34.4K',
     };
   }

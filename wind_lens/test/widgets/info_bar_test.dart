@@ -70,8 +70,8 @@ void main() {
         ),
       );
 
-      // Should display the altitude level name (Cloud Level)
-      expect(find.textContaining('Cloud Level'), findsOneWidget);
+      // Should display the altitude level name (850 hPa)
+      expect(find.textContaining('850 hPa'), findsOneWidget);
     });
 
     testWidgets('uses BackdropFilter for glassmorphism', (tester) async {

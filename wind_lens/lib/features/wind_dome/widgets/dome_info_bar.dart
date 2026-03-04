@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/data_providers.dart';
+import '../models/dome_constants.dart';
 import '../models/dome_wind_field.dart';
 import '../providers/dome_providers.dart';
 
@@ -136,6 +137,21 @@ class DomeInfoBar extends ConsumerWidget {
                     const SizedBox(width: 8),
                 ],
               ],
+            ),
+
+            const SizedBox(height: 4),
+
+            // Altitude range label
+            Semantics(
+              label: 'Dome altitude range: Surface to ${DomeConstants.maxAltitudeMeters.toInt()} meters',
+              child: Text(
+                'Surface \u2013 ${DomeConstants.maxAltitudeMeters.toInt()}m',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.54),
+                  fontSize: 10,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
           ],
         ),
