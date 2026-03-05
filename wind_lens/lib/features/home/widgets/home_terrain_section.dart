@@ -7,34 +7,26 @@ import 'package:wind_lens/core/providers/sensor_providers.dart';
 
 import 'home_altitude_rail.dart';
 import 'home_compass_bar.dart';
-import 'home_particle_painter.dart';
 
 /// The terrain panorama section that fills remaining vertical space.
 ///
 /// Contains a [Stack] with layers (bottom to top):
-/// 1. Grid overlay (faint lines)
-/// 2. Terrain silhouette (procedural bezier or real HeyWhatsThat data)
-/// 3. Animated particles
-/// 4. Altitude rail (right edge)
-/// 5. Compass bar (bottom edge)
-/// 6. Loading indicator (during terrain fetch)
+/// 0. Grid overlay (faint lines)
+/// 1. Terrain silhouette (procedural bezier or real HeyWhatsThat data)
+/// 2. Altitude rail (right edge)
+/// 3. Compass bar (bottom edge)
+/// 4. Loading indicator (during terrain fetch)
 ///
 /// Decorative painters are wrapped in [ExcludeSemantics] since they
 /// provide no meaningful information to screen readers.
 ///
-/// ConsumerStatefulWidget so it can watch [horizonProfileProvider] and
-/// own [HomeParticleState] which must survive across painter recreations
-/// (Flutter creates a new painter each build).
+/// ConsumerStatefulWidget so it can watch [horizonProfileProvider].
 class HomeTerrainSection extends ConsumerStatefulWidget {
-  /// The animation controller driving particle rendering.
-  final AnimationController particleController;
-
   /// Sensor notifiers for compass heading (used by compass bar).
   final SensorNotifiers sensorNotifiers;
 
   const HomeTerrainSection({
     super.key,
-    required this.particleController,
     required this.sensorNotifiers,
   });
 
@@ -44,7 +36,6 @@ class HomeTerrainSection extends ConsumerStatefulWidget {
 }
 
 class _HomeTerrainSectionState extends ConsumerState<HomeTerrainSection> {
-  final HomeParticleState _particleState = HomeParticleState();
 
   @override
   Widget build(BuildContext context) {
@@ -74,19 +65,7 @@ class _HomeTerrainSectionState extends ConsumerState<HomeTerrainSection> {
             ),
           ),
 
-          // Layer 2: Animated particles
-          Positioned.fill(
-            child: ExcludeSemantics(
-              child: CustomPaint(
-                painter: HomeParticlePainter(
-                  state: _particleState,
-                  animation: widget.particleController,
-                ),
-              ),
-            ),
-          ),
-
-          // Layer 3: Altitude rail (right edge)
+          // Layer 2: Altitude rail (right edge)
           const Positioned(
             right: 0,
             top: 0,
@@ -94,7 +73,7 @@ class _HomeTerrainSectionState extends ConsumerState<HomeTerrainSection> {
             child: HomeAltitudeRail(),
           ),
 
-          // Layer 4: Compass bar (bottom edge)
+          // Layer 3: Compass bar (bottom edge)
           Positioned(
             left: 0,
             right: 0,
@@ -104,7 +83,7 @@ class _HomeTerrainSectionState extends ConsumerState<HomeTerrainSection> {
             ),
           ),
 
-          // Layer 5: Loading indicator (during terrain fetch)
+          // Layer 4: Loading indicator (during terrain fetch)
           if (isLoading)
             Positioned(
               left: 0,

@@ -33,7 +33,7 @@ class CompassService {
   /// Smoothing factor for the low-pass filter (0.0 = no change, 1.0 = instant).
   /// 0.15 at 20 Hz provides smooth, responsive tracking.
   /// Raised from 0.1 to compensate for lower tick rate (20 Hz vs 50-100 Hz).
-  static const double smoothingFactor = 0.15;
+  static const double smoothingFactor = 0.4;
 
   /// Emission rate: 20 Hz (50ms interval). Matches typical UI refresh needs
   /// without overwhelming the widget tree with 50-100 Hz sensor data.

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 
 import 'package:wind_lens/core/models/altitude_level.dart';
 import 'package:wind_lens/core/providers/data_providers.dart';
@@ -128,27 +128,30 @@ class _DataColumn extends StatelessWidget {
         children: [
           Text(
             label,
-            style: GoogleFonts.dmMono(
-              fontSize: 8,
-              color: const Color(0xFF555555),
-              letterSpacing: 0.25 * 8, // 0.25em
+            style: const TextStyle(
+              fontFamily: 'DM Mono',
+              fontSize: 10,
+              color: Color(0xFF555555),
+              letterSpacing: 0.25 * 10, // 0.25em
             ),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: GoogleFonts.bebasNeue(
-              fontSize: 28,
+            style: const TextStyle(
+              fontFamily: 'Bebas Neue',
+              fontSize: 34,
               color: Colors.white,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             unit,
-            style: GoogleFonts.dmMono(
-              fontSize: 9,
-              color: const Color(0xFF777777),
-              letterSpacing: 0.15 * 9, // 0.15em
+            style: const TextStyle(
+              fontFamily: 'DM Mono',
+              fontSize: 11,
+              color: Color(0xFF777777),
+              letterSpacing: 0.15 * 11, // 0.15em
             ),
           ),
         ],

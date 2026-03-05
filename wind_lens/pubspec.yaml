@@ -45,8 +45,8 @@ dependencies:
   freezed_annotation: ^2.4.1    # Freezed model annotations
   flutter_riverpod: ^2.4.9       # Riverpod state management
   riverpod_annotation: ^2.3.3    # Riverpod annotations for codegen
-  google_fonts: ^6.1.0            # Google Fonts (Bebas Neue, DM Mono)
   flutter_map: ^7.0.0              # Map tiles for Wind Dome
+  flutter_map_cancellable_tile_provider: ^3.0.0  # Cancellable tile loading
   latlong2: ^0.9.1                 # Coordinate type for flutter_map
 
 dev_dependencies:
@@ -101,5 +101,12 @@ flutter:
   #       - asset: fonts/TrajanPro_Bold.ttf
   #         weight: 700
   #
-  # For details regarding fonts from package dependencies,
-  # see https://flutter.dev/to/font-from-package
+  fonts:
+    - family: DM Mono
+      fonts:
+        - asset: assets/fonts/DMMono-Regular.ttf
+        - asset: assets/fonts/DMMono-Medium.ttf
+          weight: 500
+    - family: Bebas Neue
+      fonts:
+        - asset: assets/fonts/BebasNeue-Regular.ttf

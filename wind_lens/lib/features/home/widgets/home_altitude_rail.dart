@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 
 import 'package:wind_lens/core/models/altitude_level.dart';
 import 'package:wind_lens/core/providers/data_providers.dart';
@@ -50,11 +50,12 @@ class HomeAltitudeRail extends ConsumerWidget {
                   selected: isActive,
                   child: Text(
                     tick.label,
-                    style: GoogleFonts.dmMono(
-                      fontSize: 8,
+                    style: TextStyle(
+                      fontFamily: 'DM Mono',
+                      fontSize: 10,
                       color: isActive
                           ? Colors.white
-                          : const Color(0xFF282828),
+                          : const Color(0xFF555555),
                     ),
                   ),
                 ),
@@ -74,7 +75,7 @@ class HomeAltitudeRail extends ConsumerWidget {
                   height: 1,
                   color: isActive
                       ? Colors.white
-                      : const Color(0xFF222222),
+                      : const Color(0xFF444444),
                 ),
               ],
             ),

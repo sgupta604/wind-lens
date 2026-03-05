@@ -44,7 +44,7 @@ final rawSensorProvider = AutoDisposeStreamProvider<SensorState>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef RawSensorRef = AutoDisposeStreamProviderRef<SensorState>;
-String _$sensorNotifiersHash() => r'5816cabfbc1affcc97781c53f0ba673ba7515567';
+String _$sensorNotifiersHash() => r'ade204552c5bd05237553cf09add574810a3a1fa';
 
 /// Provides [SensorNotifiers] that pipe high-frequency sensor data
 /// to [ValueNotifier]s for direct consumption by CustomPainters.
@@ -53,7 +53,7 @@ String _$sensorNotifiersHash() => r'5816cabfbc1affcc97781c53f0ba673ba7515567';
 ///
 /// Copied from [sensorNotifiers].
 @ProviderFor(sensorNotifiers)
-final sensorNotifiersProvider = AutoDisposeProvider<SensorNotifiers>.internal(
+final sensorNotifiersProvider = Provider<SensorNotifiers>.internal(
   sensorNotifiers,
   name: r'sensorNotifiersProvider',
   debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
@@ -65,7 +65,7 @@ final sensorNotifiersProvider = AutoDisposeProvider<SensorNotifiers>.internal(
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef SensorNotifiersRef = AutoDisposeProviderRef<SensorNotifiers>;
+typedef SensorNotifiersRef = ProviderRef<SensorNotifiers>;
 String _$stablePositionHash() => r'e4a3f4698fe7acfc5a445599070c07f5975a4502';
 
 /// Debounced GPS position that only updates when the user moves >100m.

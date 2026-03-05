@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'features/home/home_screen.dart';
+import 'features/splash/splash_screen.dart';
 
 /// The main Wind Lens application widget, wrapped in a ProviderScope
 /// for Riverpod dependency injection.
@@ -19,7 +19,7 @@ class WindLensApp extends StatelessWidget {
         title: 'Shyft Lens',
         theme: ThemeData.dark(),
         debugShowCheckedModeBanner: false,
-        home: const HomeScreen(),
+        home: const SplashScreen(),
       ),
     );
   }

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:latlong2/latlong.dart';
 
 import '../../core/models/position_data.dart';
@@ -20,7 +21,9 @@ import '../../core/providers/sensor_providers.dart';
 ///
 /// Session-only: the override persists until the app restarts.
 class LocationPickerScreen extends ConsumerStatefulWidget {
-  const LocationPickerScreen({super.key});
+  final TileProvider? tileProvider;
+
+  const LocationPickerScreen({super.key, this.tileProvider});
 
   @override
   ConsumerState<LocationPickerScreen> createState() =>
@@ -30,16 +33,26 @@ class LocationPickerScreen extends ConsumerStatefulWidget {
 class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
   late LatLng _selectedPosition;
   final _mapController = MapController();
+  late final TileProvider _tileProvider;
 
   @override
   void initState() {
     super.initState();
+    _tileProvider =
+        widget.tileProvider ?? CancellableNetworkTileProvider();
     final position = ref.read(effectivePositionProvider);
     if (position != null) {
       _selectedPosition = LatLng(position.latitude, position.longitude);
     } else {
-      _selectedPosition = const LatLng(0, 0);
+      _selectedPosition = const LatLng(39.8283, -98.5795);
     }
+  }
+
+  @override
+  void dispose() {
+    _tileProvider.dispose();
+    _mapController.dispose();
+    super.dispose();
   }
 
   void _onMapTap(TapPosition tapPosition, LatLng point) {
@@ -65,131 +78,197 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
   }
 
   void _onCoordinateTap() {
-    final initialText =
-        '${_selectedPosition.latitude.toStringAsFixed(4)}, '
-        '${_selectedPosition.longitude.toStringAsFixed(4)}';
-    final controller = TextEditingController(text: initialText);
-    // Select all text so the user can immediately type over it.
-    controller.selection =
-        TextSelection(baseOffset: 0, extentOffset: initialText.length);
-
-    showDialog<void>(
+    showModalBottomSheet<void>(
       context: context,
-      builder: (dialogContext) {
-        String? errorText;
+      backgroundColor: const Color(0xFF1A1A2E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        final latController = TextEditingController(
+          text: _selectedPosition.latitude.toStringAsFixed(4),
+        );
+        final lngController = TextEditingController(
+          text: _selectedPosition.longitude.toStringAsFixed(4),
+        );
+        String? latError;
+        String? lngError;
+
         return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: const Color(0xFF1A1A2E),
-              title: Text(
-                'Enter Coordinates',
-                style: GoogleFonts.dmMono(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+          builder: (context, setSheetState) {
+            bool validate() {
+              final lat = double.tryParse(latController.text.trim());
+              final lng = double.tryParse(lngController.text.trim());
+              bool valid = true;
+
+              if (lat == null || lat < -90 || lat > 90) {
+                latError = 'Must be between -90 and 90';
+                valid = false;
+              } else {
+                latError = null;
+              }
+
+              if (lng == null || lng < -180 || lng > 180) {
+                lngError = 'Must be between -180 and 180';
+                valid = false;
+              } else {
+                lngError = null;
+              }
+
+              setSheetState(() {});
+              return valid;
+            }
+
+            void onGo() {
+              if (!validate()) return;
+              final lat = double.parse(latController.text.trim());
+              final lng = double.parse(lngController.text.trim());
+              _applyCoordinates(LatLng(lat, lng));
+              Navigator.of(sheetContext).pop();
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 12,
+                bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 24,
               ),
-              content: TextField(
-                controller: controller,
-                autofocus: true,
-                keyboardType: const TextInputType.numberWithOptions(
-                  signed: true,
-                  decimal: true,
-                ),
-                style: GoogleFonts.dmMono(
-                  color: Colors.white,
-                  fontSize: 14,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'lat, lng  e.g. 41.2678, -96.0490',
-                  hintStyle: GoogleFonts.dmMono(
-                    color: Colors.white38,
-                    fontSize: 13,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Handle
+                  Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                  errorText: errorText,
-                  errorStyle: const TextStyle(color: Colors.redAccent),
-                  enabledBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white30),
-                  ),
-                  focusedBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white),
-                  ),
-                  errorBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.redAccent),
-                  ),
-                  focusedErrorBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.redAccent),
-                  ),
-                ),
-                onSubmitted: (_) {
-                  final result = _parseCoordinates(controller.text);
-                  if (result != null) {
-                    _applyCoordinates(result);
-                    Navigator.of(dialogContext).pop();
-                  } else {
-                    setDialogState(() {
-                      errorText = 'Invalid coordinates';
-                    });
-                  }
-                },
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: Text(
-                    'Cancel',
-                    style: GoogleFonts.dmMono(color: Colors.white54),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    final result = _parseCoordinates(controller.text);
-                    if (result != null) {
-                      _applyCoordinates(result);
-                      Navigator.of(dialogContext).pop();
-                    } else {
-                      setDialogState(() {
-                        errorText = 'Invalid coordinates';
-                      });
-                    }
-                  },
-                  child: Text(
-                    'Go',
-                    style: GoogleFonts.dmMono(
+                  const SizedBox(height: 16),
+                  // Title
+                  const Text(
+                    'Enter Coordinates',
+                    style: TextStyle(
+                      fontFamily: 'DM Mono',
                       color: Colors.white,
+                      fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 20),
+                  // Latitude field
+                  TextField(
+                    controller: latController,
+                    autofocus: true,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      signed: true,
+                      decimal: true,
+                    ),
+                    style: const TextStyle(
+                      fontFamily: 'DM Mono',
+                      color: Colors.white,
+                      fontSize: 14,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'Latitude',
+                      labelStyle: const TextStyle(
+                        fontFamily: 'DM Mono',
+                        color: Colors.white54,
+                        fontSize: 13,
+                      ),
+                      errorText: latError,
+                      errorStyle: const TextStyle(color: Colors.redAccent),
+                      enabledBorder: const UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white30),
+                      ),
+                      focusedBorder: const UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white),
+                      ),
+                      errorBorder: const UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.redAccent),
+                      ),
+                      focusedErrorBorder: const UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.redAccent),
+                      ),
+                    ),
+                    onSubmitted: (_) => onGo(),
+                  ),
+                  const SizedBox(height: 12),
+                  // Longitude field
+                  TextField(
+                    controller: lngController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      signed: true,
+                      decimal: true,
+                    ),
+                    style: const TextStyle(
+                      fontFamily: 'DM Mono',
+                      color: Colors.white,
+                      fontSize: 14,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'Longitude',
+                      labelStyle: const TextStyle(
+                        fontFamily: 'DM Mono',
+                        color: Colors.white54,
+                        fontSize: 13,
+                      ),
+                      errorText: lngError,
+                      errorStyle: const TextStyle(color: Colors.redAccent),
+                      enabledBorder: const UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white30),
+                      ),
+                      focusedBorder: const UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white),
+                      ),
+                      errorBorder: const UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.redAccent),
+                      ),
+                      focusedErrorBorder: const UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.redAccent),
+                      ),
+                    ),
+                    onSubmitted: (_) => onGo(),
+                  ),
+                  const SizedBox(height: 20),
+                  // Action buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(sheetContext).pop(),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontFamily: 'DM Mono',
+                            color: Colors.white54,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      TextButton(
+                        onPressed: onGo,
+                        child: const Text(
+                          'Go',
+                          style: TextStyle(
+                            fontFamily: 'DM Mono',
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             );
           },
         );
       },
     );
-  }
-
-  /// Parse a coordinate string like "41.2678, -96.0490" or "41.2678 -96.0490".
-  /// Returns a [LatLng] if valid, or null if not.
-  LatLng? _parseCoordinates(String input) {
-    final trimmed = input.trim();
-    if (trimmed.isEmpty) return null;
-
-    // Split on comma, or whitespace if no comma
-    final parts = trimmed.contains(',')
-        ? trimmed.split(',').map((s) => s.trim()).toList()
-        : trimmed.split(RegExp(r'\s+')).toList();
-
-    if (parts.length != 2) return null;
-
-    final lat = double.tryParse(parts[0]);
-    final lng = double.tryParse(parts[1]);
-
-    if (lat == null || lng == null) return null;
-    if (lat < -90 || lat > 90) return null;
-    if (lng < -180 || lng > 180) return null;
-
-    return LatLng(lat, lng);
   }
 
   void _applyCoordinates(LatLng position) {
@@ -240,6 +319,7 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.shyftlens.app',
+                tileProvider: _tileProvider,
               ),
               MarkerLayer(
                 markers: [
@@ -305,7 +385,8 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
                     '${_selectedPosition.latitude.toStringAsFixed(4)}, '
                     '${_selectedPosition.longitude.toStringAsFixed(4)}',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.dmMono(
+                    style: const TextStyle(
+                      fontFamily: 'DM Mono',
                       fontSize: 13,
                       color: Colors.white,
                       letterSpacing: 0.5,
@@ -351,7 +432,8 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
                           child: Text(
                             'RESET TO GPS',
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.dmMono(
+                            style: TextStyle(
+                              fontFamily: 'DM Mono',
                               fontSize: 11,
                               color: Colors.white.withValues(alpha: 0.7),
                               letterSpacing: 1,
@@ -379,7 +461,8 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
                           child: Text(
                             'CONFIRM',
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.dmMono(
+                            style: const TextStyle(
+                              fontFamily: 'DM Mono',
                               fontSize: 12,
                               color: Colors.black,
                               letterSpacing: 1.5,

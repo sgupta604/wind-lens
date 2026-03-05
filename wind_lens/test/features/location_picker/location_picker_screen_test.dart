@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -41,6 +42,28 @@ class _TestSensorService implements SensorService {
   }
 }
 
+/// A no-op tile provider that avoids Dio timer leaks in tests.
+/// Returns a valid 1x1 transparent PNG to prevent image decode errors.
+class _NoOpTileProvider extends TileProvider {
+  // Minimal valid 1x1 transparent PNG (67 bytes)
+  static final _pixel = Uint8List.fromList([
+    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+    0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, // IHDR chunk
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, // 1x1
+    0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4,
+    0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, // IDAT chunk
+    0x54, 0x78, 0x9C, 0x62, 0x00, 0x00, 0x00, 0x02,
+    0x00, 0x01, 0xE5, 0x27, 0xDE, 0xFC, 0x00, 0x00, // IEND chunk
+    0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42,
+    0x60, 0x82,
+  ]);
+
+  @override
+  ImageProvider getImage(TileCoordinates coordinates, TileLayer options) {
+    return MemoryImage(_pixel);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -56,10 +79,12 @@ PositionData _makePosition(double lat, double lng) => PositionData(
 void main() {
   late SensorNotifiers testNotifiers;
   late _TestSensorService testSensorService;
+  late _NoOpTileProvider testTileProvider;
 
   setUp(() {
     testNotifiers = SensorNotifiers();
     testSensorService = _TestSensorService();
+    testTileProvider = _NoOpTileProvider();
   });
 
   tearDown(() {
@@ -67,14 +92,15 @@ void main() {
     testSensorService.dispose();
   });
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({List<Override> extraOverrides = const []}) {
     return ProviderScope(
       overrides: [
         sensorServiceProvider.overrideWithValue(testSensorService),
         sensorNotifiersProvider.overrideWithValue(testNotifiers),
+        ...extraOverrides,
       ],
-      child: const MaterialApp(
-        home: LocationPickerScreen(),
+      child: MaterialApp(
+        home: LocationPickerScreen(tileProvider: testTileProvider),
       ),
     );
   }
@@ -115,7 +141,7 @@ void main() {
     testWidgets('initState uses effectivePositionProvider for initial center',
         (tester) async {
       // Set a location override before opening the screen.
-      // The map should open at the override position, not (0,0).
+      // The map should open at the override position, not US center.
       final overridePosition = _makePosition(51.5074, -0.1278); // London
 
       await tester.pumpWidget(
@@ -129,15 +155,25 @@ void main() {
             }),
             effectivePositionProvider.overrideWithValue(overridePosition),
           ],
-          child: const MaterialApp(
-            home: LocationPickerScreen(),
+          child: MaterialApp(
+            home: LocationPickerScreen(tileProvider: testTileProvider),
           ),
         ),
       );
       await tester.pump();
 
-      // Verify coordinate display shows the override location, not (0,0)
+      // Verify coordinate display shows the override location
       expect(find.text('51.5074, -0.1278'), findsOneWidget);
+    });
+
+    testWidgets('GPS fallback centers on US when no GPS fix available',
+        (tester) async {
+      // No GPS emitted, no override -- effectivePositionProvider is null
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pump();
+
+      // Verify coordinate display shows US center (39.8283, -98.5795)
+      expect(find.text('39.8283, -98.5795'), findsOneWidget);
     });
 
     testWidgets('Reset to GPS shows SnackBar when GPS is null',
@@ -168,7 +204,7 @@ void main() {
             home: Consumer(
               builder: (context, ref, _) {
                 container = ProviderScope.containerOf(context);
-                return const LocationPickerScreen();
+                return LocationPickerScreen(tileProvider: testTileProvider);
               },
             ),
           ),
@@ -207,7 +243,9 @@ void main() {
                 body: ElevatedButton(
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => const LocationPickerScreen(),
+                      builder: (_) => LocationPickerScreen(
+                        tileProvider: testTileProvider,
+                      ),
                     ),
                   ),
                   child: const Text('Open'),
@@ -260,6 +298,72 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('coordinate tap opens bottom sheet with lat/lng fields',
+        (tester) async {
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pump();
+
+      // Tap the coordinate display to open bottom sheet
+      await tester.tap(find.text('39.8283, -98.5795'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Verify bottom sheet elements
+      expect(find.text('Enter Coordinates'), findsOneWidget);
+      expect(find.text('Latitude'), findsOneWidget);
+      expect(find.text('Longitude'), findsOneWidget);
+    });
+
+    testWidgets('bottom sheet validates invalid latitude',
+        (tester) async {
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pump();
+
+      // Open bottom sheet
+      await tester.tap(find.text('39.8283, -98.5795'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Find all text fields -- the bottom sheet has 2 (lat first, lng second)
+      final textFields = find.byType(TextField);
+
+      // Clear lat field and enter invalid value
+      await tester.enterText(textFields.first, '999');
+      await tester.pump();
+
+      // Tap Go button
+      await tester.tap(find.text('Go'));
+      await tester.pump();
+
+      // Verify error message
+      expect(find.text('Must be between -90 and 90'), findsOneWidget);
+    });
+
+    testWidgets('bottom sheet validates invalid longitude',
+        (tester) async {
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pump();
+
+      // Open bottom sheet
+      await tester.tap(find.text('39.8283, -98.5795'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Find all text fields
+      final textFields = find.byType(TextField);
+
+      // Clear lng field (second) and enter invalid value
+      await tester.enterText(textFields.last, '999');
+      await tester.pump();
+
+      // Tap Go button
+      await tester.tap(find.text('Go'));
+      await tester.pump();
+
+      // Verify error message
+      expect(find.text('Must be between -180 and 180'), findsOneWidget);
     });
   });
 }

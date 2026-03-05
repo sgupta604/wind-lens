@@ -1,15 +1,18 @@
 # Pipeline Status
 
-**Last updated:** 2026-03-04
+**Last updated:** 2026-03-05
 
-## Current Feature: large-dome-wind-grid / dome-radius-stale-data
+## Current Feature: app-performance-polish
 
 | Field | Value |
 |-------|-------|
-| Feature | large-dome-wind-grid (P2B-007) + dome-radius-stale-data (bug fix) |
-| Phase | finalize - COMPLETE |
-| Next step | Merge PR to master |
-| Branch | feature/large-dome-wind-grid |
+| Feature | app-performance-polish (Streams 1-4 + Phase 6 bugfixes DONE) |
+| Phase | implement-complete — needs /test |
+| Next step | /test app-performance-polish |
+| Branch | feature/app-performance-polish (uncommitted changes) |
+| Notes | All streams + Phase 6 bugfixes implemented. 835 tests pass, 47 explicit-path tests pass, 0 analyzer errors. Bugs fixed: (1) keepAlive on sensorNotifiersProvider, (2) ref.read in HomeScreen initState, (3) heading line removed, (4) dome zoom deferred init. Implementation summary at `.claude/active-work/app-performance-polish/implementation_phase6.md`. |
+
+## Previous Feature: large-dome-wind-grid / dome-radius-stale-data
 
 ## Phase History: large-dome-wind-grid + dome-radius-stale-data
 
@@ -58,5 +61,5 @@
 ## Next Command
 
 ```
-Merge PR to master (feature/large-dome-wind-grid)
+/test app-performance-polish
 ```

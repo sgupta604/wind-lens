@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 
 /// Bottom compass row showing 8 cardinal/intercardinal directions.
 ///
@@ -35,11 +35,12 @@ class HomeCompassBar extends StatelessWidget {
               final isActive = i == active;
               return Text(
                 _directions[i],
-                style: GoogleFonts.dmMono(
-                  fontSize: 9,
+                style: TextStyle(
+                  fontFamily: 'DM Mono',
+                  fontSize: 11,
                   color: isActive
-                      ? const Color(0xFF666666)
-                      : const Color(0xFF222222),
+                      ? const Color(0xFFAAAAAA)
+                      : const Color(0xFF444444),
                 ),
               );
             }),

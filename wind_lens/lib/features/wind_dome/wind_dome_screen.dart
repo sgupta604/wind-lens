@@ -55,7 +55,7 @@ class _WindDomeScreenState extends ConsumerState<WindDomeScreen>
 
   double _theta = DomeConstants.defaultTheta;
   double _phi = DomeConstants.defaultPhi;
-  double _camR = DomeConstants.camR;
+  double? _camR;
 
   /// Elapsed time in seconds for marker pulsing animation.
   double _elapsedSeconds = 0.0;
@@ -177,6 +177,10 @@ class _WindDomeScreenState extends ConsumerState<WindDomeScreen>
     _currentDomeR = computedDomeR;
     _currentDomeH = computedDomeH;
 
+    // Deferred camera init: set _camR based on actual dome size on first build.
+    // Subsequent builds preserve user's pinch-zoom adjustments.
+    _camR ??= computedDomeR * (DomeConstants.camRMax / DomeConstants.domeR) * 0.85;
+
     // Listen for dome size changes to reinitialize particles
     ref.listen(domeSizeProvider, (prev, next) {
       if (prev == next) return;
@@ -186,7 +190,7 @@ class _WindDomeScreenState extends ConsumerState<WindDomeScreen>
       _reinitializeParticles(newDomeR, newDomeH);
       // Reset camera orbit to fit new dome size
       setState(() {
-        _camR = newDomeR * 2.8; // Same ratio as DomeConstants.camR / domeR
+        _camR = newDomeR * (DomeConstants.camRMax / DomeConstants.domeR) * 0.85;
       });
     });
 
@@ -209,7 +213,7 @@ class _WindDomeScreenState extends ConsumerState<WindDomeScreen>
                       particles: _particles,
                       theta: _theta,
                       phi: _phi,
-                      camR: _camR,
+                      camR: _camR!,
                       domeR: _currentDomeR,
                       domeH: _currentDomeH,
                       time: _elapsedSeconds,
@@ -323,7 +327,7 @@ class _WindDomeScreenState extends ConsumerState<WindDomeScreen>
         final pinchDelta = currentDist - _lastPinchDistance;
         final scale = _currentDomeR / DomeConstants.domeR;
         setState(() {
-          _camR = (_camR - pinchDelta * 0.5 * scale).clamp(
+          _camR = (_camR! - pinchDelta * 0.5 * scale).clamp(
             DomeConstants.camRMin * scale,
             DomeConstants.camRMax * scale,
           );

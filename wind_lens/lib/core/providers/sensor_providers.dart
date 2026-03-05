@@ -94,7 +94,7 @@ class SensorNotifiers {
 /// to [ValueNotifier]s for direct consumption by CustomPainters.
 ///
 /// This avoids Riverpod rebuilds at sensor rate (20-50Hz).
-@riverpod
+@Riverpod(keepAlive: true)
 SensorNotifiers sensorNotifiers(SensorNotifiersRef ref) {
   final notifiers = SensorNotifiers();
 

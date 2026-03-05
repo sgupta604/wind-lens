@@ -65,10 +65,10 @@ void main() {
     });
 
     group('Constants', () {
-      test('should have smoothing factor of 0.15', () {
-        // Smoothing factor raised from 0.1 to 0.15 to compensate for
+      test('should have smoothing factor of 0.4', () {
+        // Smoothing factor raised from 0.1 to 0.15 to 0.4 to compensate for
         // timer-based 20 Hz update rate (vs 50-100 Hz sensor rate).
-        expect(CompassService.smoothingFactor, 0.15);
+        expect(CompassService.smoothingFactor, 0.4);
       });
 
       test('should have emit interval of 50ms (20 Hz)', () {

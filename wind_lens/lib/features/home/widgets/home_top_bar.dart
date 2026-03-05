@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 
 /// Top bar containing the ShyftLens logo/subtitle and the Live AR button.
 ///
@@ -65,7 +65,8 @@ class _HomeTopBarState extends State<HomeTopBar>
             children: [
               Text(
                 'ShyftLens',
-                style: GoogleFonts.bebasNeue(
+                style: const TextStyle(
+                  fontFamily: 'Bebas Neue',
                   fontSize: 32,
                   color: Colors.white,
                   letterSpacing: 2,
@@ -73,9 +74,10 @@ class _HomeTopBarState extends State<HomeTopBar>
               ),
               Text(
                 'ATMOSPHERIC AR',
-                style: GoogleFonts.dmMono(
+                style: const TextStyle(
+                  fontFamily: 'DM Mono',
                   fontSize: 9,
-                  color: const Color(0xFF666666),
+                  color: Color(0xFF666666),
                   letterSpacing: 3,
                 ),
               ),
@@ -141,7 +143,8 @@ class _HomeTopBarState extends State<HomeTopBar>
                         ),
                         child: Text(
                           'DOME',
-                          style: GoogleFonts.dmMono(
+                          style: const TextStyle(
+                            fontFamily: 'DM Mono',
                             fontSize: 11,
                             color: Colors.white,
                             letterSpacing: 0.15 * 11,
@@ -191,7 +194,8 @@ class _HomeTopBarState extends State<HomeTopBar>
                         const SizedBox(width: 8),
                         Text(
                           'LIVE AR',
-                          style: GoogleFonts.dmMono(
+                          style: const TextStyle(
+                            fontFamily: 'DM Mono',
                             fontSize: 12,
                             color: Colors.black,
                             letterSpacing: 0.15 * 12, // 0.15em

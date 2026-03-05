@@ -131,6 +131,13 @@ class DomeParticle {
             (y / domeH) * DomeConstants.updraftGradient) *
         renderScale * dt;
 
+    // Anti-bunching jitter for large domes
+    if (domeR > 15.0 && rng != null) {
+      final jitterScale = 0.002 * domeR;
+      x += (rng.nextDouble() - 0.5) * jitterScale * dt;
+      z += (rng.nextDouble() - 0.5) * jitterScale * dt;
+    }
+
     // Check dome containment with 2% margin (prototype line 252)
     if (!insideDome(x, y, z, domeR * 1.02, domeH * 1.02) || y < 0) {
       respawn(rng ?? Random(), domeR, domeH);
